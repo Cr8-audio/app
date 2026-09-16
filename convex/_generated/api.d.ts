@@ -8,7 +8,9 @@
  * @module
  */
 
+import type * as agents_djAssistant from "../agents/djAssistant.js";
 import type * as auth from "../auth.js";
+import type * as chat from "../chat.js";
 import type * as discogsCollection from "../discogsCollection.js";
 import type * as favorites from "../favorites.js";
 import type * as http from "../http.js";
@@ -27,7 +29,9 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  "agents/djAssistant": typeof agents_djAssistant;
   auth: typeof auth;
+  chat: typeof chat;
   discogsCollection: typeof discogsCollection;
   favorites: typeof favorites;
   http: typeof http;
@@ -67,6 +71,80 @@ export declare const internal: FilterApi<
 >;
 
 export declare const components: {
+  agent: {
+    threads: {
+      listThreadsByUserId: FunctionReference<
+        "query",
+        "internal",
+        {
+          order?: "asc" | "desc";
+          paginationOpts?: {
+            cursor: string | null;
+            endCursor?: string | null;
+            id?: number;
+            maximumBytesRead?: number;
+            maximumRowsRead?: number;
+            numItems: number;
+          };
+          userId?: string;
+        },
+        {
+          continueCursor: string;
+          isDone: boolean;
+          page: Array<{
+            _creationTime: number;
+            _id: string;
+            status: "active" | "archived";
+            summary?: string;
+            title?: string;
+            userId?: string;
+          }>;
+          pageStatus?: "SplitRecommended" | "SplitRequired" | null;
+          splitCursor?: string | null;
+        }
+      >;
+      createThread: FunctionReference<
+        "mutation",
+        "internal",
+        {
+          defaultSystemPrompt?: string;
+          parentThreadIds?: Array<string>;
+          summary?: string;
+          title?: string;
+          userId?: string;
+        },
+        {
+          _creationTime: number;
+          _id: string;
+          status: "active" | "archived";
+          summary?: string;
+          title?: string;
+          userId?: string;
+        }
+      >;
+      getThread: FunctionReference<
+        "query",
+        "internal",
+        { threadId: string },
+        {
+          _creationTime: number;
+          _id: string;
+          status: "active" | "archived";
+          summary?: string;
+          title?: string;
+          userId?: string;
+        } | null
+      >;
+    };
+    messages: {
+      addMessages: FunctionReference<"mutation", "internal", any, any>;
+      listMessagesByThreadId: FunctionReference<"query", "internal", any, any>;
+    };
+    streams: {
+      list: FunctionReference<"query", "internal", any, any>;
+      addDelta: FunctionReference<"mutation", "internal", any, any>;
+    };
+  };
   migrations: {
     lib: {
       cancel: FunctionReference<
