@@ -54,9 +54,25 @@ const config: Config = {
         darkBg: '#374151',
         darkText: '#eeefe9',
         darkBorder: '#000',
+        // Chat-home nocturnal tokens (CSS vars set under .crate-chat-home)
+        crate: {
+          void: 'var(--crate-void)',
+          ink: 'var(--crate-ink)',
+          'ink-muted': 'var(--crate-ink-muted)',
+          panel: 'var(--crate-panel)',
+          'panel-raised': 'var(--crate-panel-raised)',
+          rule: 'var(--crate-rule)',
+          accent: 'var(--crate-accent)',
+          'accent-soft': 'var(--crate-accent-soft)',
+          source: 'var(--crate-source)',
+          ok: 'var(--crate-ok)',
+        },
       },
       borderRadius: {
         base: '8px',
+        card: 'var(--radius-card, 12px)',
+        chip: 'var(--radius-chip, 999px)',
+        composer: 'var(--radius-composer, 16px)',
       },
       boxShadow: {
         light: '1px 4px 0px 0px #000',
