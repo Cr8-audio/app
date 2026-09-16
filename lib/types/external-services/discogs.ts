@@ -261,10 +261,11 @@ export interface ReleasesTrackProps {
 }
 
 // SearchParams / SearchResult / SearchResponse used to be redeclared here
-// because @crate.ai/discogs-sdk 2.x mistyped getSearchResults() as returning a
-// bare array. 3.0.0 returns the real `{ pagination, results }` payload, so the
+// because @crate.ai/discogs-sdk 2.x (the SDK's old name) mistyped
+// getSearchResults() as returning a bare array. 3.0.0 returns the real
+// `{ pagination, results }` payload, so the
 // SDK's own types are the source of truth — import them from
-// '@crate.ai/discogs-sdk'.
+// '@cr8.audio/discogs-sdk'.
 
 export interface PaginationUrls {
   next: string;

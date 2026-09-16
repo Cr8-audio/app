@@ -1,5 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { DiscogsSDK } from '@crate.ai/discogs-sdk';
+import { DiscogsSDK } from '@cr8.audio/discogs-sdk';
 import { serialize } from 'cookie';
 
 // Allowed origins for OAuth redirects (security allowlist)
@@ -29,7 +29,7 @@ export const Route = createFileRoute('/api/auth/discogs/request-token')({
             DiscogsConsumerSecret:
               import.meta.env.VITE_DISCOGS_CONSUMER_SECRET || '',
             callbackUrl: `${baseUrl}/api/auth/discogs/callback`,
-            userAgent: 'CrateApp/1.0 +https://crate.ai',
+            userAgent: 'CrateApp/1.0 +https://cr8.audio',
           });
 
           const requestTokenResponse = await sdk.auth
