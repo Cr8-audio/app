@@ -80,8 +80,7 @@ export default function ReleaseDigCard({
             {discogsUrl || discogsId != null ? (
               <a
                 href={
-                  discogsUrl ||
-                  `https://www.discogs.com/release/${discogsId}`
+                  discogsUrl || `https://www.discogs.com/release/${discogsId}`
                 }
                 target="_blank"
                 rel="noopener noreferrer"
@@ -91,7 +90,9 @@ export default function ReleaseDigCard({
               >
                 Discogs
                 {discogsId != null ? (
-                  <span className="font-mono opacity-90">{String(discogsId)}</span>
+                  <span className="font-mono opacity-90">
+                    {String(discogsId)}
+                  </span>
                 ) : null}
               </a>
             ) : (
@@ -148,6 +149,3 @@ export default function ReleaseDigCard({
     </article>
   );
 }
-
-// eslint-disable-next-line react-refresh/only-export-components -- stub lives in releaseDigStub.ts
-export { STUB_RELEASE_DIG } from './releaseDigStub';
