@@ -7,14 +7,15 @@ compatibility_flags = ["nodejs_compat"]
 
 [env.production]
 name = "crate-app"
-# routes = [
-#   { pattern = "crate.audio", custom_domain = true }
-# ]
+routes = [
+  { pattern = "cr8.audio", custom_domain = true },
+  { pattern = "www.cr8.audio", custom_domain = true }
+]
 
 [env.staging]
 name = "crate-app"
 # routes = [
-#   { pattern = "staging.crate.audio", custom_domain = true }
+#   { pattern = "staging.cr8.audio", custom_domain = true }
 # ]
 
 # Environment variables
