@@ -30,7 +30,6 @@ export const Route = createFileRoute('/api/auth/discogs/request-token')({
               import.meta.env.VITE_DISCOGS_CONSUMER_SECRET || '',
             callbackUrl: `${baseUrl}/api/auth/discogs/callback`,
             userAgent: 'CrateApp/1.0 +https://crate.ai',
-            debug: false,
           });
 
           const requestTokenResponse = await sdk.auth

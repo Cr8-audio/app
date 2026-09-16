@@ -260,45 +260,12 @@ export interface ReleasesTrackProps {
   onTrackSelect?: (track: ReleaseTrack) => void;
 }
 
-export interface SearchParams {
-  query?: string;
-  type?: 'release' | 'master' | 'artist' | 'label';
-  title?: string;
-  releaseTitle?: string;
-  artist?: string;
-  format?: string;
-}
+// SearchParams / SearchResult / SearchResponse used to be redeclared here
+// because @crate.ai/discogs-sdk 2.x mistyped getSearchResults() as returning a
+// bare array. 3.0.0 returns the real `{ pagination, results }` payload, so the
+// SDK's own types are the source of truth — import them from
+// '@crate.ai/discogs-sdk'.
 
-export interface SearchResult {
-  id: number;
-  type: string;
-  title: string;
-  thumb: string;
-  cover_image?: string;
-  master_id?: number;
-  master_url?: string;
-  uri: string;
-  country?: string;
-  year?: string;
-  format?: string[];
-  label?: string[];
-  genre?: string[];
-  style?: string[];
-  community?: {
-    want: number;
-    have: number;
-  };
-}
-
-export interface SearchResponse {
-  results: SearchResult[];
-  pagination?: {
-    page: number;
-    pages: number;
-    per_page: number;
-    items: number;
-  };
-}
 export interface PaginationUrls {
   next: string;
   last: string;
