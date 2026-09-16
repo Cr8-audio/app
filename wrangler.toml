@@ -6,7 +6,8 @@ compatibility_date = "2024-12-16"
 compatibility_flags = ["nodejs_compat"]
 
 [env.production]
-name = "crate-app"
+name = "crate-app-production"
+account_id = "2f84630cfef8a6b13712d41a0e8d9afc"
 routes = [
   { pattern = "cr8.audio", custom_domain = true },
   { pattern = "www.cr8.audio", custom_domain = true }
