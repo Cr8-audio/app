@@ -1,7 +1,10 @@
 import { createFileRoute } from '@tanstack/react-router';
-import { DiscogsSDK } from '@crate.ai/discogs-sdk';
+import {
+  DiscogsSDK,
+  type SearchParams,
+  type SearchResult,
+} from '@crate.ai/discogs-sdk';
 import { parse } from 'cookie';
-import type { SearchParams, SearchResult, SearchResponse } from '@/lib/types';
 
 function buildSearchParams(originalQuery: string): SearchParams {
   const terms = originalQuery.trim().split(/\s+/);
@@ -69,9 +72,7 @@ export const Route = createFileRoute('/api/external/discogs/search')({
 
           const searchParams = buildSearchParams(originalQuery);
 
-          const response = (await sdk.search.getSearchResults(
-            searchParams,
-          )) as unknown as SearchResponse;
+          const response = await sdk.search.getSearchResults(searchParams);
 
           // Enhance relevance sorting
           const normalizedQuery = originalQuery.toLowerCase().trim();
