@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useRouterState } from '@tanstack/react-router';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { cn } from '@/lib/utils/tailwind';
@@ -80,9 +80,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
+  // Enable keyboard navigation
   useKeyboardNavigation();
 
+  // Handle responsive behavior and persistence
   useEffect(() => {
+    // Check localStorage for sidebar state
     const savedState = localStorage.getItem('crate-sidebar-collapsed');
     if (savedState !== null) {
       setSidebarCollapsed(JSON.parse(savedState));
@@ -91,6 +94,8 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
+
+      // On mobile, always start with sidebar collapsed
       if (mobile) {
         setSidebarCollapsed(true);
         setMobileMenuOpen(false);
@@ -102,12 +107,16 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  const toggleSidebar = () => {
-    const newState = !sidebarCollapsed;
-    setSidebarCollapsed(newState);
-    localStorage.setItem('crate-sidebar-collapsed', JSON.stringify(newState));
-  };
+  // Persist sidebar state
+  const toggleSidebar = useCallback(() => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      localStorage.setItem('crate-sidebar-collapsed', JSON.stringify(next));
+      return next;
+    });
+  }, []);
 
+  // Close mobile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (mobileMenuOpen && isMobile) {
@@ -122,8 +131,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [mobileMenuOpen, isMobile]);
 
+  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      // CMD/Ctrl + B to toggle sidebar (skip on chat-home — no sidebar)
       if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
         if (isChatHome) return;
         event.preventDefault();
@@ -134,15 +145,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
         }
       }
 
+      // CMD/Ctrl + K for search (handled by TopBar)
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
         if (isChatHome) return;
         event.preventDefault();
+        // Focus search input
         const searchInput = document.querySelector(
           'input[placeholder*="Search"]',
         ) as HTMLInputElement;
         searchInput?.focus();
       }
 
+      // Escape to close mobile menu
       if (event.key === 'Escape' && mobileMenuOpen) {
         setMobileMenuOpen(false);
       }
@@ -150,18 +164,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [sidebarCollapsed, mobileMenuOpen, isMobile, isChatHome]);
+  }, [sidebarCollapsed, mobileMenuOpen, isMobile, isChatHome, toggleSidebar]);
 
+  // Don't render navigation for unauthenticated users
   if (!isAuthenticated) {
     return <div className="min-h-screen">{children}</div>;
   }
 
+  // Chat is primary home — void shell, no sidebar/topbar
   if (isChatHome) {
     return <ChatHomeChrome>{children}</ChatHomeChrome>;
   }
 
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
+      {/* Mobile Menu Overlay */}
       {isMobile && mobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-[55] md:hidden"
@@ -170,6 +187,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       )}
 
       <div className="flex flex-1 overflow-hidden relative">
+        {/* Sidebar Wrapper */}
         <div
           id="sidebar"
           className={cn(
@@ -194,21 +212,26 @@ export default function AppLayout({ children }: AppLayoutProps) {
           />
         </div>
 
+        {/* Main Content Wrapper */}
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative">
+          {/* Top Bar */}
           <TopBar
             sidebarCollapsed={sidebarCollapsed}
             onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
             mobileMenuOpen={mobileMenuOpen}
           />
 
+          {/* Scrollable Page Content */}
           <main className="flex-1 overflow-y-auto">
             <div className="p-6 max-w-7xl mx-auto">{children}</div>
           </main>
         </div>
       </div>
 
+      {/* Mobile Navigation Helper */}
       {isMobile && (
         <div className="fixed bottom-24 right-4 flex flex-col space-y-2 z-30 pointer-events-none">
+          {/* Quick access button for mobile - moved up to avoid player if present */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="pointer-events-auto w-12 h-12 bg-main text-black rounded-full shadow-lg flex items-center justify-center hover:bg-mainAccent transition-colors border-2 border-black"
@@ -235,6 +258,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       )}
 
+      {/* Persistent Music Player - Stacks at bottom */}
       <div className="flex-shrink-0 z-[60]">
         <PersistentPlayer />
       </div>
