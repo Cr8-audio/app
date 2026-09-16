@@ -13,10 +13,13 @@ function AnalyzePage() {
   const user = useQuery(api.users.getCurrentUser);
 
   useEffect(() => {
-    if (user?.username) {
-      navigate({ to: `/${user.username}`, replace: true });
+    if (user?.username && user.onboardingComplete) {
+      // Chat is home — do not bounce to /$username dashboard
+      navigate({ to: '/analyze/chat', replace: true });
     } else if (user === null) {
       navigate({ to: '/', replace: true });
+    } else if (user && (!user.username || !user.onboardingComplete)) {
+      navigate({ to: '/onboarding', replace: true });
     }
   }, [user, navigate]);
 

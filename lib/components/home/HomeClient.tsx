@@ -42,8 +42,8 @@ function AuthenticatedRedirect() {
         return;
       }
 
-      // Navigate to user's dashboard
-      navigate({ to: `/${user.username}`, replace: true });
+      // Chat is the primary signed-in surface (not /$username dashboard)
+      navigate({ to: '/analyze/chat', replace: true });
     }
   }, [user, navigate]);
 
