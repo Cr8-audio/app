@@ -34,13 +34,14 @@ import {
   DropdownMenuTrigger,
 } from '@/lib/components/ui/dropdown-menu';
 import { CrateTrack } from '@/lib/types';
-import { useChat } from 'ai/react';
+import { extractText } from '@convex-dev/agent';
+import { toUIMessages, useThreadMessages } from '@convex-dev/agent/react';
 import { cn } from '@/lib/utils/tailwind';
 import { usePlayerStore } from '@/lib/stores';
 import { useTrackSorting } from '@/lib/hooks/useTrackSorting';
 import { toast } from 'sonner';
 import PlaylistCreationModal from './PlaylistCreationModal';
-import { useQuery } from 'convex/react';
+import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 
 interface EnhancedChatInterfaceProps {
@@ -63,10 +64,8 @@ interface TrackSuggestion {
   context: string;
 }
 
-// Enhanced track parsing with multiple format support
 const parseTracksFromMessage = (content: string): TrackSuggestion | null => {
   try {
-    // Try to parse JSON response first
     if (content.includes('{') && content.includes('}')) {
       const jsonMatch = content.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -75,7 +74,6 @@ const parseTracksFromMessage = (content: string): TrackSuggestion | null => {
       }
     }
 
-    // Fallback to regex parsing
     const trackMatches = content.matchAll(
       /["'](.+?)["']\s*-\s*(.+?)\s*(?:\(|$)(\d+)?\s*(?:BPM)?(?:\)|$)/gi,
     );
@@ -100,12 +98,10 @@ const parseTracksFromMessage = (content: string): TrackSuggestion | null => {
   }
 };
 
-// Enhanced track matching with fuzzy search
 const findMatchingTrack = (
   suggestion: ParsedTrack,
   tracks: CrateTrack[],
 ): CrateTrack | null => {
-  // Exact title match
   let match = tracks.find(
     (t) =>
       t.title.toLowerCase().trim() === suggestion.title.toLowerCase().trim(),
@@ -113,7 +109,6 @@ const findMatchingTrack = (
 
   if (match) return match;
 
-  // Artist + title match
   match = tracks.find(
     (t) =>
       t.title.toLowerCase().includes(suggestion.title.toLowerCase()) &&
@@ -122,7 +117,6 @@ const findMatchingTrack = (
 
   if (match) return match;
 
-  // Fuzzy title match
   match = tracks.find((t) => {
     const titleWords = suggestion.title.toLowerCase().split(' ');
     const trackTitle = t.title.toLowerCase();
@@ -134,7 +128,6 @@ const findMatchingTrack = (
   return match || null;
 };
 
-// Suggested prompts for better user guidance
 const SUGGESTED_PROMPTS = [
   'Find tracks around 128 BPM for a house set',
   'Suggest tracks that mix well with techno',
@@ -306,7 +299,6 @@ const MessageBubble = ({
             </div>
           </div>
 
-          {/* Track suggestions */}
           {!isUser && matchedTracks.length > 0 && (
             <div className="w-full space-y-3 max-w-full">
               <div className="flex items-center justify-between p-3 bg-bg border-2 border-black rounded-base">
@@ -360,8 +352,30 @@ export default function EnhancedChatInterface({
   >(new Map());
   const [playlistModalOpen, setPlaylistModalOpen] = useState(false);
   const [playlistTracks, setPlaylistTracks] = useState<CrateTrack[]>([]);
+  const [input, setInput] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const processedMessageIds = useRef<Set<string>>(new Set());
 
-  // Initialize player when component mounts
+  const getOrCreateChatThread = useMutation(api.chat.getOrCreateChatThread);
+  const sendMessage = useMutation(api.chat.sendMessage);
+  const [threadId, setThreadId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { threadId: id } = await getOrCreateChatThread({});
+        if (!cancelled) setThreadId(id);
+      } catch (error) {
+        console.error('Failed to get/create chat thread:', error);
+        toast.error('Failed to load chat thread');
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [getOrCreateChatThread]);
+
   useEffect(() => {
     if (!isReady) {
       initializePlayer();
@@ -398,25 +412,35 @@ export default function EnhancedChatInterface({
     [tracks, onTracksFilter, setOrderingConfig],
   );
 
-  const { messages, input, handleInputChange, handleSubmit, isLoading } =
-    useChat({
-      api: '/api/ai/chat',
-      body: {
-        tracks: tracks.map((track) => ({
-          title: track.title,
-          artist: track.artist,
-          bpm: track.bpm,
-          genres: track.genres,
-        })),
-      },
-      onFinish: (message) => {
-        processTrackSuggestions(message.content, message.id);
-      },
-      onError: (error) => {
-        console.error('Chat error:', error);
-        toast.error('Failed to get AI response. Please try again.');
-      },
-    });
+  const { results: threadMessages, status: messagesStatus } = useThreadMessages(
+    api.chat.listThreadMessages,
+    threadId ? { threadId } : 'skip',
+    { initialNumItems: 50, stream: true },
+  );
+
+  const uiMessages = toUIMessages(threadMessages ?? []);
+  const isLoading =
+    isSending ||
+    messagesStatus === 'LoadingFirstPage' ||
+    (threadMessages ?? []).some(
+      (m) => m.status === 'pending' || m.streaming === true,
+    );
+
+  useEffect(() => {
+    for (const msg of threadMessages ?? []) {
+      if (
+        msg.status === 'success' &&
+        msg.message?.role === 'assistant' &&
+        !processedMessageIds.current.has(msg._id)
+      ) {
+        processedMessageIds.current.add(msg._id);
+        const content = msg.message ? extractText(msg.message) : undefined;
+        if (content) {
+          processTrackSuggestions(content, msg._id);
+        }
+      }
+    }
+  }, [threadMessages, processTrackSuggestions]);
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -424,10 +448,10 @@ export default function EnhancedChatInterface({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, isLoading, scrollToBottom]);
+  }, [uiMessages, isLoading, scrollToBottom]);
 
   const handleSuggestedPrompt = (prompt: string) => {
-    handleInputChange({ target: { value: prompt } } as any);
+    setInput(prompt);
     setShowSuggestions(false);
   };
 
@@ -465,17 +489,40 @@ export default function EnhancedChatInterface({
     setPlaylistModalOpen(true);
   };
 
-  const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    if (input.trim()) {
-      setShowSuggestions(false);
-      handleSubmit(e);
+    const trimmed = input.trim();
+    if (!trimmed || !threadId || isLoading) return;
+
+    setShowSuggestions(false);
+    setIsSending(true);
+    setInput('');
+    try {
+      await sendMessage({
+        threadId,
+        prompt: trimmed,
+        tracks: tracks.map((track) => ({
+          title: track.title,
+          artist: track.artist,
+          bpm: typeof track.bpm === 'number' ? track.bpm : undefined,
+          genres: Array.isArray(track.genres)
+            ? track.genres
+            : typeof track.genres === 'string' && track.genres
+              ? track.genres.split(',').map((g: string) => g.trim())
+              : undefined,
+        })),
+      });
+    } catch (error) {
+      console.error('Chat error:', error);
+      toast.error('Failed to get AI response. Please try again.');
+      setInput(trimmed);
+    } finally {
+      setIsSending(false);
     }
   };
 
   return (
     <div className="flex flex-col h-full bg-bg max-w-full overflow-hidden">
-      {/* Header */}
       <div className="p-4 border-b-2 border-black bg-bg flex-shrink-0 sticky top-0 z-10">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 flex-1 min-w-0">
@@ -502,11 +549,9 @@ export default function EnhancedChatInterface({
         </div>
       </div>
 
-      {/* Messages */}
       <div className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="p-4 space-y-2 max-w-full">
-          {/* Welcome message */}
-          {messages.length === 0 && (
+          {uiMessages.length === 0 && (
             <div className="mb-10">
               <MessageBubble
                 message={{
@@ -519,7 +564,6 @@ export default function EnhancedChatInterface({
                 onCreatePlaylist={handleCreatePlaylistFromSuggestions}
               />
 
-              {/* Suggested prompts */}
               {showSuggestions && (
                 <div className="space-y-4 mt-8 max-w-full">
                   <div className="flex items-center space-x-2 text-sm text-gray-600">
@@ -545,11 +589,15 @@ export default function EnhancedChatInterface({
             </div>
           )}
 
-          {/* Chat messages */}
-          {messages.map((message) => (
+          {uiMessages.map((message) => (
             <MessageBubble
               key={message.id}
-              message={message}
+              message={{
+                id: message.id,
+                role: message.role,
+                content:
+                  typeof message.content === 'string' ? message.content : '',
+              }}
               userAvatar={user?.avatarUrl}
               matchedTracks={matchedTracksMap.get(message.id) || []}
               onTrackPlay={handleTrackPlay}
@@ -558,21 +606,19 @@ export default function EnhancedChatInterface({
             />
           ))}
 
-          {/* Typing indicator */}
           {isLoading && <TypingIndicator />}
 
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Input */}
       <div className="p-4 border-t-2 border-black bg-bg flex-shrink-0 sticky bottom-0 z-10">
         <form onSubmit={onSubmit} className="flex space-x-3">
           <Input
             value={input}
-            onChange={handleInputChange}
+            onChange={(e) => setInput(e.target.value)}
             placeholder="Ask about tracks, mixing tips, or BPM matching..."
-            disabled={isLoading}
+            disabled={isLoading || !threadId}
             className="flex-1 border-2 border-black bg-white focus:ring-main focus:border-main text-text h-11 rounded-base"
           />
           <TooltipProvider>
@@ -580,7 +626,7 @@ export default function EnhancedChatInterface({
               <TooltipTrigger asChild>
                 <Button
                   type="submit"
-                  disabled={isLoading || !input.trim()}
+                  disabled={isLoading || !threadId || !input.trim()}
                   className="h-11 px-4 bg-main hover:bg-mainAccent border-2 border-black text-text shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all flex-shrink-0 rounded-base"
                 >
                   <Send className="w-4 h-4" />
@@ -594,12 +640,11 @@ export default function EnhancedChatInterface({
         </form>
       </div>
 
-      {/* Playlist Creation Modal */}
       <PlaylistCreationModal
         isOpen={playlistModalOpen}
         onClose={() => setPlaylistModalOpen(false)}
         suggestedTracks={playlistTracks}
-        onPlaylistCreated={(playlistId) => {
+        onPlaylistCreated={() => {
           toast.success('Playlist created successfully!');
         }}
       />
