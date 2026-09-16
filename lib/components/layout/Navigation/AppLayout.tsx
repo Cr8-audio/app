@@ -1,30 +1,88 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Link, useRouterState } from '@tanstack/react-router';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { cn } from '@/lib/utils/tailwind';
 import { useKeyboardNavigation } from '@/lib/hooks/useKeyboardNavigation';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import PersistentPlayer from '@/lib/components/ui/persistent-player';
-import { X } from 'lucide-react';
+import { X, Home } from 'lucide-react';
+import { useQuery } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
+function ChatHomeChrome({ children }: { children: React.ReactNode }) {
+  const { username, displayName } = useAuth();
+  const tracks = useQuery(api.tracks.getUserTracks);
+  const trackCount = tracks?.length;
+
+  return (
+    <div className="crate-chat-home flex h-screen flex-col overflow-hidden bg-[var(--crate-void)] text-[var(--crate-ink)]">
+      {/* Minimal identity + crate status — no sidebar/topbar */}
+      <header className="flex h-12 flex-shrink-0 items-center justify-between border-b border-[var(--crate-rule)] px-4">
+        <div className="flex items-center gap-3 min-w-0">
+          <Link
+            to="/analyze/chat"
+            className="font-heading text-sm font-semibold tracking-tight text-[var(--crate-ink)]"
+          >
+            Crate
+          </Link>
+          <span
+            className="hidden h-1 w-1 rounded-full bg-[var(--crate-rule)] sm:inline-block"
+            aria-hidden
+          />
+          <p className="truncate text-xs text-[var(--crate-ink-muted)]">
+            {displayName || username || 'DJ'}
+            {typeof trackCount === 'number' ? (
+              <span className="font-mono">
+                {' '}
+                · {trackCount} in crate
+              </span>
+            ) : (
+              <span> · loading crate…</span>
+            )}
+          </p>
+        </div>
+        {username ? (
+          <Link
+            to="/$username"
+            params={{ username }}
+            className="inline-flex items-center gap-1.5 rounded-[var(--radius-chip)] border border-[var(--crate-rule)] bg-[var(--crate-panel)] px-2.5 py-1 text-[10px] text-[var(--crate-ink-muted)] transition-colors duration-150 ease-out hover:bg-[var(--crate-accent-soft)] hover:text-[var(--crate-ink)]"
+            title="Overview (dashboard)"
+          >
+            <Home className="h-3 w-3" aria-hidden />
+            Overview
+          </Link>
+        ) : null}
+      </header>
+
+      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
+        {children}
+      </main>
+
+      <div className="flex-shrink-0 z-[60]">
+        <PersistentPlayer />
+      </div>
+    </div>
+  );
+}
+
 export default function AppLayout({ children }: AppLayoutProps) {
   const { isAuthenticated } = useAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isChatHome = pathname === '/analyze/chat';
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Enable keyboard navigation
   useKeyboardNavigation();
 
-  // Handle responsive behavior and persistence
   useEffect(() => {
-    // Check localStorage for sidebar state
     const savedState = localStorage.getItem('crate-sidebar-collapsed');
     if (savedState !== null) {
       setSidebarCollapsed(JSON.parse(savedState));
@@ -33,8 +91,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
     const handleResize = () => {
       const mobile = window.innerWidth < 768;
       setIsMobile(mobile);
-
-      // On mobile, always start with sidebar collapsed
       if (mobile) {
         setSidebarCollapsed(true);
         setMobileMenuOpen(false);
@@ -46,14 +102,12 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Persist sidebar state
   const toggleSidebar = () => {
     const newState = !sidebarCollapsed;
     setSidebarCollapsed(newState);
     localStorage.setItem('crate-sidebar-collapsed', JSON.stringify(newState));
   };
 
-  // Close mobile menu when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (mobileMenuOpen && isMobile) {
@@ -68,11 +122,10 @@ export default function AppLayout({ children }: AppLayoutProps) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [mobileMenuOpen, isMobile]);
 
-  // Handle keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      // CMD/Ctrl + B to toggle sidebar
       if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
+        if (isChatHome) return;
         event.preventDefault();
         if (isMobile) {
           setMobileMenuOpen(!mobileMenuOpen);
@@ -81,17 +134,15 @@ export default function AppLayout({ children }: AppLayoutProps) {
         }
       }
 
-      // CMD/Ctrl + K for search (handled by TopBar)
       if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
+        if (isChatHome) return;
         event.preventDefault();
-        // Focus search input
         const searchInput = document.querySelector(
           'input[placeholder*="Search"]',
         ) as HTMLInputElement;
         searchInput?.focus();
       }
 
-      // Escape to close mobile menu
       if (event.key === 'Escape' && mobileMenuOpen) {
         setMobileMenuOpen(false);
       }
@@ -99,16 +150,18 @@ export default function AppLayout({ children }: AppLayoutProps) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [sidebarCollapsed, mobileMenuOpen, isMobile]);
+  }, [sidebarCollapsed, mobileMenuOpen, isMobile, isChatHome]);
 
-  // Don't render navigation for unauthenticated users
   if (!isAuthenticated) {
     return <div className="min-h-screen">{children}</div>;
   }
 
+  if (isChatHome) {
+    return <ChatHomeChrome>{children}</ChatHomeChrome>;
+  }
+
   return (
     <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
-      {/* Mobile Menu Overlay */}
       {isMobile && mobileMenuOpen && (
         <div
           className="fixed inset-0 bg-black bg-opacity-50 z-[55] md:hidden"
@@ -117,7 +170,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
       )}
 
       <div className="flex flex-1 overflow-hidden relative">
-        {/* Sidebar Wrapper */}
         <div
           id="sidebar"
           className={cn(
@@ -142,26 +194,21 @@ export default function AppLayout({ children }: AppLayoutProps) {
           />
         </div>
 
-        {/* Main Content Wrapper */}
         <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative">
-          {/* Top Bar */}
           <TopBar
             sidebarCollapsed={sidebarCollapsed}
             onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
             mobileMenuOpen={mobileMenuOpen}
           />
 
-          {/* Scrollable Page Content */}
           <main className="flex-1 overflow-y-auto">
             <div className="p-6 max-w-7xl mx-auto">{children}</div>
           </main>
         </div>
       </div>
 
-      {/* Mobile Navigation Helper */}
       {isMobile && (
         <div className="fixed bottom-24 right-4 flex flex-col space-y-2 z-30 pointer-events-none">
-          {/* Quick access button for mobile - moved up to avoid player if present */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="pointer-events-auto w-12 h-12 bg-main text-black rounded-full shadow-lg flex items-center justify-center hover:bg-mainAccent transition-colors border-2 border-black"
@@ -188,7 +235,6 @@ export default function AppLayout({ children }: AppLayoutProps) {
         </div>
       )}
 
-      {/* Persistent Music Player - Stacks at bottom */}
       <div className="flex-shrink-0 z-[60]">
         <PersistentPlayer />
       </div>
