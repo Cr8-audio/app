@@ -38,7 +38,7 @@ function ChatPage() {
   // Loading auth or tracks
   if (user === undefined || (user && convexTracks === undefined)) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center bg-[var(--crate-void)]">
         <LoadingSpinner />
       </div>
     );
@@ -47,7 +47,7 @@ function ChatPage() {
   // Redirecting (spinner while navigate runs)
   if (user === null || !user.username || !user.onboardingComplete) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[400px] items-center justify-center bg-[var(--crate-void)]">
         <LoadingSpinner />
       </div>
     );
@@ -55,16 +55,15 @@ function ChatPage() {
 
   return (
     <ErrorBoundary>
-      {/* Contained chat-home: fill content area without horizontal bleed */}
-      <div className="-m-6 flex h-[calc(100vh-4rem-5rem)] max-w-full flex-col overflow-hidden">
-        <div className="mx-auto flex h-full w-full max-w-3xl flex-col overflow-hidden border-x-2 border-black bg-bg">
-          <EnhancedChatInterface
-            tracks={tracks}
-            onTracksFilter={() => {}}
-            isOpen
-            onClose={() => {}}
-          />
-        </div>
+      {/* Nocturnal void shell — no cream column, no 2px black rails */}
+      <div className="crate-chat-home flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden bg-[var(--crate-void)]">
+        <EnhancedChatInterface
+          tracks={tracks}
+          onTracksFilter={() => {}}
+          isOpen
+          onClose={() => {}}
+          variant="nocturnal"
+        />
       </div>
     </ErrorBoundary>
   );
