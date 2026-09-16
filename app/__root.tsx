@@ -4,8 +4,9 @@ import {
   HeadContent,
   Scripts,
   createRootRouteWithContext,
+  useRouterState,
 } from '@tanstack/react-router';
-import { Suspense } from 'react';
+import { Suspense, useEffect } from 'react';
 import { Toaster } from 'sonner';
 import appCss from './globals.css?url';
 import AppLayout from '@/lib/components/layout/Navigation/AppLayout';
@@ -14,9 +15,6 @@ import { LoadingSpinner } from '@/lib/components/ui/loading';
 import GlobalError from '@/lib/components/Error/GlobalError';
 import { ConvexReactClient } from 'convex/react';
 import { ConvexAuthProvider } from '@convex-dev/auth/react';
-import { Authenticated, Unauthenticated, AuthLoading } from 'convex/react';
-import { useRouter } from '@tanstack/react-router';
-import { useEffect } from 'react';
 
 const convexUrl = import.meta.env.VITE_CONVEX_URL;
 
@@ -58,19 +56,50 @@ export const Route = createRootRouteWithContext<{
   component: RootLayout,
 });
 
+function RootBody({ children }: { children: React.ReactNode }) {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isChatHome = pathname === '/analyze/chat';
+
+  useEffect(() => {
+    const body = document.body;
+    if (isChatHome) {
+      body.classList.add('crate-chat-home');
+    } else {
+      body.classList.remove('crate-chat-home');
+    }
+    return () => {
+      body.classList.remove('crate-chat-home');
+    };
+  }, [isChatHome]);
+
+  return (
+    <body
+      // Landing keeps yellow polka-dot; chat-home uses void via .crate-chat-home
+      style={
+        isChatHome
+          ? {
+              backgroundColor: 'hsl(240 12% 6%)',
+              backgroundImage: 'none',
+            }
+          : {
+              backgroundImage: 'radial-gradient(#FFDC58 1px, transparent 1px)',
+              backgroundSize: '10px 10px',
+            }
+      }
+      className={isChatHome ? 'crate-chat-home' : undefined}
+    >
+      {children}
+    </body>
+  );
+}
+
 function RootLayout() {
   return (
     <html lang="en">
       <head>
         <HeadContent />
       </head>
-      <body
-        // TODO: Add font class back after migration to fontsource
-        style={{
-          backgroundImage: 'radial-gradient(#FFDC58 1px, transparent 1px)',
-          backgroundSize: '10px 10px',
-        }}
-      >
+      <RootBody>
         <ErrorBoundary fallback={<GlobalError />}>
           <ConvexAuthProvider client={convex}>
             <AppLayout>
@@ -100,7 +129,7 @@ function RootLayout() {
           }}
         />
         <Scripts />
-      </body>
+      </RootBody>
     </html>
   );
 }
