@@ -1,7 +1,7 @@
 import { useLocation, Link } from '@tanstack/react-router';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { cn } from '@/lib/utils/tailwind';
-import { Home, Music, ListMusic, Search } from 'lucide-react';
+import { Home, Music, ListMusic, Search, MessageCircle } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import {
   Avatar,
@@ -34,10 +34,10 @@ export default function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
 
   const navigationItems = [
     {
-      name: 'Dashboard',
-      href: `/${username}`,
-      icon: Home,
-      description: 'Overview',
+      name: 'Chat',
+      href: '/analyze/chat',
+      icon: MessageCircle,
+      description: 'DJ Assistant',
     },
     {
       name: 'Tracks',
@@ -56,6 +56,12 @@ export default function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
       href: `/${username}/collection`,
       icon: Search,
       description: 'Discogs',
+    },
+    {
+      name: 'Overview',
+      href: `/${username}`,
+      icon: Home,
+      description: 'Dashboard',
     },
   ];
 
@@ -99,7 +105,9 @@ export default function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
           const Icon = item.icon;
           const isActive =
             pathname === item.href ||
-            (item.href !== `/${username}` && pathname.startsWith(item.href));
+            (item.href !== `/${username}` &&
+              item.href !== '/analyze/chat' &&
+              pathname.startsWith(item.href));
 
           return (
             <Link
