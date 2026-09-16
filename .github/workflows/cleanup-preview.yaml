@@ -1,0 +1,19 @@
+name: Cleanup PR Preview
+
+on:
+  pull_request:
+    types: [closed]
+
+jobs:
+  cleanup:
+    name: Delete Preview Worker
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete Preview Worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: delete --name crate-app-pr-${{ github.event.pull_request.number }} --force
+

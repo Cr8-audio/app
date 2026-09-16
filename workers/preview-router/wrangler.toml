@@ -1,0 +1,13 @@
+name = "crate-preview-router"
+main = "index.ts"
+compatibility_date = "2024-12-16"
+compatibility_flags = ["nodejs_compat"]
+
+# Setup in Cloudflare Dashboard:
+# 1. DNS: Add CNAME record with Name: * and Target: crate-preview-router.govi218mu.workers.dev (Proxied)
+# 2. Routes: *.crate.audio/* -> crate-preview-router
+# The worker will only handle {number}-pr.crate.audio URLs, returning 404 for others
+
+[observability]
+enabled = true
+

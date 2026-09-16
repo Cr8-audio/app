@@ -1,0 +1,32 @@
+name = "crate-app"
+main = "@tanstack/react-start/server-entry"
+account_id = "32a73ac2845c6c9986379ea97030bb5d"
+assets = { directory = "dist/client" }
+compatibility_date = "2024-12-16"
+compatibility_flags = ["nodejs_compat"]
+
+[env.production]
+name = "crate-app"
+# routes = [
+#   { pattern = "crate.audio", custom_domain = true }
+# ]
+
+[env.staging]
+name = "crate-app"
+# routes = [
+#   { pattern = "staging.crate.audio", custom_domain = true }
+# ]
+
+# Environment variables
+[env.production.vars]
+ENVIRONMENT = "production"
+
+[env.staging.vars]
+ENVIRONMENT = "staging"
+
+# Note: Build is handled by GitHub Actions, not wrangler
+# See .github/workflows/deploy-*.yaml
+
+# Observability
+[observability]
+enabled = true

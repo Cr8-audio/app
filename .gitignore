@@ -9,12 +9,20 @@
 # testing
 /coverage
 
+# tanstack
+.tanstack
+
 # next.js
 /.next/
 /out/
 
 # production
 /build
+/dist
+/.output
+/.vinxi
+/.vite
+/.wrangler
 
 # misc
 .DS_Store
@@ -37,3 +45,15 @@ next-env.d.ts
 
 # storage
 storage.json
+.aider*
+.env
+.dev.vars
+
+# convex data exports
+convex-data.zip
+.env.source
+# Local, non-repo context
+context-repos/
+
+# Cursor IDE rules
+.cursor/

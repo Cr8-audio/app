@@ -1,75 +1,153 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Public+Sans:wght@400;700&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
-@tailwind base;
-  @tailwind components;
-  @tailwind utilities;
+@import '@fontsource-variable/inter';
+@import 'tailwindcss';
+@config "../tailwind.config.ts";
 
-  @layer base {
-    :root {
-      --background: 0 0% 100%;
-      --foreground: 240 10% 3.9%;
+@theme {
+  --font-sans: 'Inter Variable', 'Public Sans', 'Montserrat', sans-serif;
+  --font-heading: 'Montserrat', 'Public Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
 
-      --card: 0 0% 100%;
-      --card-foreground: 240 10% 3.9%;
+  --radius-base: 0.5rem;
+}
 
-      --popover: 0 0% 100%;
-      --popover-foreground: 240 10% 3.9%;
+@layer base {
+  :root {
+    --color-background: hsl(0 0% 100%);
+    --color-foreground: hsl(240 10% 3.9%);
 
-      --primary: 240 5.9% 10%;
-      --primary-foreground: 0 0% 98%;
+    --color-card: hsl(0 0% 100%);
+    --color-card-foreground: hsl(240 10% 3.9%);
 
-      --secondary: 240 4.8% 95.9%;
-      --secondary-foreground: 240 5.9% 10%;
+    --color-popover: hsl(0 0% 100%);
+    --color-popover-foreground: hsl(240 10% 3.9%);
 
-      --muted: 240 4.8% 95.9%;
-      --muted-foreground: 240 3.8% 46.1%;
+    --color-primary: hsl(240 5.9% 10%);
+    --color-primary-foreground: hsl(0 0% 98%);
 
-      --accent: 240 4.8% 95.9%;
-      --accent-foreground: 240 5.9% 10%;
+    --color-secondary: hsl(240 4.8% 95.9%);
+    --color-secondary-foreground: hsl(240 5.9% 10%);
 
-      --destructive: 0 84.2% 60.2%;
-      --destructive-foreground: 0 0% 98%;
+    --color-muted: hsl(240 4.8% 95.9%);
+    --color-muted-foreground: hsl(240 3.8% 46.1%);
 
-      --border: 240 5.9% 90%;
-      --input: 240 5.9% 90%;
-      --ring: 240 10% 3.9%;
+    --color-accent: hsl(240 4.8% 95.9%);
+    --color-accent-foreground: hsl(240 5.9% 10%);
 
-      --radius: 0.5rem;
-    }
+    --color-destructive: hsl(0 84.2% 60.2%);
+    --color-destructive-foreground: hsl(0 0% 98%);
 
-    .dark {
-      --background: 240 10% 3.9%;
-      --foreground: 0 0% 98%;
-
-      --card: 240 10% 3.9%;
-      --card-foreground: 0 0% 98%;
-
-      --popover: 240 10% 3.9%;
-      --popover-foreground: 0 0% 98%;
-
-      --primary: 0 0% 98%;
-      --primary-foreground: 240 5.9% 10%;
-
-      --secondary: 240 3.7% 15.9%;
-      --secondary-foreground: 0 0% 98%;
-
-      --muted: 240 3.7% 15.9%;
-      --muted-foreground: 240 5% 64.9%;
-
-      --accent: 240 3.7% 15.9%;
-      --accent-foreground: 0 0% 98%;
-
-      --destructive: 0 62.8% 30.6%;
-      --destructive-foreground: 0 0% 98%;
-
-      --border: 240 3.7% 15.9%;
-      --input: 240 3.7% 15.9%;
-      --ring: 240 4.9% 83.9%;
-    }
+    --color-border: hsl(240 5.9% 90%);
+    --color-input: hsl(240 5.9% 90%);
+    --color-ring: hsl(240 10% 3.9%);
   }
 
-  @layer base {
-    * {
-      @apply border-border;
-    }
+  .dark {
+    --color-background: hsl(240 10% 3.9%);
+    --color-foreground: hsl(0 0% 98%);
+
+    --color-card: hsl(240 10% 3.9%);
+    --color-card-foreground: hsl(0 0% 98%);
+
+    --color-popover: hsl(240 10% 3.9%);
+    --color-popover-foreground: hsl(0 0% 98%);
+
+    --color-primary: hsl(0 0% 98%);
+    --color-primary-foreground: hsl(240 5.9% 10%);
+
+    --color-secondary: hsl(240 3.7% 15.9%);
+    --color-secondary-foreground: hsl(0 0% 98%);
+
+    --color-muted: hsl(240 3.7% 15.9%);
+    --color-muted-foreground: hsl(240 5% 64.9%);
+
+    --color-accent: hsl(240 3.7% 15.9%);
+    --color-accent-foreground: hsl(0 0% 98%);
+
+    --color-destructive: hsl(0 62.8% 30.6%);
+    --color-destructive-foreground: hsl(0 0% 98%);
+
+    --color-border: hsl(240 3.7% 15.9%);
+    --color-input: hsl(240 3.7% 15.9%);
+    --color-ring: hsl(240 4.9% 83.9%);
   }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground font-sans;
+  }
+}
+
+@layer components {
+  /* Enhanced click feedback for interactive elements */
+  .interactive-element {
+    @apply transition-all duration-150 ease-out;
+  }
+
+  .interactive-element:active {
+    @apply scale-95;
+  }
+
+  /* Play button enhancements */
+  .play-button {
+    @apply transition-all duration-150 ease-out;
+  }
+
+  .play-button:active {
+    @apply scale-90 bg-accent;
+  }
+
+  /* Icon button enhancements */
+  .icon-button {
+    @apply transition-all duration-150 ease-out;
+  }
+
+  .icon-button:active {
+    @apply scale-90 bg-accent;
+  }
+
+  /* Track row enhancements */
+  .track-row {
+    @apply transition-all duration-150 ease-out;
+  }
+
+  .track-row:active {
+    @apply bg-accent/10 scale-[0.99];
+  }
+
+  /* Remove default button tap highlight on mobile */
+  button,
+  [role='button'] {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Custom tap highlight using our yellow color */
+  button:active,
+  [role='button']:active {
+    background-color: rgba(255, 200, 0, 0.2);
+  }
+
+  /* Custom Range Input Styling */
+  input[type='range'] {
+    @apply appearance-none bg-transparent;
+  }
+
+  input[type='range']::-webkit-slider-thumb {
+    @apply appearance-none w-3 h-3 rounded-full bg-black border-2 border-primary cursor-pointer transition-transform hover:scale-125;
+    margin-top: -4px; /* Align center with the track if needed */
+  }
+
+  input[type='range']::-moz-range-thumb {
+    @apply w-3 h-3 rounded-full bg-black border-2 border-primary cursor-pointer transition-transform hover:scale-125 border-none;
+  }
+
+  /* Remove default focus ring */
+  input[type='range']:focus {
+    outline: none;
+  }
+}

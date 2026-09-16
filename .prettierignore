@@ -1,0 +1,16 @@
+# Generated files
+convex/_generated/
+routeTree.gen.ts
+
+# Build outputs
+dist/
+.vinxi/
+.output/
+.next/
+
+# Dependencies
+node_modules/
+pnpm-lock.yaml
+
+# Context repos
+context-repos/
