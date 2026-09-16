@@ -39,10 +39,7 @@ function ChatHomeChrome({ children }: { children: React.ReactNode }) {
           <p className="truncate text-xs text-[var(--crate-ink-muted)]">
             {displayName || username || 'DJ'}
             {typeof trackCount === 'number' ? (
-              <span className="font-mono">
-                {' '}
-                · {trackCount} in crate
-              </span>
+              <span className="font-mono"> · {trackCount} in crate</span>
             ) : (
               <span> · loading crate…</span>
             )}
