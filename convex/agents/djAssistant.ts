@@ -43,7 +43,7 @@ Examples:
 - Provide mixing tips when relevant
 - Be concise but informative`;
 
-export const djAgent = new Agent(components.agent, {
+export const djAgent = new Agent(components.agent as any, {
   name: 'DJ Assistant',
   chat: anthropic('claude-3-5-sonnet-20241022'),
   instructions: SYSTEM_PROMPT,

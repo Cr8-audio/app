@@ -46,7 +46,7 @@ export async function authorizeThreadAccess(
   const userId = await requireUserId(ctx);
   const { userId: threadUserId } = await getThreadMetadata(
     ctx,
-    components.agent,
+    components.agent as any,
     { threadId },
   );
   if (threadUserId !== userId) {
@@ -65,7 +65,7 @@ export const getOrCreateChatThread = mutation({
     const userId = await requireUserId(ctx);
 
     const existing = await ctx.runQuery(
-      components.agent.threads.listThreadsByUserId,
+      (components.agent as any).threads.listThreadsByUserId,
       {
         userId,
         order: 'desc',
@@ -74,13 +74,14 @@ export const getOrCreateChatThread = mutation({
     );
 
     const match = existing.page.find(
-      (t) => t.title === DJ_ASSISTANT_THREAD_TITLE && t.status === 'active',
+      (t: { title?: string; status: string; _id: string }) =>
+        t.title === DJ_ASSISTANT_THREAD_TITLE && t.status === 'active',
     );
     if (match) {
       return { threadId: match._id };
     }
 
-    const threadId = await createThread(ctx, components.agent, {
+    const threadId = await createThread(ctx, components.agent as any, {
       userId,
       title: DJ_ASSISTANT_THREAD_TITLE,
     });
@@ -100,13 +101,13 @@ export const listThreadMessages = query({
   handler: async (ctx, args) => {
     await authorizeThreadAccess(ctx, args.threadId);
 
-    const paginated = await listMessages(ctx, components.agent, {
+    const paginated = await listMessages(ctx, components.agent as any, {
       threadId: args.threadId,
       paginationOpts: args.paginationOpts,
       excludeToolMessages: true,
     });
 
-    const streams = await syncStreams(ctx, components.agent, {
+    const streams = await syncStreams(ctx, components.agent as any, {
       threadId: args.threadId,
       streamArgs: args.streamArgs,
     });
@@ -139,7 +140,7 @@ export const sendMessage = mutation({
       throw new Error('Prompt is empty');
     }
 
-    const { messageId } = await saveMessage(ctx, components.agent, {
+    const { messageId } = await saveMessage(ctx, components.agent as any, {
       threadId,
       prompt: trimmed,
     });
