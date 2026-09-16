@@ -1,5 +1,5 @@
 import { Release } from '@/lib/types';
-import { DiscogsSDK } from '@crate.ai/discogs-sdk';
+import { DiscogsSDK } from '@cr8.audio/discogs-sdk';
 import { rateLimiter } from '@/lib/utils/rateLimiter';
 
 const discogs = new DiscogsSDK({
@@ -78,7 +78,7 @@ export const getDiscogsRelease = async (
   const response = await fetch(discogsUrl, {
     headers: {
       Authorization: `OAuth oauth_token=${accessToken}, oauth_token_secret=${accessTokenSecret}`,
-      'User-Agent': 'CrateApp/1.0 +https://crate.ai',
+      'User-Agent': 'CrateApp/1.0 +https://cr8.audio',
       Accept: 'application/json',
     },
   });

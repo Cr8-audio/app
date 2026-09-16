@@ -3,7 +3,7 @@ import {
   DiscogsSDK,
   type SearchParams,
   type SearchResult,
-} from '@crate.ai/discogs-sdk';
+} from '@cr8.audio/discogs-sdk';
 import { parse } from 'cookie';
 
 function buildSearchParams(originalQuery: string): SearchParams {
@@ -63,7 +63,7 @@ export const Route = createFileRoute('/api/external/discogs/search')({
             DiscogsConsumerKey: import.meta.env.VITE_DISCOGS_CONSUMER_KEY || '',
             DiscogsConsumerSecret:
               import.meta.env.VITE_DISCOGS_CONSUMER_SECRET || '',
-            userAgent: 'CrateApp/1.0 +https://crate.ai',
+            userAgent: 'CrateApp/1.0 +https://cr8.audio',
           });
 
           const tokenManager = sdk.auth.base.getTokenManager();
