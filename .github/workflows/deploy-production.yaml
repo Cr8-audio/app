@@ -59,5 +59,4 @@ jobs:
         with:
           apiToken: ${{ secrets.CLOUDFLARE_PRODUCTION_API_TOKEN }}
           accountId: 2f84630cfef8a6b13712d41a0e8d9afc
-          workingDirectory: dist/server
-          command: deploy
+          command: deploy --config dist/server/wrangler.json
