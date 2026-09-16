@@ -17,6 +17,9 @@ importers:
       '@auth/core':
         specifier: 0.37.0
         version: 0.37.0
+      '@convex-dev/agent':
+        specifier: 0.1.18
+        version: 0.1.18(ai@4.3.19(react@18.3.1)(zod@3.25.76))(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.29.3(react@18.3.1))(react@18.3.1)(typescript@5.9.3)(zod@3.25.76))(convex@1.29.3(react@18.3.1))(react@18.3.1)
       '@convex-dev/auth':
         specifier: ^0.0.90
         version: 0.0.90(@auth/core@0.37.0)(convex@1.29.3(react@18.3.1))(react@18.3.1)
@@ -87,7 +90,7 @@ importers:
         specifier: ^1.34.3
         version: 1.35.7
       ai:
-        specifier: ^4.0.26
+        specifier: ^4.3.16
         version: 4.3.19(react@18.3.1)(zod@3.25.76)
       class-variance-authority:
         specifier: ^0.7.0
@@ -98,6 +101,9 @@ importers:
       convex:
         specifier: ^1.29.3
         version: 1.29.3(react@18.3.1)
+      convex-helpers:
+        specifier: 0.1.104
+        version: 0.1.104(@standard-schema/spec@1.0.0)(convex@1.29.3(react@18.3.1))(react@18.3.1)(typescript@5.9.3)(zod@3.25.76)
       cookie:
         specifier: ^1.0.2
         version: 1.1.1
@@ -506,6 +512,17 @@ packages:
     engines: {node: '>=16'}
     cpu: [x64]
     os: [win32]
+
+  '@convex-dev/agent@0.1.18':
+    resolution: {integrity: sha512-eAoBBlHAmPmyA2VThLA7BEVVbCfuz+A1mTMph0AqKlWxUdPkipoaGVY7WekijHODKoC6MWlYCO6/jJ6KKjGxNQ==}
+    peerDependencies:
+      ai: ^4.3.16
+      convex: ^1.23.0
+      convex-helpers: ^0.1.100
+      react: ^18.3.1 || ^19.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
 
   '@convex-dev/auth@0.0.90':
     resolution: {integrity: sha512-aqw88EB042HvnaF4wcf/f/wTocmT2Bus2VDQRuV79cM0+8kORM0ICK/ByZ6XsHgQ9qr6TmidNbXm6QAgndrdpQ==}
@@ -2900,6 +2917,28 @@ packages:
 
   convert-source-map@2.0.0:
     resolution: {integrity: sha512-Kvp459HrV2FEJ1CAsi1Ku+MY3kasH19TFykTz2xWmMeq6bk2NU3XXvfJ+Q61m0xktWwt+1HSYf3JZsTms3aRJg==}
+
+  convex-helpers@0.1.104:
+    resolution: {integrity: sha512-7CYvx7T3K6n+McDTK4ZQaQNNGBzq5aWezpjzsKbOxPXx7oNcTP9wrpef3JxeXWFzkByJv5hRCjseh9B7eNJ7Ig==}
+    hasBin: true
+    peerDependencies:
+      '@standard-schema/spec': ^1.0.0
+      convex: ^1.24.0
+      hono: ^4.0.5
+      react: ^17.0.2 || ^18.0.0 || ^19.0.0
+      typescript: ^5.5
+      zod: ^3.22.4 || ^4.0.15
+    peerDependenciesMeta:
+      '@standard-schema/spec':
+        optional: true
+      hono:
+        optional: true
+      react:
+        optional: true
+      typescript:
+        optional: true
+      zod:
+        optional: true
 
   convex-test@0.0.41:
     resolution: {integrity: sha512-GPHeYFOi70n7UtW0eCEQFVhzl/+m8PvbWkDCbKpHLybI1MrScf4sVpGeM0cC2qmtxiduxa2nLPbehPalhh9oyQ==}
@@ -6225,6 +6264,14 @@ snapshots:
   '@cloudflare/workerd-windows-64@1.20251202.0':
     optional: true
 
+  '@convex-dev/agent@0.1.18(ai@4.3.19(react@18.3.1)(zod@3.25.76))(convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.29.3(react@18.3.1))(react@18.3.1)(typescript@5.9.3)(zod@3.25.76))(convex@1.29.3(react@18.3.1))(react@18.3.1)':
+    dependencies:
+      ai: 4.3.19(react@18.3.1)(zod@3.25.76)
+      convex: 1.29.3(react@18.3.1)
+      convex-helpers: 0.1.104(@standard-schema/spec@1.0.0)(convex@1.29.3(react@18.3.1))(react@18.3.1)(typescript@5.9.3)(zod@3.25.76)
+    optionalDependencies:
+      react: 18.3.1
+
   '@convex-dev/auth@0.0.90(@auth/core@0.37.0)(convex@1.29.3(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@auth/core': 0.37.0
@@ -8453,6 +8500,15 @@ snapshots:
   convert-hrtime@5.0.0: {}
 
   convert-source-map@2.0.0: {}
+
+  convex-helpers@0.1.104(@standard-schema/spec@1.0.0)(convex@1.29.3(react@18.3.1))(react@18.3.1)(typescript@5.9.3)(zod@3.25.76):
+    dependencies:
+      convex: 1.29.3(react@18.3.1)
+    optionalDependencies:
+      '@standard-schema/spec': 1.0.0
+      react: 18.3.1
+      typescript: 5.9.3
+      zod: 3.25.76
 
   convex-test@0.0.41(convex@1.29.3(react@18.3.1)):
     dependencies:
