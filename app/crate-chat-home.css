@@ -1,0 +1,92 @@
+/* Crate chat-home (nocturnal) — imported only for /analyze/chat via .crate-chat-home scope */
+
+@layer base {
+  .crate-chat-home {
+    --crate-void: hsl(240 12% 6%);
+    --crate-ink: hsl(40 12% 92%);
+    --crate-ink-muted: hsl(240 8% 58%);
+    --crate-panel: hsl(240 10% 9%);
+    --crate-panel-raised: hsl(240 9% 12%);
+    --crate-rule: hsl(240 8% 18%);
+    --crate-accent: hsl(42 95% 55%);
+    --crate-accent-soft: hsl(42 60% 40% / 0.18);
+    --crate-source: hsl(18 70% 55%);
+    --crate-ok: hsl(150 40% 45%);
+    --radius-card: 12px;
+    --radius-chip: 999px;
+    --radius-composer: 16px;
+
+    --color-background: 240 12% 6%;
+    --color-foreground: 40 12% 92%;
+    --color-card: 240 9% 12%;
+    --color-card-foreground: 40 12% 92%;
+    --color-muted: 240 10% 9%;
+    --color-muted-foreground: 240 8% 58%;
+    --color-border: 240 8% 18%;
+    --color-input: 240 8% 18%;
+    --color-ring: 42 95% 55%;
+    --color-accent: 42 60% 40%;
+    --color-accent-foreground: 40 12% 92%;
+    --color-primary: 42 95% 55%;
+    --color-primary-foreground: 240 12% 6%;
+
+    background-color: var(--crate-void);
+    color: var(--crate-ink);
+    background-image: none !important;
+  }
+
+  body.crate-chat-home {
+    background-color: var(--crate-void);
+    background-image: none !important;
+  }
+}
+
+@layer components {
+  .crate-chat-home button:active,
+  .crate-chat-home [role='button']:active {
+    background-color: transparent;
+  }
+
+  .crate-chat-home .crate-play-affordance:active {
+    background-color: var(--crate-accent);
+  }
+
+  @keyframes crate-dig-enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes crate-confirm-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 transparent;
+    }
+    40% {
+      box-shadow: 0 0 0 1px var(--crate-accent);
+    }
+  }
+
+  .crate-chat-home .crate-thread {
+    max-width: 42rem;
+  }
+
+  .crate-chat-home .crate-turn + .crate-turn {
+    margin-top: 12px;
+  }
+
+  .crate-chat-home .crate-dig-cluster {
+    margin-top: 20px;
+  }
+
+  .crate-chat-home .crate-composer-well {
+    border-radius: var(--radius-composer);
+    background: var(--crate-panel-raised);
+    border: 1px solid var(--crate-rule);
+  }
+}

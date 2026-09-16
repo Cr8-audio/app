@@ -4,6 +4,8 @@
 @import 'tailwindcss';
 @config "../tailwind.config.ts";
 
+@import './crate-chat-home.css';
+
 @theme {
   --font-sans: 'Inter Variable', 'Public Sans', 'Montserrat', sans-serif;
   --font-heading: 'Montserrat', 'Public Sans', sans-serif;
