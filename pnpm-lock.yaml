@@ -26,9 +26,9 @@ importers:
       '@convex-dev/migrations':
         specifier: ^0.3.1
         version: 0.3.1(convex@1.29.3(react@18.3.1))
-      '@crate.ai/discogs-sdk':
-        specifier: ^2.3.0
-        version: 2.3.0
+      '@cr8.audio/discogs-sdk':
+        specifier: ^3.0.0
+        version: 3.0.0
       '@fontsource-variable/inter':
         specifier: ^5.2.8
         version: 5.2.8
@@ -540,9 +540,9 @@ packages:
     peerDependencies:
       convex: ^1.24.8
 
-  '@crate.ai/discogs-sdk@2.3.0':
-    resolution: {integrity: sha512-V4VEEA/kMP42uZY3lhjCpJ1MXL8V6Vk1PGItuG2UauSORGhxHVHnYwHfI3tStxWpukD2mGjAtMQIlA30L7JgZQ==}
-    engines: {node: '>=18.0.0'}
+  '@cr8.audio/discogs-sdk@3.0.0':
+    resolution: {integrity: sha512-+UeHxFQIc+Zk0PCoU8oq3+ZRx5sVHbtqMgtLqSILc8LdNkY9JhORzsHej/qZcZmBlEkVcI9wcz7ty3YKqHdiaw==}
+    engines: {node: '>=20.0.0'}
 
   '@cspotcode/source-map-support@0.8.1':
     resolution: {integrity: sha512-IchNf6dN4tHoMFIn/7OE8LWZ19Y6q/67Bmf6vnGREv8RSbBVb9LPJxEcnwrcwX6ixSvaiGoomAUvu4YSxXrVgw==}
@@ -6293,7 +6293,7 @@ snapshots:
     dependencies:
       convex: 1.29.3(react@18.3.1)
 
-  '@crate.ai/discogs-sdk@2.3.0': {}
+  '@cr8.audio/discogs-sdk@3.0.0': {}
 
   '@cspotcode/source-map-support@0.8.1':
     dependencies:
