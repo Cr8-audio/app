@@ -11,9 +11,11 @@
 import type * as agents_djAssistant from "../agents/djAssistant.js";
 import type * as auth from "../auth.js";
 import type * as chat from "../chat.js";
+import type * as discogs from "../discogs.js";
 import type * as discogsCollection from "../discogsCollection.js";
 import type * as favorites from "../favorites.js";
 import type * as http from "../http.js";
+import type * as lib_discogsOAuth from "../lib/discogsOAuth.js";
 import type * as migrations from "../migrations.js";
 import type * as musicConnections from "../musicConnections.js";
 import type * as playlists from "../playlists.js";
@@ -32,9 +34,11 @@ declare const fullApi: ApiFromModules<{
   "agents/djAssistant": typeof agents_djAssistant;
   auth: typeof auth;
   chat: typeof chat;
+  discogs: typeof discogs;
   discogsCollection: typeof discogsCollection;
   favorites: typeof favorites;
   http: typeof http;
+  "lib/discogsOAuth": typeof lib_discogsOAuth;
   migrations: typeof migrations;
   musicConnections: typeof musicConnections;
   playlists: typeof playlists;
