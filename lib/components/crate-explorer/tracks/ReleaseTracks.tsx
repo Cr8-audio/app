@@ -1,9 +1,10 @@
 import { TrackList } from './TrackList';
 import { useEffect } from 'react';
 import { usePlayerStore } from '@/lib/stores';
-import { CrateTrack } from '@/lib/types';
+import type { CrateTrack } from '@/lib/types';
 import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
+import { toast } from 'sonner';
 
 interface Props {
   releaseId: number;
@@ -11,11 +12,11 @@ interface Props {
 
 const ReleaseTracks = ({ releaseId }: Props) => {
   const {
-    player,
-    isReady,
+    isPlaying,
     playingTrackId,
-    setPlayingTrackId,
     initializePlayer,
+    setQueue,
+    togglePlayPause,
   } = usePlayerStore();
 
   // Use Convex query instead of fetch
@@ -32,37 +33,15 @@ const ReleaseTracks = ({ releaseId }: Props) => {
   })) as CrateTrack[];
 
   useEffect(() => {
-    initializePlayer();
+    void initializePlayer();
   }, [initializePlayer]);
 
   const handlePlayToggle = async (track: CrateTrack) => {
-    if (!track.youtube_video_id || !player || !isReady) {
-      const reason = !track.youtube_video_id
-        ? 'No video ID available'
-        : !player
-          ? 'YouTube player not initialized'
-          : 'Player not ready';
-      console.error('Cannot play track:', reason);
-      return;
-    }
-
     try {
-      if (playingTrackId === track.position) {
-        player.pauseVideo();
-        setPlayingTrackId(null);
-      } else {
-        if (playingTrackId) {
-          player.stopVideo();
-        }
-
-        player.loadVideoById({
-          videoId: track.youtube_video_id,
-          suggestedQuality: 'small',
-        });
-
-        player.playVideo();
-        setPlayingTrackId(track.position);
-      }
+      const trackIndex = tracks.findIndex((item) => item.id === track.id);
+      setQueue(tracks, trackIndex);
+      const didStart = await togglePlayPause(track);
+      if (!didStart) toast.error('No playable audio found for this track');
     } catch (err) {
       console.error('Failed to play track:', err);
     }
@@ -89,9 +68,8 @@ const ReleaseTracks = ({ releaseId }: Props) => {
   return (
     <TrackList
       tracks={tracks}
-      playingTrackId={playingTrackId}
+      playingTrackId={isPlaying ? playingTrackId : null}
       onPlayToggle={handlePlayToggle}
-      isPlayerReady={isReady}
     />
   );
 };

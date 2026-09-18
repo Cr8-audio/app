@@ -49,6 +49,10 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_PRODUCTION_API_TOKEN }}
           accountId: 2f84630cfef8a6b13712d41a0e8d9afc
           command: deploy --config dist/server/wrangler.json --name crate-app-pr-${{ github.event.pull_request.number }} --domain ${{ env.PREVIEW_HOST }}
+          secrets: |
+            YOUTUBE_API_KEY
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
 
       - name: Comment PR with Preview URL
         uses: actions/github-script@v7
@@ -92,4 +96,3 @@ jobs:
                 body,
               });
             }
-

@@ -37,6 +37,7 @@ export interface YouTubeConfig {
     onReady: (event: YouTubeEvent) => void;
     onStateChange: (event: YouTubeEvent) => void;
     onError: (event: YouTubeEvent) => void;
+    onAutoplayBlocked?: (event: YouTubePlayerEvent) => void;
   };
 }
 
@@ -52,5 +53,9 @@ declare global {
 
 export interface YouTubeEvent {
   data: number;
+  target: YouTubePlayer;
+}
+
+export interface YouTubePlayerEvent {
   target: YouTubePlayer;
 }

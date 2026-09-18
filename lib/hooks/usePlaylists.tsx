@@ -5,7 +5,7 @@
 
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
-import { useCallback } from 'react';
+import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Id } from '@/convex/_generated/dataModel';
 
@@ -21,16 +21,28 @@ export function usePlaylists() {
   const removeTrackMutation = useMutation(
     api.playlists.removeTrackFromPlaylist,
   );
+  const reorderTracksMutation = useMutation(
+    api.playlists.reorderPlaylistTracks,
+  );
 
   const isLoading = playlistsData === undefined;
-  const playlists = playlistsData || [];
+  type PlaylistForUi = Exclude<typeof playlistsData, undefined>[number] & {
+    name?: string;
+  };
+  const playlists = useMemo(
+    () => (playlistsData || []) as PlaylistForUi[],
+    [playlistsData],
+  );
 
   const createPlaylist = useCallback(
     async (title: string, description?: string) => {
       try {
-        const playlist = await createPlaylistMutation({ title, description });
+        const { playlistId } = await createPlaylistMutation({
+          title,
+          description,
+        });
         toast.success(`Created playlist "${title}"`);
-        return playlist?.id || playlist?._id;
+        return playlistId;
       } catch (error) {
         console.error('Error creating playlist:', error);
         toast.error('Failed to create playlist');
@@ -56,11 +68,14 @@ export function usePlaylists() {
 
   const updatePlaylist = useCallback(
     async (
-      playlistId: Id<'playlists'>,
+      playlistId: Id<'playlists'> | string,
       updates: { title?: string; description?: string; is_public?: boolean },
     ) => {
       try {
-        await updatePlaylistMutation({ playlistId, ...updates });
+        await updatePlaylistMutation({
+          playlistId: playlistId as Id<'playlists'>,
+          ...updates,
+        });
         toast.success('Playlist updated');
       } catch (error) {
         console.error('Error updating playlist:', error);
@@ -93,9 +108,15 @@ export function usePlaylists() {
   );
 
   const removeTrackFromPlaylist = useCallback(
-    async (playlistId: Id<'playlists'>, trackId: Id<'tracks'>) => {
+    async (
+      playlistId: Id<'playlists'> | string,
+      trackId: Id<'tracks'> | string,
+    ) => {
       try {
-        await removeTrackMutation({ playlistId, trackId });
+        await removeTrackMutation({
+          playlistId: playlistId as Id<'playlists'>,
+          trackId: trackId as Id<'tracks'>,
+        });
         toast.success('Track removed from playlist');
       } catch (error) {
         console.error('Error removing track:', error);
@@ -104,6 +125,20 @@ export function usePlaylists() {
       }
     },
     [removeTrackMutation],
+  );
+
+  const reorderPlaylistTracks = useCallback(
+    async (playlistId: Id<'playlists'>, trackIds: Id<'tracks'>[]) => {
+      try {
+        await reorderTracksMutation({ playlistId, trackIds });
+        toast.success('Playlist order updated');
+      } catch (error) {
+        console.error('Error reordering playlist:', error);
+        toast.error('Failed to reorder playlist');
+        throw error;
+      }
+    },
+    [reorderTracksMutation],
   );
 
   // For backward compatibility - returns empty array without showing error
@@ -121,5 +156,6 @@ export function usePlaylists() {
     updatePlaylist,
     addTrackToPlaylist,
     removeTrackFromPlaylist,
+    reorderPlaylistTracks,
   };
 }

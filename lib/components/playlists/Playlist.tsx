@@ -1,19 +1,32 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Image } from '@unpic/react';
 import {
+  ArrowDown,
+  ArrowUp,
   Clock,
+  Copy,
+  ExternalLink,
   Globe,
   ListMusic,
   Lock,
   Pause,
+  Pencil,
   Play,
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Id } from '@/convex/_generated/dataModel';
 import { Button } from '@/lib/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/lib/components/ui/dialog';
+import { Input } from '@/lib/components/ui/input';
 import { Switch } from '@/lib/components/ui/switch';
 import { usePlaylists } from '@/lib/hooks/usePlaylists';
 import { usePlayerStore } from '@/lib/stores';
@@ -28,7 +41,12 @@ interface PlaylistProps {
 type PlaylistTrack = CrateTrack & { _id: Id<'tracks'> };
 
 export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
-  const { playlists, removeTrackFromPlaylist, updatePlaylist } = usePlaylists();
+  const {
+    playlists,
+    removeTrackFromPlaylist,
+    updatePlaylist,
+    reorderPlaylistTracks,
+  } = usePlaylists();
   const {
     initializePlayer,
     playingTrackId,
@@ -36,6 +54,10 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
     togglePlayPause,
     setQueue,
   } = usePlayerStore();
+  const [editOpen, setEditOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState('');
+  const [editDescription, setEditDescription] = useState('');
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
 
   const activePlaylist = playlists.find(
     (playlist) =>
@@ -50,10 +72,12 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
 
   const playlistId = activePlaylist._id || activePlaylist.id;
   const tracks = (activePlaylist.tracks ?? []) as PlaylistTrack[];
+  const sharePath = activePlaylist.id ? `/p/${activePlaylist.id}` : null;
 
-  const handlePlayTrack = (track: PlaylistTrack, index: number) => {
+  const handlePlayTrack = async (track: PlaylistTrack, index: number) => {
     setQueue(tracks, index);
-    togglePlayPause(track);
+    const didStart = await togglePlayPause(track);
+    if (!didStart) toast.error('No playable audio found for this track');
   };
 
   const handleRemoveTrack = async (trackId: Id<'tracks'>) => {
@@ -76,10 +100,54 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
     }
   };
 
+  const openEditor = () => {
+    setEditTitle(activePlaylist.title);
+    setEditDescription(activePlaylist.description ?? '');
+    setEditOpen(true);
+  };
+
+  const saveDetails = async () => {
+    if (!playlistId || !editTitle.trim() || isSavingDetails) return;
+    setIsSavingDetails(true);
+    try {
+      await updatePlaylist(playlistId, {
+        title: editTitle.trim(),
+        description: editDescription.trim(),
+      });
+      setEditOpen(false);
+    } finally {
+      setIsSavingDetails(false);
+    }
+  };
+
+  const copyShareLink = async () => {
+    if (!sharePath) return;
+    await navigator.clipboard.writeText(
+      `${window.location.origin}${sharePath}`,
+    );
+    toast.success('Public playlist link copied');
+  };
+
+  const moveTrack = async (index: number, direction: -1 | 1) => {
+    if (!activePlaylist._id) return;
+    const nextIndex = index + direction;
+    if (nextIndex < 0 || nextIndex >= tracks.length) return;
+
+    const reordered = [...tracks];
+    [reordered[index], reordered[nextIndex]] = [
+      reordered[nextIndex],
+      reordered[index],
+    ];
+    await reorderPlaylistTracks(
+      activePlaylist._id,
+      reordered.map((track) => track._id),
+    );
+  };
+
   return (
     <section aria-labelledby={`playlist-${playlistId}`}>
       <div className="flex flex-col gap-5 border-b border-border/70 pb-6 sm:flex-row sm:items-end sm:justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="text-xs font-semibold uppercase tracking-[0.16em] text-primary">
             Selected playlist
           </p>
@@ -92,25 +160,67 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
           <p className="mt-2 text-sm text-muted-foreground">
             {tracks.length} {tracks.length === 1 ? 'track' : 'tracks'}
           </p>
+          {activePlaylist.description && (
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+              {activePlaylist.description}
+            </p>
+          )}
         </div>
 
-        <div className="flex min-h-11 items-center gap-3 rounded-xl border border-border/70 bg-background px-3">
-          <Switch
-            id={`public-${playlistId}`}
-            checked={activePlaylist.is_public ?? false}
-            onCheckedChange={handleTogglePublic}
-          />
-          <label
-            htmlFor={`public-${playlistId}`}
-            className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground"
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-10 rounded-full px-4"
+            onClick={openEditor}
           >
-            {activePlaylist.is_public ? (
-              <Globe className="h-4 w-4 text-primary" />
-            ) : (
-              <Lock className="h-4 w-4 text-muted-foreground" />
-            )}
-            {activePlaylist.is_public ? 'Public' : 'Private'}
-          </label>
+            <Pencil className="mr-2 h-3.5 w-3.5" />
+            Edit details
+          </Button>
+
+          {activePlaylist.is_public && sharePath && (
+            <>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-10 rounded-full px-4"
+                onClick={() => void copyShareLink()}
+              >
+                <Copy className="mr-2 h-3.5 w-3.5" />
+                Copy link
+              </Button>
+              <a
+                href={sharePath}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex h-10 items-center rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+              >
+                Open
+                <ExternalLink className="ml-2 h-3.5 w-3.5" />
+              </a>
+            </>
+          )}
+
+          <div className="flex min-h-10 items-center gap-3 rounded-full border border-border/70 bg-background px-3">
+            <Switch
+              id={`public-${playlistId}`}
+              checked={activePlaylist.is_public ?? false}
+              onCheckedChange={handleTogglePublic}
+            />
+            <label
+              htmlFor={`public-${playlistId}`}
+              className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground"
+            >
+              {activePlaylist.is_public ? (
+                <Globe className="h-4 w-4 text-primary" />
+              ) : (
+                <Lock className="h-4 w-4 text-muted-foreground" />
+              )}
+              {activePlaylist.is_public ? 'Public' : 'Private'}
+            </label>
+          </div>
         </div>
       </div>
 
@@ -143,7 +253,7 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
                 >
                   <button
                     type="button"
-                    onClick={() => handlePlayTrack(track, index)}
+                    onClick={() => void handlePlayTrack(track, index)}
                     className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-muted"
                     aria-label={
                       isPlayingThisTrack && isPlaying
@@ -179,15 +289,37 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
                   <span className="text-xs tabular-nums text-muted-foreground">
                     {formatDuration(track.duration)}
                   </span>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-10 w-10 shrink-0 rounded-full"
-                    onClick={() => handleRemoveTrack(trackId)}
-                    aria-label={`Remove ${track.title}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex shrink-0 items-center">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 rounded-full"
+                      onClick={() => void moveTrack(index, -1)}
+                      disabled={index === 0}
+                      aria-label={`Move ${track.title} up`}
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 rounded-full"
+                      onClick={() => void moveTrack(index, 1)}
+                      disabled={index === tracks.length - 1}
+                      aria-label={`Move ${track.title} down`}
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-9 w-9 rounded-full"
+                      onClick={() => handleRemoveTrack(trackId)}
+                      aria-label={`Remove ${track.title}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </div>
               );
             })}
@@ -208,7 +340,7 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
                       <Clock className="h-3.5 w-3.5" /> Time
                     </span>
                   </th>
-                  <th className="w-16 px-4 py-3 text-right">
+                  <th className="w-36 px-4 py-3 text-right">
                     <span className="sr-only">Actions</span>
                   </th>
                 </tr>
@@ -231,7 +363,7 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
                           variant={isPlayingThisTrack ? 'default' : 'ghost'}
                           size="icon"
                           className="h-9 w-9 rounded-full"
-                          onClick={() => handlePlayTrack(track, index)}
+                          onClick={() => void handlePlayTrack(track, index)}
                           aria-label={
                             isPlayingThisTrack && isPlaying
                               ? `Pause ${track.title}`
@@ -272,15 +404,37 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
                         {formatDuration(track.duration)}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 rounded-full"
-                          onClick={() => handleRemoveTrack(trackId)}
-                          aria-label={`Remove ${track.title}`}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="inline-flex items-center">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-full"
+                            onClick={() => void moveTrack(index, -1)}
+                            disabled={index === 0}
+                            aria-label={`Move ${track.title} up`}
+                          >
+                            <ArrowUp className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-full"
+                            onClick={() => void moveTrack(index, 1)}
+                            disabled={index === tracks.length - 1}
+                            aria-label={`Move ${track.title} down`}
+                          >
+                            <ArrowDown className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-9 w-9 rounded-full"
+                            onClick={() => handleRemoveTrack(trackId)}
+                            aria-label={`Remove ${track.title}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -290,6 +444,60 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
           </div>
         </>
       )}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl tracking-tight">
+              Playlist details
+            </DialogTitle>
+          </DialogHeader>
+          <form
+            className="space-y-4"
+            onSubmit={(event) => {
+              event.preventDefault();
+              void saveDetails();
+            }}
+          >
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Title
+              </span>
+              <Input
+                value={editTitle}
+                onChange={(event) => setEditTitle(event.target.value)}
+                maxLength={80}
+              />
+            </label>
+            <label className="block space-y-2">
+              <span className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Listener note
+              </span>
+              <textarea
+                value={editDescription}
+                onChange={(event) => setEditDescription(event.target.value)}
+                rows={4}
+                maxLength={280}
+                className="w-full resize-none rounded-xl border border-input bg-background px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+              />
+            </label>
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setEditOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={!editTitle.trim() || isSavingDetails}
+              >
+                {isSavingDetails ? 'Saving…' : 'Save changes'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 };

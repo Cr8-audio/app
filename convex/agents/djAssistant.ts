@@ -45,6 +45,10 @@ Examples:
 
 export const djAgent = new Agent(components.agent as any, {
   name: 'DJ Assistant',
-  chat: anthropic('claude-opus-5'),
+  // AI SDK 4 supplies a temperature value for every request. Opus 5 rejects
+  // that legacy setting, while Sonnet 4.6 remains compatible with this agent
+  // version. Upgrade AI SDK + Convex Agent together before moving to a model
+  // that only accepts the newer sampling contract.
+  chat: anthropic('claude-sonnet-4-6'),
   instructions: SYSTEM_PROMPT,
 });

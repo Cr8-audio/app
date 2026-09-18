@@ -128,7 +128,6 @@ function OverviewContent({ username }: { username: string }) {
   const { getFavoriteTracksFromAllTracks } = useFavorites();
   const {
     initializePlayer,
-    isReady,
     isPlaying,
     playingTrackId,
     setQueue,
@@ -193,18 +192,13 @@ function OverviewContent({ username }: { username: string }) {
     });
   };
 
-  const playTrack = (track: CrateTrack) => {
-    if (!track.youtube_video_id) {
-      toast.error('No playable audio is available for this track yet.');
-      return;
+  const playTrack = async (track: CrateTrack) => {
+    const index = rotation.findIndex((candidate) => candidate.id === track.id);
+    setQueue(rotation, Math.max(0, index));
+    const didStart = await togglePlayPause(track);
+    if (!didStart) {
+      toast.error('No playable audio was found for this track.');
     }
-    if (!isReady) {
-      toast.message('The player is still getting ready.');
-      return;
-    }
-    const index = tracks.findIndex((candidate) => candidate.id === track.id);
-    setQueue(tracks, Math.max(0, index));
-    togglePlayPause(track);
   };
 
   return (
@@ -325,7 +319,7 @@ function OverviewContent({ username }: { username: string }) {
                 key={track.id}
                 track={track}
                 isPlaying={playingTrackId === track.id && isPlaying}
-                onPlay={() => playTrack(track)}
+                onPlay={() => void playTrack(track)}
               />
             ))}
           </div>

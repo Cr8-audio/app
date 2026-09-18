@@ -90,7 +90,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
   const isAlwaysBareRoute =
     normalizedPath === '/' ||
     normalizedPath === '/auth' ||
-    normalizedPath === '/connect/discogs/callback';
+    normalizedPath === '/connect/discogs/callback' ||
+    normalizedPath.startsWith('/p/') ||
+    normalizedPath.startsWith('/listen/');
   const isOnboardingRoute = normalizedPath === '/onboarding';
 
   if (isAlwaysBareRoute) return <>{children}</>;

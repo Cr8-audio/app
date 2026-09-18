@@ -4,6 +4,23 @@ import type {
   YouTubeEvent,
   CrateTrack,
 } from '@/lib/types';
+import {
+  searchTrackVideo,
+  validateTrackVideo,
+} from '@/lib/api-clients/youtube/service';
+
+const YOUTUBE_IFRAME_API_URL = 'https://www.youtube.com/iframe_api';
+const YOUTUBE_PLAYER_ID = 'youtube-player';
+const YOUTUBE_SCRIPT_ID = 'youtube-iframe-api';
+
+let youtubeApiPromise: Promise<void> | null = null;
+let playerInitializationPromise: Promise<void> | null = null;
+let playbackRequestId = 0;
+
+const resolvedVideoIds = new Map<string, string>();
+const videoResolutionPromises = new Map<string, Promise<string | null>>();
+const validatedVideoIds = new Map<string, string>();
+const videoValidationPromises = new Map<string, Promise<boolean>>();
 
 interface PlayerState {
   player: YTPlayer | null;
@@ -28,9 +45,9 @@ interface PlayerState {
   setPlayer: (player: YTPlayer) => void;
   setIsReady: (ready: boolean) => void;
   setPlayingTrackId: (trackId: string | null) => void;
-  playTrack: (track: CrateTrack) => void;
+  playTrack: (track: CrateTrack) => Promise<boolean>;
   pauseTrack: () => void;
-  togglePlayPause: (track: CrateTrack) => void;
+  togglePlayPause: (track: CrateTrack) => Promise<boolean>;
 
   // Queue management
   setQueue: (tracks: CrateTrack[], startIndex?: number) => void;
@@ -39,8 +56,8 @@ interface PlayerState {
   clearQueue: () => void;
 
   // Playback controls
-  playNext: () => void;
-  playPrevious: () => void;
+  playNext: () => Promise<boolean>;
+  playPrevious: () => Promise<boolean>;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
   setVolume: (volume: number) => void;
@@ -66,6 +83,123 @@ const shuffleArray = (array: number[]): number[] => {
   return shuffled;
 };
 
+const loadYouTubeIframeApi = (): Promise<void> => {
+  if (window.YT?.Player) return Promise.resolve();
+  if (youtubeApiPromise) return youtubeApiPromise;
+
+  youtubeApiPromise = new Promise<void>((resolve, reject) => {
+    const previousReadyCallback = window.onYouTubeIframeAPIReady;
+    const existingScript = document.querySelector<HTMLScriptElement>(
+      `script[src="${YOUTUBE_IFRAME_API_URL}"]`,
+    );
+    const script = existingScript ?? document.createElement('script');
+    // Assigned after the handlers are created so both can close over it.
+    // eslint-disable-next-line prefer-const
+    let timeoutId: number | undefined;
+
+    const cleanup = () => {
+      if (timeoutId !== undefined) window.clearTimeout(timeoutId);
+      script.removeEventListener('error', handleError);
+    };
+    const handleError = () => {
+      cleanup();
+      reject(new Error('Failed to load the YouTube iframe API'));
+    };
+
+    window.onYouTubeIframeAPIReady = () => {
+      try {
+        previousReadyCallback?.();
+      } finally {
+        cleanup();
+        if (window.YT?.Player) {
+          resolve();
+        } else {
+          reject(new Error('YouTube iframe API loaded without a player'));
+        }
+      }
+    };
+
+    script.addEventListener('error', handleError, { once: true });
+    if (!existingScript) {
+      script.id = YOUTUBE_SCRIPT_ID;
+      script.src = YOUTUBE_IFRAME_API_URL;
+      document.head.appendChild(script);
+    }
+
+    timeoutId = window.setTimeout(() => {
+      cleanup();
+      reject(new Error('Timed out loading the YouTube iframe API'));
+    }, 15_000);
+  }).catch((error) => {
+    youtubeApiPromise = null;
+    throw error;
+  });
+
+  return youtubeApiPromise;
+};
+
+const createPlayerContainer = () => {
+  document.getElementById(YOUTUBE_PLAYER_ID)?.remove();
+
+  const container = document.createElement('div');
+  container.id = YOUTUBE_PLAYER_ID;
+  container.setAttribute('aria-hidden', 'true');
+  container.style.cssText =
+    'position:fixed;top:-10000px;left:-10000px;width:200px;height:200px;pointer-events:none;';
+  document.body.appendChild(container);
+};
+
+const resolvePlayableTrack = async (
+  track: CrateTrack,
+): Promise<CrateTrack | null> => {
+  const knownVideoId =
+    resolvedVideoIds.get(track.id) ?? track.youtube_video_id ?? null;
+  if (knownVideoId) {
+    const validationKey = `${track.id}:${knownVideoId}`;
+    let isValid = validatedVideoIds.get(track.id) === knownVideoId;
+
+    if (!isValid) {
+      let validation = videoValidationPromises.get(validationKey);
+      if (!validation) {
+        validation = validateTrackVideo(knownVideoId, track).finally(() => {
+          videoValidationPromises.delete(validationKey);
+        });
+        videoValidationPromises.set(validationKey, validation);
+      }
+      isValid = await validation;
+    }
+
+    if (isValid) {
+      resolvedVideoIds.set(track.id, knownVideoId);
+      validatedVideoIds.set(track.id, knownVideoId);
+      return track.youtube_video_id === knownVideoId
+        ? track
+        : { ...track, youtube_video_id: knownVideoId };
+    }
+
+    // A stored mapping can become stale or simply be wrong. Never let it win
+    // over current artist/title evidence (for example, a recipe returned for
+    // Akufen's "Pickled Beets").
+    resolvedVideoIds.delete(track.id);
+    validatedVideoIds.delete(track.id);
+  }
+
+  let resolution = videoResolutionPromises.get(track.id);
+  if (!resolution) {
+    resolution = searchTrackVideo(track).finally(() => {
+      videoResolutionPromises.delete(track.id);
+    });
+    videoResolutionPromises.set(track.id, resolution);
+  }
+
+  const videoId = await resolution;
+  if (!videoId) return null;
+
+  resolvedVideoIds.set(track.id, videoId);
+  validatedVideoIds.set(track.id, videoId);
+  return { ...track, youtube_video_id: videoId };
+};
+
 export const usePlayerStore = create<PlayerState>((set, get) => ({
   player: null,
   isReady: false,
@@ -83,163 +217,234 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   timeUpdateInterval: null,
 
   initializePlayer: async () => {
-    try {
-      await new Promise<void>((resolve) => {
-        if (window.YT?.Player) {
-          resolve();
-          return;
+    if (typeof window === 'undefined') return;
+    if (get().player && get().isReady) return;
+    if (playerInitializationPromise) return playerInitializationPromise;
+
+    playerInitializationPromise = (async () => {
+      await loadYouTubeIframeApi();
+      if (get().player && get().isReady) return;
+
+      createPlayerContainer();
+
+      await new Promise<void>((resolve, reject) => {
+        let readyTimeoutId: number | undefined;
+        let didBecomeReady = false;
+
+        const ytPlayer = new window.YT.Player(YOUTUBE_PLAYER_ID, {
+          width: '200',
+          height: '200',
+          playerVars: {
+            autoplay: 0,
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            modestbranding: 1,
+            origin: window.location.origin,
+            enablejsapi: 1,
+            playsinline: 1,
+            rel: 0,
+            iv_load_policy: 3,
+          },
+          events: {
+            onReady: (event) => {
+              didBecomeReady = true;
+              if (readyTimeoutId !== undefined) {
+                window.clearTimeout(readyTimeoutId);
+              }
+              event.target.setVolume(get().volume);
+              set({ player: event.target, isReady: true });
+              resolve();
+            },
+            onStateChange: (event: YouTubeEvent) => {
+              if (event.data !== -1) {
+                set({ isReady: true });
+              }
+              const isPlaying = event.data === 1;
+              set({ isPlaying });
+
+              const { startTimeTracking, stopTimeTracking } = get();
+              if (isPlaying) {
+                startTimeTracking();
+              } else {
+                stopTimeTracking();
+              }
+
+              if (event.data === 0) {
+                const endedTrackId = get().playingTrackId;
+                window.setTimeout(() => {
+                  if (get().playingTrackId === endedTrackId) {
+                    void get().playNext();
+                  }
+                }, 1000);
+              }
+            },
+            onError: (event: YouTubeEvent) => {
+              if (![2, 5, 100, 101, 150, 153].includes(event.data)) return;
+
+              const failedTrackId = get().playingTrackId;
+              get().stopTimeTracking();
+              set((state) => ({
+                isPlaying: false,
+                currentTrack:
+                  state.currentTrack?.id === failedTrackId
+                    ? { ...state.currentTrack, youtube_video_id: null }
+                    : state.currentTrack,
+                queue: state.queue.map((track) =>
+                  track.id === failedTrackId
+                    ? { ...track, youtube_video_id: null }
+                    : track,
+                ),
+              }));
+
+              // These errors belong to the selected video, not the player.
+              // Keep the iframe alive so the next queue item can reuse it.
+              if (failedTrackId) {
+                resolvedVideoIds.delete(failedTrackId);
+                validatedVideoIds.delete(failedTrackId);
+                window.setTimeout(() => {
+                  if (get().playingTrackId === failedTrackId) {
+                    void get().playNext();
+                  }
+                }, 1000);
+              }
+            },
+            onAutoplayBlocked: () => {
+              get().stopTimeTracking();
+              set({ isPlaying: false });
+            },
+          },
+        });
+
+        if (!didBecomeReady) {
+          readyTimeoutId = window.setTimeout(() => {
+            ytPlayer.destroy();
+            reject(new Error('Timed out waiting for the YouTube player'));
+          }, 15_000);
         }
-
-        window.onYouTubeIframeAPIReady = resolve;
-        const tag = document.createElement('script');
-        tag.src = 'https://www.youtube.com/iframe_api';
-        document.head.appendChild(tag);
       });
-
-      const container = document.createElement('div');
-      container.id = 'youtube-player';
-      container.style.cssText =
-        'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;';
-      document.body.appendChild(container);
-
-      const ytPlayer = new window.YT.Player('youtube-player', {
-        width: '1',
-        height: '1',
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
-          modestbranding: 1,
-          origin: window.location.origin,
-          enablejsapi: 1,
-          playsinline: 1,
-          rel: 0,
-          iv_load_policy: 3,
-        },
-        events: {
-          onReady: () => {
-            set({ player: ytPlayer, isReady: true });
-            ytPlayer.setVolume(get().volume);
-          },
-          onStateChange: (event: YouTubeEvent) => {
-            if (event.data !== -1) {
-              set({ isReady: true });
-            }
-            const isPlaying = event.data === 1;
-            set({ isPlaying });
-
-            // Handle time tracking based on playback state
-            const { startTimeTracking, stopTimeTracking } = get();
-            if (isPlaying) {
-              startTimeTracking();
-            } else {
-              stopTimeTracking();
-            }
-
-            // Auto-play next track when current track ends
-            if (event.data === 0) {
-              // YT.PlayerState.ENDED
-              setTimeout(() => {
-                const { playNext } = get();
-                playNext();
-              }, 1000);
-            }
-          },
-          onError: (event: YouTubeEvent) => {
-            if ([2, 5, 100, 101, 150].includes(event.data)) {
-              set({ isReady: false, player: null, isPlaying: false });
-              // Try to play next track on error
-              setTimeout(() => {
-                const { playNext } = get();
-                playNext();
-              }, 1000);
-            }
-          },
-        },
-      });
-    } catch (error) {
+    })().catch((error) => {
+      console.error('Failed to initialize YouTube player:', error);
+      playerInitializationPromise = null;
+      document.getElementById(YOUTUBE_PLAYER_ID)?.remove();
       set({ isReady: false, player: null, isPlaying: false });
-    }
+    });
+
+    return playerInitializationPromise;
   },
 
   setPlayer: (player) => set({ player }),
   setIsReady: (ready) => set({ isReady: ready }),
   setPlayingTrackId: (trackId) => set({ playingTrackId: trackId }),
 
-  playTrack: (track) => {
-    const { player, isReady, startTimeTracking } = get();
-    if (!player || !isReady || !track.youtube_video_id) return;
+  playTrack: async (track) => {
+    const requestId = ++playbackRequestId;
 
-    player.loadVideoById({
-      videoId: track.youtube_video_id,
-      suggestedQuality: 'highres',
-    });
-    player.playVideo();
-    set({
-      playingTrackId: track.id,
-      currentTrack: track,
-      isPlaying: true,
-    });
-    startTimeTracking();
+    try {
+      const queuedTrack = get().queue.find((item) => item.id === track.id);
+      const resolvedTrack = await resolvePlayableTrack({
+        ...track,
+        youtube_video_id:
+          track.youtube_video_id ?? queuedTrack?.youtube_video_id ?? null,
+      });
+      if (!resolvedTrack || requestId !== playbackRequestId) return false;
+
+      await get().initializePlayer();
+      if (requestId !== playbackRequestId) return false;
+
+      const { player, isReady, startTimeTracking } = get();
+      if (!player || !isReady || !resolvedTrack.youtube_video_id) return false;
+
+      player.loadVideoById({
+        videoId: resolvedTrack.youtube_video_id,
+        suggestedQuality: 'highres',
+      });
+
+      set((state) => {
+        const queueIndex = state.queue.findIndex(
+          (item) => item.id === resolvedTrack.id,
+        );
+        const queue = state.queue.map((item) =>
+          item.id === resolvedTrack.id ? { ...item, ...resolvedTrack } : item,
+        );
+
+        return {
+          queue,
+          currentIndex: queueIndex === -1 ? state.currentIndex : queueIndex,
+          playingTrackId: resolvedTrack.id,
+          currentTrack: resolvedTrack,
+          isPlaying: true,
+          currentTime: 0,
+          duration: 0,
+        };
+      });
+
+      player.playVideo();
+      startTimeTracking();
+      return true;
+    } catch (error) {
+      console.error('Failed to play track:', error);
+      if (requestId === playbackRequestId) {
+        get().stopTimeTracking();
+        set({ isPlaying: false });
+      }
+      return false;
+    }
   },
 
   pauseTrack: () => {
     const { player, stopTimeTracking } = get();
     if (!player) return;
 
+    playbackRequestId += 1;
     player.pauseVideo();
     set({ isPlaying: false });
     stopTimeTracking();
   },
 
-  togglePlayPause: (track) => {
-    const {
-      player,
-      playingTrackId,
-      isPlaying,
-      queue,
-      startTimeTracking,
-      stopTimeTracking,
-    } = get();
-    if (!player || !track.youtube_video_id) return;
+  togglePlayPause: async (track) => {
+    const { currentTrack, playingTrackId, isPlaying } = get();
+    if (playingTrackId !== track.id) return get().playTrack(track);
 
-    if (playingTrackId === track.id) {
-      if (isPlaying) {
-        player.pauseVideo();
-        set({ isPlaying: false });
-        stopTimeTracking();
-      } else {
-        player.playVideo();
-        set({ isPlaying: true });
-        startTimeTracking();
-      }
-    } else {
-      // If playing a different track, update the queue and index
-      const trackIndex = queue.findIndex((t) => t.id === track.id);
-      if (trackIndex !== -1) {
-        set({ currentIndex: trackIndex });
-      }
+    if (isPlaying) {
+      get().pauseTrack();
+      return true;
+    }
 
-      player.loadVideoById({
-        videoId: track.youtube_video_id,
-        suggestedQuality: 'highres',
-      });
+    const activeTrack = currentTrack?.id === track.id ? currentTrack : track;
+    if (!activeTrack.youtube_video_id) return get().playTrack(activeTrack);
+
+    try {
+      await get().initializePlayer();
+      const { player, isReady, startTimeTracking } = get();
+      if (!player || !isReady) return false;
+
+      playbackRequestId += 1;
       player.playVideo();
-      set({
-        playingTrackId: track.id,
-        currentTrack: track,
-        isPlaying: true,
-      });
+      set({ isPlaying: true });
       startTimeTracking();
+      return true;
+    } catch (error) {
+      console.error('Failed to resume track:', error);
+      return false;
     }
   },
 
   setQueue: (tracks, startIndex = 0) => {
-    const indices = Array.from({ length: tracks.length }, (_, i) => i);
+    const queue = tracks.map((track) => {
+      const videoId =
+        resolvedVideoIds.get(track.id) ?? track.youtube_video_id ?? null;
+      return videoId === track.youtube_video_id
+        ? track
+        : { ...track, youtube_video_id: videoId };
+    });
+    const indices = Array.from({ length: queue.length }, (_, i) => i);
     set({
-      queue: tracks,
-      currentIndex: startIndex,
+      queue,
+      currentIndex:
+        queue.length === 0
+          ? 0
+          : Math.min(Math.max(startIndex, 0), queue.length - 1),
       shuffledIndices: shuffleArray(indices),
     });
   },
@@ -247,7 +452,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   addToQueue: (track) => {
     const { queue } = get();
     if (!queue.find((t) => t.id === track.id)) {
-      const newQueue = [...queue, track];
+      const videoId =
+        resolvedVideoIds.get(track.id) ?? track.youtube_video_id ?? null;
+      const queuedTrack =
+        videoId === track.youtube_video_id
+          ? track
+          : { ...track, youtube_video_id: videoId };
+      const newQueue = [...queue, queuedTrack];
       const indices = Array.from({ length: newQueue.length }, (_, i) => i);
       set({
         queue: newQueue,
@@ -277,6 +488,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
   clearQueue: () => {
     const { player, stopTimeTracking } = get();
+    playbackRequestId += 1;
     player?.stopVideo();
     stopTimeTracking();
     set({
@@ -291,7 +503,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     });
   },
 
-  playNext: () => {
+  playNext: async () => {
     const {
       queue,
       currentIndex,
@@ -300,7 +512,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       shuffledIndices,
       playTrack,
     } = get();
-    if (queue.length === 0) return;
+    if (queue.length === 0) return false;
 
     let nextIndex: number;
 
@@ -320,17 +532,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       currentIndex === queue.length - 1
     ) {
       // End of queue and no repeat
-      return;
+      return false;
     }
 
     const nextTrack = queue[nextIndex];
     if (nextTrack) {
-      set({ currentIndex: nextIndex });
-      playTrack(nextTrack);
+      return playTrack(nextTrack);
     }
+
+    return false;
   },
 
-  playPrevious: () => {
+  playPrevious: async () => {
     const {
       queue,
       currentIndex,
@@ -338,7 +551,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       shuffledIndices,
       playTrack,
     } = get();
-    if (queue.length === 0) return;
+    if (queue.length === 0) return false;
 
     let prevIndex: number;
 
@@ -355,9 +568,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 
     const prevTrack = queue[prevIndex];
     if (prevTrack) {
-      set({ currentIndex: prevIndex });
-      playTrack(prevTrack);
+      return playTrack(prevTrack);
     }
+
+    return false;
   },
 
   toggleShuffle: () => {
@@ -430,10 +644,20 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   reset: () => {
-    const { timeUpdateInterval } = get();
+    const { player, timeUpdateInterval } = get();
+    playbackRequestId += 1;
     if (timeUpdateInterval) {
       clearInterval(timeUpdateInterval);
     }
+    player?.destroy();
+    if (typeof document !== 'undefined') {
+      document.getElementById(YOUTUBE_PLAYER_ID)?.remove();
+    }
+    playerInitializationPromise = null;
+    resolvedVideoIds.clear();
+    videoResolutionPromises.clear();
+    validatedVideoIds.clear();
+    videoValidationPromises.clear();
 
     set({
       player: null,

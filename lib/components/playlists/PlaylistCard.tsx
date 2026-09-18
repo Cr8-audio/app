@@ -9,6 +9,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { Id } from '@/convex/_generated/dataModel';
+import { toast } from 'sonner';
 import { usePlaylists } from '@/lib/hooks/usePlaylists';
 import { usePlayerStore } from '@/lib/stores';
 import type { CrateTrack } from '@/lib/types';
@@ -56,7 +57,7 @@ export const PlaylistCard = ({
     (track) => track.id === playingTrackId || track._id === playingTrackId,
   );
 
-  const handlePlayPause = (event: MouseEvent) => {
+  const handlePlayPause = async (event: MouseEvent) => {
     event.stopPropagation();
     if (tracks.length > 0) {
       const activeIndex = tracks.findIndex(
@@ -65,7 +66,8 @@ export const PlaylistCard = ({
       const startIndex = activeIndex >= 0 ? activeIndex : 0;
       const targetTrack = tracks[startIndex];
       setQueue(tracks, startIndex);
-      togglePlayPause(targetTrack);
+      const didStart = await togglePlayPause(targetTrack);
+      if (!didStart) toast.error('No playable audio found for this playlist');
       onExpand();
     }
   };
@@ -140,7 +142,7 @@ export const PlaylistCard = ({
         <button
           type="button"
           className="absolute bottom-3 right-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-black shadow-sm transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
-          onClick={handlePlayPause}
+          onClick={(event) => void handlePlayPause(event)}
           disabled={tracks.length === 0}
           aria-label={
             isPlayingThisPlaylist && isPlaying

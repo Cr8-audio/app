@@ -223,7 +223,7 @@ export default function EnhancedChatInterface({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const user = useQuery(api.users.getCurrentUser);
   const { setOrderingConfig } = useTrackSorting(tracks);
-  const { togglePlayPause, initializePlayer, isReady } = usePlayerStore();
+  const { togglePlayPause, initializePlayer, setQueue } = usePlayerStore();
   const [showSuggestions, setShowSuggestions] = useState(true);
   const [matchedTracksMap, setMatchedTracksMap] = useState<
     Map<string, CrateTrack[]>
@@ -282,8 +282,8 @@ export default function EnhancedChatInterface({
   }, [getOrCreateChatThread]);
 
   useEffect(() => {
-    if (!isReady) initializePlayer();
-  }, [initializePlayer, isReady]);
+    void initializePlayer();
+  }, [initializePlayer]);
 
   const processTrackSuggestions = useCallback(
     (content: string, messageId: string) => {
@@ -353,20 +353,17 @@ export default function EnhancedChatInterface({
   };
 
   const handleTrackPlay = async (track: CrateTrack) => {
-    if (!isReady) {
-      toast.error('Player is still loading...');
-      return;
-    }
-    if (!track.youtube_video_id) {
-      toast.error('No audio available for this track');
-      return;
-    }
     try {
-      const { playingTrackId } = usePlayerStore.getState();
+      const { playingTrackId, isPlaying } = usePlayerStore.getState();
       const isCurrentlyPlaying = playingTrackId === track.id;
-      togglePlayPause(track);
+      setQueue([track], 0);
+      const didStart = await togglePlayPause(track);
+      if (!didStart) {
+        toast.error('No playable audio found for this track');
+        return;
+      }
       toast.success(
-        `${isCurrentlyPlaying ? 'Pausing' : 'Playing'} ${track.title}`,
+        `${isCurrentlyPlaying && isPlaying ? 'Paused' : 'Playing'} ${track.title}`,
       );
     } catch (error) {
       console.error('Error playing track:', error);

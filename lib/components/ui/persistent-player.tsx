@@ -21,7 +21,13 @@ import { CrateTrack } from '@/lib/types';
 import { Image } from '@unpic/react';
 import { toast } from 'sonner';
 
-const PersistentPlayer = () => {
+interface PersistentPlayerProps {
+  showFavoriteAction?: boolean;
+}
+
+const PersistentPlayer = ({
+  showFavoriteAction = true,
+}: PersistentPlayerProps) => {
   const {
     currentTrack,
     isPlaying,
@@ -434,7 +440,7 @@ const PersistentPlayer = () => {
           </div>
 
           <div className="col-start-2 row-start-1 flex items-center justify-end gap-1 sm:col-start-3 sm:gap-1.5">
-            {currentTrack && (
+            {showFavoriteAction && currentTrack && (
               <Button
                 type="button"
                 variant="ghost"
