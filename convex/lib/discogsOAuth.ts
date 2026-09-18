@@ -13,9 +13,16 @@ const ALLOWED_ORIGINS = new Set([
 const WORKERS_ORIGIN =
   /^https:\/\/crate-app(-pr-\d+)?\.[a-z0-9-]+\.workers\.dev$/;
 
+// PR previews on their own custom domain (`pr-<n>.cr8.audio`).
+const PREVIEW_ORIGIN = /^https:\/\/pr-\d+\.cr8\.audio$/;
+
 /** Only origins we deploy to may receive the Discogs OAuth redirect. */
 export function isAllowedAppOrigin(origin: string): boolean {
-  return ALLOWED_ORIGINS.has(origin) || WORKERS_ORIGIN.test(origin);
+  return (
+    ALLOWED_ORIGINS.has(origin) ||
+    WORKERS_ORIGIN.test(origin) ||
+    PREVIEW_ORIGIN.test(origin)
+  );
 }
 
 export const DISCOGS_CALLBACK_PATH = '/connect/discogs/callback';

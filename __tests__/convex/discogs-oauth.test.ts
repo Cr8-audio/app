@@ -18,6 +18,7 @@ describe('isAllowedAppOrigin', () => {
     'http://localhost:1995',
     'https://crate-app.someaccount.workers.dev',
     'https://crate-app-pr-144.someaccount.workers.dev',
+    'https://pr-155.cr8.audio',
   ])('allows %s', (origin) => {
     expect(isAllowedAppOrigin(origin)).toBe(true);
   });
@@ -29,6 +30,10 @@ describe('isAllowedAppOrigin', () => {
     'https://cr8.audio.evil.com',
     'https://evil-crate-app.someaccount.workers.dev',
     'https://crate-app-pr-1.someaccount.workers.dev.evil.com',
+    'http://pr-155.cr8.audio',
+    'https://pr-155.cr8.audio.evil.com',
+    'https://evil-pr-155.cr8.audio',
+    'https://pr-abc.cr8.audio',
     'http://localhost:3000',
   ])('rejects %s', (origin) => {
     expect(isAllowedAppOrigin(origin)).toBe(false);

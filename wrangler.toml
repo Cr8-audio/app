@@ -19,11 +19,13 @@ name = "crate-app"
 #   { pattern = "staging.cr8.audio", custom_domain = true }
 # ]
 
-# PR previews run on the cr8.audio account, on workers.dev only.
-# The workflow deploys each one as crate-app-pr-<number>.
+# PR previews run on the cr8.audio account. The workflow deploys each one as
+# crate-app-pr-<number> on its own custom domain, pr-<number>.cr8.audio.
 [env.preview]
 name = "crate-app-preview"
 account_id = "2f84630cfef8a6b13712d41a0e8d9afc"
+workers_dev = false
+preview_urls = false
 
 # Environment variables
 [env.production.vars]
