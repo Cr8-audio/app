@@ -49,7 +49,7 @@ const SignInButton = () => {
         {isLoading && <LoaderCircle className="h-4 w-4 animate-spin" />}
         {isLoading ? 'Redirecting to Discogs…' : 'Continue with Discogs'}
       </Button>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      {error && <p className="text-sm text-destructive">{error}</p>}
     </div>
   );
 };

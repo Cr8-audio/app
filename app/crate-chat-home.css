@@ -1,45 +1,4 @@
-/* Crate chat-home (nocturnal) — imported only for /analyze/chat via .crate-chat-home scope */
-
-@layer base {
-  .crate-chat-home {
-    --crate-void: hsl(240 12% 6%);
-    --crate-ink: hsl(40 12% 92%);
-    --crate-ink-muted: hsl(240 8% 58%);
-    --crate-panel: hsl(240 10% 9%);
-    --crate-panel-raised: hsl(240 9% 12%);
-    --crate-rule: hsl(240 8% 18%);
-    --crate-accent: hsl(42 95% 55%);
-    --crate-accent-soft: hsl(42 60% 40% / 0.18);
-    --crate-source: hsl(18 70% 55%);
-    --crate-ok: hsl(150 40% 45%);
-    --radius-card: 12px;
-    --radius-chip: 999px;
-    --radius-composer: 16px;
-
-    --color-background: 240 12% 6%;
-    --color-foreground: 40 12% 92%;
-    --color-card: 240 9% 12%;
-    --color-card-foreground: 40 12% 92%;
-    --color-muted: 240 10% 9%;
-    --color-muted-foreground: 240 8% 58%;
-    --color-border: 240 8% 18%;
-    --color-input: 240 8% 18%;
-    --color-ring: 42 95% 55%;
-    --color-accent: 42 60% 40%;
-    --color-accent-foreground: 40 12% 92%;
-    --color-primary: 42 95% 55%;
-    --color-primary-foreground: 240 12% 6%;
-
-    background-color: var(--crate-void);
-    color: var(--crate-ink);
-    background-image: none !important;
-  }
-
-  body.crate-chat-home {
-    background-color: var(--crate-void);
-    background-image: none !important;
-  }
-}
+/* Chat-home layout and motion. Colors come from the global nocturnal tokens in globals.css. */
 
 @layer components {
   .crate-chat-home button:active,

@@ -53,7 +53,7 @@ function takeSignInNonce(): string | null {
 
 /**
  * Discogs redirects here after the user approves (or denies) access, for both
- * "Continue with Discogs" (this tab holds a sign-in nonce) and connecting
+ * "Continue with Discogs"(this tab holds a sign-in nonce) and connecting
  * Discogs from settings. The token exchange always runs in Convex.
  */
 function DiscogsCallbackPage() {
@@ -128,14 +128,14 @@ function DiscogsCallbackPage() {
     return (
       <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3">
         <LoadingSpinner />
-        <p className="text-sm text-gray-600">Talking to Discogs…</p>
+        <p className="text-sm text-muted-foreground">Talking to Discogs…</p>
       </div>
     );
   }
 
   return (
     <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4">
-      <p className="text-gray-800">{error}</p>
+      <p className="text-foreground">{error}</p>
       <Button
         variant="outline"
         onClick={() => navigate({ to: takeReturnPath() ?? '/', replace: true })}

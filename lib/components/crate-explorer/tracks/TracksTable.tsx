@@ -139,7 +139,7 @@ export default function TracksTable() {
 
   const handleAddToQueue = (track: CrateTrack) => {
     addToQueue(track);
-    toast.success(`Added "${track.title}" to queue`);
+    toast.success(`Added "${track.title}"to queue`);
   };
 
   const handleToggleFavorite = async (track: CrateTrack) => {
@@ -248,8 +248,8 @@ export default function TracksTable() {
                 className={cn(
                   'h-4 w-4 transition-colors',
                   isFavorite
-                    ? 'fill-red-500 text-red-500'
-                    : 'text-gray-400 hover:text-red-500',
+                    ? 'fill-red-500 text-destructive'
+                    : 'text-muted-foreground/70 hover:text-destructive',
                 )}
               />
             </Button>
@@ -272,7 +272,7 @@ export default function TracksTable() {
                   size="icon"
                   className={cn(
                     'h-8 w-8 relative z-10',
-                    playingTrackId === track.id && 'bg-main/20',
+                    playingTrackId === track.id && 'bg-primary/20',
                   )}
                   onClick={() => handlePlayToggle(track)}
                   disabled={!track.youtube_video_id || !isReady}
@@ -280,22 +280,22 @@ export default function TracksTable() {
                   {playingTrackId === track.id && isPlaying ? (
                     <>
                       <Pause className="h-4 w-4" />
-                      <span className="absolute inset-0 rounded-full animate-pulse-light bg-main/30" />
+                      <span className="absolute inset-0 rounded-full animate-pulse-light bg-primary/30" />
                     </>
                   ) : (
                     <Play className="h-4 w-4" />
                   )}
                 </Button>
                 {playingTrackId === track.id && (
-                  <div className="absolute -bottom-1 left-0 right-0 h-1 bg-gray-200 rounded-full overflow-hidden">
+                  <div className="absolute -bottom-1 left-0 right-0 h-1 bg-accent rounded-full overflow-hidden">
                     <div
-                      className="h-full bg-main transition-all duration-300 ease-linear"
+                      className="h-full bg-primary transition-all duration-300 ease-linear text-primary-foreground"
                       style={{ width: `${playbackProgress[track.id] || 0}%` }}
                     />
                   </div>
                 )}
                 {track.position && (
-                  <span className="absolute -top-2 -right-2 text-xs px-1 bg-gray-100 rounded-full text-gray-500">
+                  <span className="absolute -top-2 -right-2 text-xs px-1 bg-muted rounded-full text-muted-foreground">
                     {track.position}
                   </span>
                 )}
@@ -312,10 +312,10 @@ export default function TracksTable() {
                   />
                 </div>
               ) : (
-                <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-sm" />
+                <div className="h-10 w-10 flex-shrink-0 bg-muted rounded-sm" />
               )}
 
-              <div className="text-sm font-medium text-gray-900 max-w-[16rem] relative overflow-hidden">
+              <div className="text-sm font-medium text-foreground max-w-[16rem] relative overflow-hidden">
                 <div
                   className={cn(
                     'whitespace-nowrap',
@@ -376,7 +376,7 @@ export default function TracksTable() {
           const isHovering = rowHover === track.id;
           const artist = formatArtists(track.artist, track.extra_artists);
           return (
-            <div className="text-sm text-gray-500 max-w-[18rem] overflow-hidden">
+            <div className="text-sm text-muted-foreground max-w-[18rem] overflow-hidden">
               <div
                 className={cn(
                   'whitespace-nowrap',
@@ -408,10 +408,10 @@ export default function TracksTable() {
             track.styles && formatList(track.styles),
           ]
             .filter(Boolean)
-            .join(' / ');
+            .join('/ ');
 
           return (
-            <div className="text-sm text-gray-500 max-w-[18rem] relative overflow-hidden">
+            <div className="text-sm text-muted-foreground max-w-[18rem] relative overflow-hidden">
               <div
                 className={cn(
                   'whitespace-nowrap',
@@ -436,7 +436,9 @@ export default function TracksTable() {
           </div>
         ),
         cell: ({ getValue }) => (
-          <div className="text-sm text-gray-500">{getValue() || '-'}</div>
+          <div className="text-sm text-muted-foreground">
+            {getValue() || '-'}
+          </div>
         ),
       }),
     ],
@@ -502,45 +504,45 @@ export default function TracksTable() {
     return (
       <div className="space-y-4 ml-8">
         <div className="flex justify-between items-center mb-4">
-          <div className="w-40 h-9 bg-gray-200 animate-pulse rounded-md"></div>
-          <div className="w-64 h-9 bg-gray-200 animate-pulse rounded-md"></div>
+          <div className="w-40 h-9 bg-accent animate-pulse rounded-md"></div>
+          <div className="w-64 h-9 bg-accent animate-pulse rounded-md"></div>
         </div>
 
         <div className="relative overflow-x-auto rounded-md border">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+          <table className="min-w-full divide-y divide-border">
+            <thead className="bg-muted">
               <tr>
                 {Array.from({ length: 6 }).map((_, i) => (
                   <th key={i} className="px-4 py-3">
-                    <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
+                    <div className="h-4 bg-accent rounded w-20 animate-pulse"></div>
                   </th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {Array.from({ length: 8 }).map((_, rowIndex) => (
-                <tr key={rowIndex} className="border-b border-gray-100">
+                <tr key={rowIndex} className="border-b border-border">
                   <td className="px-4 py-4">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
+                    <div className="w-8 h-8 bg-accent rounded-full animate-pulse"></div>
                   </td>
                   <td className="px-4 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
-                      <div className="h-10 w-10 bg-gray-200 rounded-sm animate-pulse"></div>
-                      <div className="h-4 bg-gray-200 rounded w-40 animate-pulse"></div>
+                      <div className="w-8 h-8 bg-accent rounded-full animate-pulse"></div>
+                      <div className="h-10 w-10 bg-accent rounded-sm animate-pulse"></div>
+                      <div className="h-4 bg-accent rounded w-40 animate-pulse"></div>
                     </div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
+                    <div className="h-4 bg-accent rounded w-24 animate-pulse"></div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-36 animate-pulse"></div>
+                    <div className="h-4 bg-accent rounded w-36 animate-pulse"></div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-10 animate-pulse"></div>
+                    <div className="h-4 bg-accent rounded w-10 animate-pulse"></div>
                   </td>
                   <td className="px-4 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-12 animate-pulse"></div>
+                    <div className="h-4 bg-accent rounded w-12 animate-pulse"></div>
                   </td>
                 </tr>
               ))}
@@ -552,7 +554,7 @@ export default function TracksTable() {
   }
 
   if (error) {
-    return <div className="text-red-500">{error}</div>;
+    return <div className="text-destructive">{error}</div>;
   }
 
   // Add a custom CSS block at the end of the component
@@ -614,15 +616,15 @@ export default function TracksTable() {
       </div>
 
       <div className="relative overflow-x-auto rounded-md border">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+        <table className="min-w-full divide-y divide-border">
+          <thead className="bg-muted">
             {table.getHeaderGroups().map((headerGroup) => (
               <tr key={headerGroup.id}>
                 {headerGroup.headers.map((header) => (
                   <th
                     key={header.id}
                     scope="col"
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                    className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider"
                   >
                     {header.isPlaceholder
                       ? null
@@ -635,7 +637,7 @@ export default function TracksTable() {
               </tr>
             ))}
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="bg-card divide-y divide-border">
             {table.getRowModel().rows.map((row) => {
               const track = row.original;
               const isSuggested = suggestedTrackIds.has(track.id);
@@ -659,12 +661,12 @@ export default function TracksTable() {
                     'hover:bg-accent/5 group relative transition-all duration-300',
                     isSuggested && [
                       'bg-gradient-to-r from-main/[0.03] to-main/[0.07]',
-                      'border-l-[3px] border-main/40',
+                      'border-l-[3px] border-primary/40',
                       'shadow-[inset_0_0_40px_rgba(0,0,0,0.02)]',
                     ],
                     playingTrackId === track.id && [
-                      'bg-main/[0.03]',
-                      'border-l-[3px] border-main/60',
+                      'bg-primary/[0.03]',
+                      'border-l-[3px] border-primary/60',
                       'shadow-[inset_0_0_30px_rgba(0,0,0,0.01)]',
                     ],
                   )}
@@ -681,10 +683,10 @@ export default function TracksTable() {
                   ))}
 
                   {isFirstSuggested && (
-                    <div className="absolute -top-px left-0 right-0 h-px bg-main/10" />
+                    <div className="absolute -top-px left-0 right-0 h-px bg-primary/10" />
                   )}
                   {isLastSuggested && (
-                    <div className="absolute -bottom-px left-0 right-0 h-px bg-main/10" />
+                    <div className="absolute -bottom-px left-0 right-0 h-px bg-primary/10" />
                   )}
                 </tr>
               );
@@ -786,24 +788,24 @@ export default function TracksTable() {
       </Dialog>
 
       {/* Pagination Controls - Fixed position at the bottom */}
-      <div className="flex items-center justify-between sticky bottom-4 bg-white border rounded-md p-2 shadow-sm">
+      <div className="flex items-center justify-between sticky bottom-4 bg-card border rounded-md p-2 shadow-sm">
         <div className="flex items-center gap-2">
-          <p className="text-sm text-gray-500">
-            Page{' '}
+          <p className="text-sm text-muted-foreground">
+            Page{''}
             <strong>
-              {table.getState().pagination.pageIndex + 1} of{' '}
+              {table.getState().pagination.pageIndex + 1} of{''}
               {table.getPageCount()}
             </strong>
           </p>
-          <p className="text-sm text-gray-500 hidden md:block">
-            | Displaying {table.getRowModel().rows.length} of{' '}
+          <p className="text-sm text-muted-foreground hidden md:block">
+            | Displaying {table.getRowModel().rows.length} of{''}
             {table.getFilteredRowModel().rows.length} tracks
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <div className="flex items-center gap-1">
-            <span className="text-sm text-gray-500 hidden sm:inline">
+            <span className="text-sm text-muted-foreground hidden sm:inline">
               Rows per page:
             </span>
             <Select

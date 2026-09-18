@@ -1,154 +1,139 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Public+Sans:wght@400;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
 @import '@fontsource-variable/inter';
 @import 'tailwindcss';
-@config "../tailwind.config.ts";
+@plugin 'tailwindcss-animate';
 
 @import './crate-chat-home.css';
 
+/*
+ * Crate's one design system: "nocturnal". Dark only. Every color, radius and
+ * font in the app comes from these tokens; use the semantic names
+ * (bg-card, text-muted-foreground, border-border, bg-primary, …) rather than
+ * raw palette colors.
+ */
 @theme {
-  --font-sans: 'Inter Variable', 'Public Sans', 'Montserrat', sans-serif;
-  --font-heading: 'Montserrat', 'Public Sans', sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace;
+
+  /* Surfaces: void (page) < panel (cards, sidebar) < raised (menus, inputs) */
+  --color-background: hsl(240 12% 6%);
+  --color-foreground: hsl(40 12% 92%);
+  --color-card: hsl(240 10% 9%);
+  --color-card-foreground: hsl(40 12% 92%);
+  --color-popover: hsl(240 9% 12%);
+  --color-popover-foreground: hsl(40 12% 92%);
+  --color-muted: hsl(240 10% 9%);
+  --color-muted-foreground: hsl(240 8% 60%);
+  --color-secondary: hsl(240 9% 12%);
+  --color-secondary-foreground: hsl(40 12% 92%);
+  /* Hover / selected surface */
+  --color-accent: hsl(240 9% 15%);
+  --color-accent-foreground: hsl(40 12% 92%);
+
+  /* Amber: the one brand color, for primary actions and "now playing" */
+  --color-primary: hsl(42 95% 55%);
+  --color-primary-foreground: hsl(240 12% 6%);
+
+  --color-destructive: hsl(0 72% 60%);
+  --color-destructive-foreground: hsl(40 12% 92%);
+  --color-ok: hsl(150 40% 50%);
+  --color-source: hsl(18 70% 55%);
+
+  --color-border: hsl(240 8% 18%);
+  --color-input: hsl(240 8% 18%);
+  --color-ring: hsl(42 95% 55%);
+
+  /* Chat-home names for the same tokens */
+  --color-crate-void: var(--color-background);
+  --color-crate-ink: var(--color-foreground);
+  --color-crate-ink-muted: var(--color-muted-foreground);
+  --color-crate-panel: var(--color-card);
+  --color-crate-panel-raised: var(--color-popover);
+  --color-crate-rule: var(--color-border);
+  --color-crate-accent: var(--color-primary);
+  --color-crate-accent-soft: hsl(42 60% 40% / 0.18);
+  --color-crate-source: var(--color-source);
+  --color-crate-ok: var(--color-ok);
 
   --radius-base: 0.5rem;
+  --radius-card: 12px;
+  --radius-chip: 999px;
+  --radius-composer: 16px;
+
+  --animate-marquee: marquee 5s linear infinite;
+
+  @keyframes marquee {
+    0% {
+      transform: translateX(0%);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
 }
 
-@layer base {
-  :root {
-    --color-background: hsl(0 0% 100%);
-    --color-foreground: hsl(240 10% 3.9%);
+:root {
+  color-scheme: dark;
 
-    --color-card: hsl(0 0% 100%);
-    --color-card-foreground: hsl(240 10% 3.9%);
-
-    --color-popover: hsl(0 0% 100%);
-    --color-popover-foreground: hsl(240 10% 3.9%);
-
-    --color-primary: hsl(240 5.9% 10%);
-    --color-primary-foreground: hsl(0 0% 98%);
-
-    --color-secondary: hsl(240 4.8% 95.9%);
-    --color-secondary-foreground: hsl(240 5.9% 10%);
-
-    --color-muted: hsl(240 4.8% 95.9%);
-    --color-muted-foreground: hsl(240 3.8% 46.1%);
-
-    --color-accent: hsl(240 4.8% 95.9%);
-    --color-accent-foreground: hsl(240 5.9% 10%);
-
-    --color-destructive: hsl(0 84.2% 60.2%);
-    --color-destructive-foreground: hsl(0 0% 98%);
-
-    --color-border: hsl(240 5.9% 90%);
-    --color-input: hsl(240 5.9% 90%);
-    --color-ring: hsl(240 10% 3.9%);
-  }
-
-  .dark {
-    --color-background: hsl(240 10% 3.9%);
-    --color-foreground: hsl(0 0% 98%);
-
-    --color-card: hsl(240 10% 3.9%);
-    --color-card-foreground: hsl(0 0% 98%);
-
-    --color-popover: hsl(240 10% 3.9%);
-    --color-popover-foreground: hsl(0 0% 98%);
-
-    --color-primary: hsl(0 0% 98%);
-    --color-primary-foreground: hsl(240 5.9% 10%);
-
-    --color-secondary: hsl(240 3.7% 15.9%);
-    --color-secondary-foreground: hsl(0 0% 98%);
-
-    --color-muted: hsl(240 3.7% 15.9%);
-    --color-muted-foreground: hsl(240 5% 64.9%);
-
-    --color-accent: hsl(240 3.7% 15.9%);
-    --color-accent-foreground: hsl(0 0% 98%);
-
-    --color-destructive: hsl(0 62.8% 30.6%);
-    --color-destructive-foreground: hsl(0 0% 98%);
-
-    --color-border: hsl(240 3.7% 15.9%);
-    --color-input: hsl(240 3.7% 15.9%);
-    --color-ring: hsl(240 4.9% 83.9%);
-  }
+  /* Raw values for CSS that reads var(--crate-*) directly */
+  --crate-void: var(--color-background);
+  --crate-ink: var(--color-foreground);
+  --crate-ink-muted: var(--color-muted-foreground);
+  --crate-panel: var(--color-card);
+  --crate-panel-raised: var(--color-popover);
+  --crate-rule: var(--color-border);
+  --crate-accent: var(--color-primary);
+  --crate-accent-soft: hsl(42 60% 40% / 0.18);
+  --crate-source: var(--color-source);
+  --crate-ok: var(--color-ok);
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
   body {
-    @apply bg-background text-foreground font-sans;
-  }
-}
-
-@layer components {
-  /* Enhanced click feedback for interactive elements */
-  .interactive-element {
-    @apply transition-all duration-150 ease-out;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 
-  .interactive-element:active {
-    @apply scale-95;
+  ::selection {
+    background-color: hsl(42 60% 40% / 0.35);
   }
 
-  /* Play button enhancements */
-  .play-button {
-    @apply transition-all duration-150 ease-out;
-  }
-
-  .play-button:active {
-    @apply scale-90 bg-accent;
-  }
-
-  /* Icon button enhancements */
-  .icon-button {
-    @apply transition-all duration-150 ease-out;
-  }
-
-  .icon-button:active {
-    @apply scale-90 bg-accent;
-  }
-
-  /* Track row enhancements */
-  .track-row {
-    @apply transition-all duration-150 ease-out;
-  }
-
-  .track-row:active {
-    @apply bg-accent/10 scale-[0.99];
-  }
-
-  /* Remove default button tap highlight on mobile */
   button,
   [role='button'] {
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Custom tap highlight using our yellow color */
-  button:active,
-  [role='button']:active {
-    background-color: rgba(255, 200, 0, 0.2);
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
   }
+}
 
-  /* Custom Range Input Styling */
+@layer components {
+  /* Range inputs (player seek and volume) */
   input[type='range'] {
     @apply appearance-none bg-transparent;
   }
 
+  input[type='range']::-webkit-slider-runnable-track {
+    @apply h-1 rounded-full bg-border;
+  }
+
+  input[type='range']::-moz-range-track {
+    @apply h-1 rounded-full bg-border;
+  }
+
   input[type='range']::-webkit-slider-thumb {
-    @apply appearance-none w-3 h-3 rounded-full bg-black border-2 border-primary cursor-pointer transition-transform hover:scale-125;
-    margin-top: -4px; /* Align center with the track if needed */
+    @apply appearance-none w-3 h-3 rounded-full bg-foreground cursor-pointer transition-transform hover:scale-125;
+    margin-top: -4px;
   }
 
   input[type='range']::-moz-range-thumb {
-    @apply w-3 h-3 rounded-full bg-black border-2 border-primary cursor-pointer transition-transform hover:scale-125 border-none;
+    @apply w-3 h-3 rounded-full bg-foreground border-none cursor-pointer transition-transform hover:scale-125;
   }
 
-  /* Remove default focus ring */
   input[type='range']:focus {
     outline: none;
   }

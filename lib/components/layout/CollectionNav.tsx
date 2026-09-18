@@ -22,8 +22,8 @@ export function CollectionNav() {
           className={cn(
             'px-4 py-2 text-sm font-medium rounded-full transition-colors',
             pathname === item.href
-              ? 'bg-main text-black border-2 border-black'
-              : 'text-gray-500 hover:text-gray-900 border-2 border-transparent',
+              ? 'bg-primary text-primary-foreground border border-border'
+              : 'text-muted-foreground hover:text-foreground border border-transparent',
           )}
         >
           {item.name}

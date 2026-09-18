@@ -82,7 +82,7 @@ export default function PlaylistCreationModal({
       });
 
       toast.success(
-        `Created playlist "${playlistName.trim()}" with ${trackCount} ${
+        `Created playlist "${playlistName.trim()}"with ${trackCount} ${
           trackCount === 1 ? 'track' : 'tracks'
         }`,
       );
@@ -103,9 +103,9 @@ export default function PlaylistCreationModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col bg-bg border-2 border-black shadow-light">
+      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col bg-background border border-border ">
         <DialogHeader>
-          <DialogTitle className="text-text font-heading">
+          <DialogTitle className="text-foreground ">
             Create Playlist from AI Suggestions
           </DialogTitle>
         </DialogHeader>
@@ -114,7 +114,10 @@ export default function PlaylistCreationModal({
           {/* Playlist Info */}
           <div className="space-y-3">
             <div>
-              <Label htmlFor="playlist-name" className="text-text font-medium">
+              <Label
+                htmlFor="playlist-name"
+                className="text-foreground font-medium"
+              >
                 Playlist Name
               </Label>
               <Input
@@ -122,13 +125,13 @@ export default function PlaylistCreationModal({
                 value={playlistName}
                 onChange={(e) => setPlaylistName(e.target.value)}
                 placeholder="Enter playlist name..."
-                className="mt-1 border-2 border-black bg-white focus:ring-main focus:border-main"
+                className="mt-1 border border-border bg-card focus:ring-primary focus:border-primary"
               />
             </div>
             <div>
               <Label
                 htmlFor="playlist-description"
-                className="text-text font-medium"
+                className="text-foreground font-medium"
               >
                 Description (Optional)
               </Label>
@@ -139,7 +142,7 @@ export default function PlaylistCreationModal({
                   setDescription(e.target.value)
                 }
                 placeholder="Describe your playlist..."
-                className="mt-1 resize-none flex min-h-[60px] w-full rounded-base border-2 border-black bg-white px-3 py-2 text-sm text-text placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-main focus:border-main"
+                className="mt-1 resize-none flex min-h-[60px] w-full rounded-base border border-border bg-card px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 rows={2}
               />
             </div>
@@ -148,7 +151,7 @@ export default function PlaylistCreationModal({
           {/* Track Selection */}
           <div className="flex-1 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between mb-3">
-              <Label className="text-text font-medium">
+              <Label className="text-foreground font-medium">
                 Select Tracks ({selectedTracks.size}/{suggestedTracks.length})
               </Label>
               <div className="flex space-x-2">
@@ -158,7 +161,7 @@ export default function PlaylistCreationModal({
                   onClick={() =>
                     setSelectedTracks(new Set(suggestedTracks.map((t) => t.id)))
                   }
-                  className="border-2 border-black bg-white hover:bg-main hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none shadow-light transition-all"
+                  className="border border-border bg-card hover:bg-primary hover:shadow-none transition-all"
                 >
                   Select All
                 </Button>
@@ -166,48 +169,50 @@ export default function PlaylistCreationModal({
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedTracks(new Set())}
-                  className="border-2 border-black bg-white hover:bg-red-100 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none shadow-light transition-all"
+                  className="border border-border bg-card hover:bg-destructive/10 hover:shadow-none transition-all"
                 >
                   Clear All
                 </Button>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2 border-2 border-black rounded-base p-3 bg-white">
+            <div className="flex-1 overflow-y-auto space-y-2 border border-border rounded-base p-3 bg-card">
               {suggestedTracks.map((track) => {
                 const isSelected = selectedTracks.has(track.id);
                 return (
                   <Card
                     key={track.id}
-                    className={`cursor-pointer transition-all border-2 border-black rounded-base shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none ${
-                      isSelected ? 'bg-main' : 'bg-white hover:bg-bg'
+                    className={`cursor-pointer transition-all border border-border rounded-base hover:shadow-none ${
+                      isSelected
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-card hover:bg-background'
                     }`}
                     onClick={() => toggleTrackSelection(track.id)}
                   >
                     <CardContent className="p-3">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-mainAccent border-2 border-black rounded-base flex items-center justify-center">
+                        <div className="w-10 h-10 bg-primary/90 border border-border rounded-base flex items-center justify-center text-primary-foreground">
                           {isSelected ? (
-                            <Check className="w-5 h-5 text-black" />
+                            <Check className="w-5 h-5 text-foreground" />
                           ) : (
-                            <Music className="w-5 h-5 text-black" />
+                            <Music className="w-5 h-5 text-foreground" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-sm truncate text-text font-heading">
+                          <h4 className="font-medium text-sm truncate text-foreground ">
                             {track.title}
                           </h4>
-                          <p className="text-xs text-gray-600 truncate">
+                          <p className="text-xs text-muted-foreground truncate">
                             {track.artist}
                           </p>
                           <div className="flex items-center space-x-2 mt-1">
                             {track.bpm && (
-                              <span className="bg-white border border-black text-xs px-2 py-0.5 rounded-base text-text font-mono">
+                              <span className="bg-card border border-border text-xs px-2 py-0.5 rounded-base text-foreground font-mono">
                                 {track.bpm} BPM
                               </span>
                             )}
                             {track.genres && track.genres.length > 0 && (
-                              <span className="border border-black text-xs px-2 py-0.5 rounded-base text-text">
+                              <span className="border border-border text-xs px-2 py-0.5 rounded-base text-foreground">
                                 {track.genres[0]}
                               </span>
                             )}
@@ -227,14 +232,14 @@ export default function PlaylistCreationModal({
             variant="outline"
             onClick={onClose}
             disabled={isCreating}
-            className="border-2 border-black bg-white hover:bg-gray-100 text-text shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all"
+            className="border border-border bg-card hover:bg-accent text-foreground hover:shadow-none transition-all"
           >
             Cancel
           </Button>
           <Button
             onClick={handleCreatePlaylist}
             disabled={isCreating}
-            className="bg-main hover:bg-mainAccent border-2 border-black text-text font-medium shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all"
+            className="bg-primary hover:bg-primary/90 border border-border text-primary-foreground font-medium hover:shadow-none transition-all"
           >
             {isCreating ? (
               <>

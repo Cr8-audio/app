@@ -53,12 +53,12 @@ const TrackDisplayGrid = () => {
   if (!trackResult) return null;
 
   return (
-    <div className="relative border-2 border-border dark:border-darkBorder rounded-base p-3">
+    <div className="relative border border-border rounded-base p-3">
       {showTracks && (
-        <div className="absolute inset-0 z-10 bg-background/95 dark:bg-darkBg/95 backdrop-blur-sm rounded-base overflow-y-auto">
+        <div className="absolute inset-0 z-10 bg-background/95 backdrop-blur-sm rounded-base overflow-y-auto">
           <div className="p-4">
             <div className="flex justify-between items-center mb-4">
-              <h3 className="font-medium text-text dark:text-darkText">
+              <h3 className="font-medium text-foreground ">
                 {trackResult.title}
               </h3>
               <Button
@@ -107,13 +107,13 @@ const TrackDisplayGrid = () => {
 
       <div className="flex justify-between items-start">
         <div>
-          <h3 className="font-medium text-text dark:text-darkText mb-1">
+          <h3 className="font-medium text-foreground mb-1">
             {trackResult.title}
           </h3>
-          <div className="text-sm text-text/60 dark:text-darkText/60 mb-2">
+          <div className="text-sm text-muted-foreground mb-2">
             {trackResult.year} · {trackResult.country || 'Unknown'}
           </div>
-          <div className="text-sm text-text/60 dark:text-darkText/60">
+          <div className="text-sm text-muted-foreground ">
             {trackResult.genre?.join(', ') || 'No Genre'}
           </div>
         </div>

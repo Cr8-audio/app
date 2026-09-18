@@ -131,7 +131,6 @@ describe('useAuth', () => {
 
       expect(result.current.onboardingStep).toBe('complete');
       expect(result.current.needsUsername).toBe(false);
-      expect(result.current.needsConnections).toBe(false);
     });
   });
 
@@ -156,13 +155,13 @@ describe('useAuth', () => {
       expect(result.current.needsOnboarding).toBe(true);
       expect(result.current.onboardingStep).toBe('username');
       expect(result.current.needsUsername).toBe(true);
-      expect(result.current.needsConnections).toBe(false);
     });
 
-    it('returns needsConnections when user has username but not complete', () => {
+    it('is onboarded once the user has a username, even if older flags say otherwise', () => {
+      // Accounts from before Discogs sign-in were left at the old
+      // "connections" step; a username is all onboarding asks for now.
       mockUseQuery.mockReturnValue({
         _id: 'user-123',
-        email: 'test@example.com',
         username: 'testuser',
         onboardingComplete: false,
         onboardingStep: 'connections',
@@ -170,38 +169,9 @@ describe('useAuth', () => {
 
       const { result } = renderHook(() => useAuth());
 
-      expect(result.current.needsOnboarding).toBe(true);
-      expect(result.current.onboardingStep).toBe('connections');
+      expect(result.current.needsOnboarding).toBe(false);
+      expect(result.current.onboardingStep).toBe('complete');
       expect(result.current.needsUsername).toBe(false);
-      expect(result.current.needsConnections).toBe(true);
-    });
-
-    it('uses onboardingStep from user when available', () => {
-      mockUseQuery.mockReturnValue({
-        _id: 'user-123',
-        email: 'test@example.com',
-        username: 'testuser',
-        onboardingComplete: false,
-        onboardingStep: 'connections',
-      });
-
-      const { result } = renderHook(() => useAuth());
-
-      expect(result.current.onboardingStep).toBe('connections');
-    });
-
-    it('infers connections step when username exists but no onboardingStep', () => {
-      mockUseQuery.mockReturnValue({
-        _id: 'user-123',
-        email: 'test@example.com',
-        username: 'testuser',
-        onboardingComplete: false,
-        // No onboardingStep field
-      });
-
-      const { result } = renderHook(() => useAuth());
-
-      expect(result.current.onboardingStep).toBe('connections');
     });
 
     it('returns complete when onboardingComplete is true', () => {

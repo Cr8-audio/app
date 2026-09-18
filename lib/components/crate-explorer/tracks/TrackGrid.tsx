@@ -23,10 +23,10 @@ const TrackGrid = ({ viewMode, items }: TrackGridProps) => {
   ): Promise<string | null> => {
     try {
       // Extract artist and title from the Discogs result
-      const titleParts = result.title.split(' - ');
+      const titleParts = result.title.split('- ');
       const artist = titleParts.length > 1 ? titleParts[0] : '';
       const title =
-        titleParts.length > 1 ? titleParts.slice(1).join(' - ') : result.title;
+        titleParts.length > 1 ? titleParts.slice(1).join('- ') : result.title;
 
       const searchQuery = `${artist} ${title}`.trim();
 

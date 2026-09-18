@@ -95,11 +95,13 @@ export const setUsername = mutation({
       throw new Error('Username is already taken');
     }
 
-    // Update user with username - move to connections step (not complete yet)
+    // Picking a username is the whole onboarding: Discogs sign-in already
+    // connected the collection.
     await ctx.db.patch(userId, {
       username: username.toLowerCase(),
       displayName: displayName || username,
-      onboardingStep: 'connections',
+      onboardingStep: 'complete',
+      onboardingComplete: true,
     });
 
     return { success: true, username: username.toLowerCase() };

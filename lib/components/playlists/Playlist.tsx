@@ -58,7 +58,7 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
     <div className="relative overflow-x-auto">
       <div className="mb-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-medium-title font-heading font-bold text-text">
+          <h2 className="text-2xl font-bold text-foreground">
             {activePlaylist.title}
           </h2>
         </div>
@@ -89,33 +89,33 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
       </div>
 
       <table className="min-w-full divide-y divide-border">
-        <thead className="bg-bg">
+        <thead className="bg-background">
           <tr>
-            <th className="w-16 px-4 py-3 text-left text-xs font-medium text-text/70 uppercase tracking-wider">
+            <th className="w-16 px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Play
             </th>
-            <th className="px-4 py-3 text-left text-xs font-medium text-text/70 uppercase tracking-wider">
+            <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Track
             </th>
-            <th className="w-24 px-4 py-3 text-right text-xs font-medium text-text/70 uppercase tracking-wider">
+            <th className="w-24 px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Duration
             </th>
-            <th className="w-16 px-4 py-3 text-right text-xs font-medium text-text/70 uppercase tracking-wider">
+            <th className="w-16 px-4 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
               Actions
             </th>
           </tr>
         </thead>
-        <tbody className="bg-bg divide-y divide-border">
+        <tbody className="bg-background divide-y divide-border">
           {activePlaylist.tracks?.map((track: any) => {
             const trackId = track._id || track.id;
             const isPlayingThisTrack =
               playingTrackId === trackId || playingTrackId === track.id;
             return (
-              <tr key={trackId} className="hover:bg-bg/50">
+              <tr key={trackId} className="hover:bg-accent">
                 <td className="px-4 py-3 whitespace-nowrap">
                   <button
                     onClick={() => togglePlayPause(track)}
-                    className="p-2 rounded-full hover:bg-bg/50"
+                    className="p-2 rounded-full hover:bg-accent"
                   >
                     {isPlayingThisTrack && isPlaying ? (
                       <Pause className="h-4 w-4" />
@@ -126,12 +126,12 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   <div className="flex items-center">
-                    <div className="text-sm font-medium text-text">
+                    <div className="text-sm font-medium text-foreground">
                       {track.title}
                     </div>
                   </div>
                 </td>
-                <td className="px-4 py-3 whitespace-nowrap text-right text-sm text-text/70">
+                <td className="px-4 py-3 whitespace-nowrap text-right text-sm text-muted-foreground">
                   {formatDuration(track.duration)}
                 </td>
                 <td className="px-4 py-3 whitespace-nowrap text-right">

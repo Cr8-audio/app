@@ -30,7 +30,7 @@ import { usePlayerStore } from '@/lib/stores';
 import { useTrackSorting } from '@/lib/hooks/useTrackSorting';
 import { toast } from 'sonner';
 import PlaylistCreationModal from './PlaylistCreationModal';
-import ReleaseDigCard, { STUB_RELEASE_DIG } from './ReleaseDigCard';
+import ReleaseDigCard from './ReleaseDigCard';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 
@@ -88,7 +88,7 @@ const findMatchingTrack = (
   );
   if (match) return match;
   match = tracks.find((t) => {
-    const titleWords = suggestion.title.toLowerCase().split(' ');
+    const titleWords = suggestion.title.toLowerCase().split('');
     const trackTitle = t.title.toLowerCase();
     return titleWords.some(
       (word) => trackTitle.includes(word) && word.length > 2,
@@ -415,30 +415,16 @@ export default function EnhancedChatInterface({
           {uiMessages.length === 0 && (
             <div className="mb-6 space-y-5">
               <div className="space-y-2">
-                <h1 className="font-heading text-xl font-semibold tracking-tight text-[var(--crate-ink)]">
+                <h1 className="text-xl font-semibold tracking-tight text-[var(--crate-ink)]">
                   Dig the crate
                 </h1>
                 <p className="text-sm leading-relaxed text-[var(--crate-ink-muted)]">
-                  One composer. Discogs as ground truth. Ask for a vibe, BPM
-                  lane, or mix-out — results land as dig cards in this thread.
+                  Ask for a vibe, a BPM range or what to mix out of a record.
+                  Answers come from the records you own.
                 </p>
                 <p className="font-mono text-xs text-[var(--crate-ink-muted)]">
                   {tracks.length} tracks ready
                 </p>
-              </div>
-              <div className="crate-dig-cluster space-y-3">
-                <p className="text-[10px] uppercase tracking-wider text-[var(--crate-ink-muted)]">
-                  Dig card · stub
-                </p>
-                <ReleaseDigCard
-                  release={STUB_RELEASE_DIG}
-                  onPlay={() =>
-                    toast.message('Play stub — wire to player in #140')
-                  }
-                  onOpenFocus={() =>
-                    toast.message('Focus panel stub — coming with dig cards')
-                  }
-                />
               </div>
               {showSuggestions && (
                 <div className="mt-5 max-w-full space-y-4">

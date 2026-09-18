@@ -4,7 +4,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { LoadingSpinner } from '@/lib/components/ui/loading';
 
-export const Route = createFileRoute('/analyze')({
+export const Route = createFileRoute('/analyze/')({
   component: AnalyzePage,
 });
 
@@ -13,12 +13,12 @@ function AnalyzePage() {
   const user = useQuery(api.users.getCurrentUser);
 
   useEffect(() => {
-    if (user?.username && user.onboardingComplete) {
+    if (user?.username) {
       // Chat is home — do not bounce to /$username dashboard
       navigate({ to: '/analyze/chat', replace: true });
     } else if (user === null) {
       navigate({ to: '/', replace: true });
-    } else if (user && (!user.username || !user.onboardingComplete)) {
+    } else if (user && !user.username) {
       navigate({ to: '/onboarding', replace: true });
     }
   }, [user, navigate]);

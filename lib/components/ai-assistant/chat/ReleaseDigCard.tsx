@@ -149,6 +149,3 @@ export default function ReleaseDigCard({
     </article>
   );
 }
-
-// eslint-disable-next-line react-refresh/only-export-components -- stub lives in releaseDigStub.ts
-export { STUB_RELEASE_DIG } from './releaseDigStub';

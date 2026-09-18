@@ -192,7 +192,7 @@ export default function CommandPalette({
   const filteredCommands = commands.filter((command) => {
     if (!query) return true;
 
-    const searchTerms = query.toLowerCase().split(' ');
+    const searchTerms = query.toLowerCase().split('');
     return searchTerms.every(
       (term) =>
         command.title.toLowerCase().includes(term) ||
@@ -217,7 +217,7 @@ export default function CommandPalette({
     : filteredCommands;
 
   // This is the single source of truth for keyboard navigation + selection.
-  // It matches the DOM order of `[data-command-item]` elements.
+  // It matches the DOM order of `[data-command-item]`elements.
   const displayCommands = shouldShowRecentSection
     ? [...recentCommandItems, ...nonRecentCommands]
     : filteredCommands;
@@ -308,17 +308,17 @@ export default function CommandPalette({
       <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] px-4">
         <div
           className={cn(
-            'bg-white rounded-base shadow-light border-2 border-gray-800 w-full max-w-xl overflow-hidden transition-all duration-200 ease-out',
+            'bg-card rounded-base border border-border w-full max-w-xl overflow-hidden transition-all duration-200 ease-out',
             isAnimating
               ? 'opacity-100 scale-100 translate-y-0'
               : 'opacity-0 scale-95 translate-y-2',
           )}
         >
           {/* Header */}
-          <div className="flex items-center px-4 py-3 border-b-2 border-gray-800">
+          <div className="flex items-center px-4 py-3 border-b border-border">
             <div className="flex items-center flex-1">
-              <div className="flex items-center justify-center w-8 h-8 bg-main rounded-base mr-3">
-                <Command className="w-4 h-4 text-black" />
+              <div className="flex items-center justify-center w-8 h-8 bg-primary rounded-base mr-3 text-primary-foreground">
+                <Command className="w-4 h-4 text-foreground" />
               </div>
               <input
                 ref={inputRef}
@@ -326,14 +326,14 @@ export default function CommandPalette({
                 placeholder="Type a command or search..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="flex-1 text-sm bg-transparent border-none outline-none placeholder-gray-500"
+                className="flex-1 text-sm bg-transparent border-none outline-none placeholder-muted-foreground"
               />
             </div>
             <button
               onClick={onClose}
-              className="flex items-center justify-center w-8 h-8 rounded-base border-2 border-transparent hover:border-gray-800 hover:bg-gray-100 transition-colors"
+              className="flex items-center justify-center w-8 h-8 rounded-base border border-transparent hover:border-border hover:bg-accent transition-colors"
             >
-              <X className="w-4 h-4 text-gray-400" />
+              <X className="w-4 h-4 text-muted-foreground/70" />
             </button>
           </div>
 
@@ -341,7 +341,7 @@ export default function CommandPalette({
           <div ref={containerRef} className="max-h-80 overflow-y-auto">
             {shouldShowRecentSection && (
               <div className="p-3">
-                <div className="flex items-center px-2 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                <div className="flex items-center px-2 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
                   <Clock className="w-3 h-3 mr-2" />
                   Recent
                 </div>
@@ -363,7 +363,7 @@ export default function CommandPalette({
             {Object.entries(groupedCommands).map(
               ([category, categoryCommands]) => (
                 <div key={category} className="p-3">
-                  <div className="flex items-center px-2 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  <div className="flex items-center px-2 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     {category === 'navigation' && (
                       <Home className="w-3 h-3 mr-2" />
                     )}
@@ -393,13 +393,13 @@ export default function CommandPalette({
 
             {displayCommands.length === 0 && (
               <div className="p-8 text-center">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Search className="w-6 h-6 text-gray-400" />
+                <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Search className="w-6 h-6 text-muted-foreground/70" />
                 </div>
-                <h3 className="text-sm font-medium text-gray-900 mb-1">
+                <h3 className="text-sm font-medium text-foreground mb-1">
                   No commands found
                 </h3>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   Try adjusting your search or browse available commands
                 </p>
               </div>
@@ -407,24 +407,24 @@ export default function CommandPalette({
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-3 bg-bg border-t-2 border-gray-800">
+          <div className="px-4 py-3 bg-background border-t border-border">
             <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4 text-xs text-gray-500">
+              <div className="flex items-center space-x-4 text-xs text-muted-foreground">
                 <div className="flex items-center">
-                  <kbd className="px-1.5 py-0.5 bg-white rounded-base border-2 border-gray-800 text-xs font-mono mr-1">
+                  <kbd className="px-1.5 py-0.5 bg-card rounded-base border border-border text-xs font-mono mr-1">
                     ↵
                   </kbd>
                   <span>to select</span>
                 </div>
                 <div className="flex items-center">
-                  <kbd className="px-1.5 py-0.5 bg-white rounded-base border-2 border-gray-800 text-xs font-mono mr-1">
+                  <kbd className="px-1.5 py-0.5 bg-card rounded-base border border-border text-xs font-mono mr-1">
                     ↑↓
                   </kbd>
                   <span>to navigate</span>
                 </div>
               </div>
-              <div className="flex items-center text-xs text-gray-500">
-                <kbd className="px-1.5 py-0.5 bg-white rounded-base border-2 border-gray-800 text-xs font-mono mr-1">
+              <div className="flex items-center text-xs text-muted-foreground">
+                <kbd className="px-1.5 py-0.5 bg-card rounded-base border border-border text-xs font-mono mr-1">
                   esc
                 </kbd>
                 <span>to close</span>
@@ -452,19 +452,19 @@ function CommandButton({ command, isSelected, onClick }: CommandButtonProps) {
       onClick={onClick}
       className={cn(
         'w-full flex items-center p-2 rounded-base text-left transition-all duration-150 group',
-        isSelected ? 'bg-main text-black' : 'hover:bg-gray-100',
+        isSelected ? 'bg-primary text-primary-foreground' : 'hover:bg-accent',
       )}
     >
       <div
         className={cn(
           'flex items-center justify-center w-8 h-8 rounded-base mr-3 transition-colors',
-          isSelected ? 'bg-black/10' : 'bg-gray-100 group-hover:bg-gray-200',
+          isSelected ? 'bg-black/10' : 'bg-muted group-hover:bg-accent',
         )}
       >
         <Icon
           className={cn(
             'w-4 h-4 transition-colors',
-            isSelected ? 'text-black' : 'text-gray-600',
+            isSelected ? 'text-foreground' : 'text-muted-foreground',
           )}
         />
       </div>
@@ -474,7 +474,7 @@ function CommandButton({ command, isSelected, onClick }: CommandButtonProps) {
           <div
             className={cn(
               'text-sm font-medium truncate transition-colors',
-              isSelected ? 'text-black' : 'text-gray-900',
+              isSelected ? 'text-foreground' : 'text-foreground',
             )}
           >
             {command.title}
@@ -483,7 +483,9 @@ function CommandButton({ command, isSelected, onClick }: CommandButtonProps) {
             <span
               className={cn(
                 'ml-2 px-1.5 py-0.5 text-xs font-medium rounded-full',
-                isSelected ? 'bg-black/10 text-black' : 'bg-main/20 text-black',
+                isSelected
+                  ? 'bg-black/10 text-foreground'
+                  : 'bg-primary/20 text-foreground',
               )}
             >
               {command.badge}
@@ -494,7 +496,9 @@ function CommandButton({ command, isSelected, onClick }: CommandButtonProps) {
           <div
             className={cn(
               'text-xs truncate transition-colors',
-              isSelected ? 'text-black/70' : 'text-gray-500',
+              isSelected
+                ? 'text-primary-foreground/70'
+                : 'text-muted-foreground',
             )}
           >
             {command.description}
@@ -507,8 +511,8 @@ function CommandButton({ command, isSelected, onClick }: CommandButtonProps) {
           className={cn(
             'w-4 h-4 ml-2 transition-all duration-150',
             isSelected
-              ? 'text-black translate-x-0'
-              : 'text-gray-400 group-hover:translate-x-0.5',
+              ? 'text-foreground translate-x-0'
+              : 'text-muted-foreground/70 group-hover:translate-x-0.5',
           )}
         />
       )}

@@ -14,7 +14,7 @@ const ViewToggleButtons = ({
 }: ViewToggleButtonsProps) => {
   const buttonClass = (buttonView: 'search' | 'collection') => `
     px-4 py-2 rounded transition-colors flex items-center gap-2
-    ${view === buttonView ? 'bg-main text-black' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'}
+    ${view === buttonView ? 'bg-primary text-primary-foreground' : 'bg-accent hover:bg-accent '}
   `;
 
   return (

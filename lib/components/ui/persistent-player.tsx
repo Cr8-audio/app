@@ -124,13 +124,13 @@ const PersistentPlayer = () => {
   }
 
   return (
-    <div className="w-full z-[60] bg-bg border-t-2 border-gray-800">
+    <div className="w-full z-[60] bg-background border-t border-border">
       {/* Queue Panel */}
       {showQueue && (
-        <div className="max-h-96 overflow-y-auto bg-white border-t-2 border-gray-800">
+        <div className="max-h-96 overflow-y-auto bg-card border-t border-border">
           <div className="p-4">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-text">
+              <h3 className="text-lg font-semibold text-foreground">
                 Queue ({queue.length} tracks)
               </h3>
               <div className="flex items-center space-x-2">
@@ -156,16 +156,16 @@ const PersistentPlayer = () => {
                 <div
                   key={track.id}
                   className={cn(
-                    'flex items-center space-x-3 p-3 rounded-base border-2 border-gray-800 hover:bg-mainAccent/10 transition-colors cursor-pointer track-row',
-                    index === currentIndex && 'bg-main/20',
+                    'flex items-center space-x-3 p-3 rounded-base border border-border hover:bg-primary/10 transition-colors cursor-pointer track-row',
+                    index === currentIndex && 'bg-primary/20',
                   )}
                   onClick={() => handleTrackClick(track, index)}
                 >
-                  <div className="w-8 h-8 bg-mainAccent border-2 border-gray-800 rounded-base flex items-center justify-center flex-shrink-0">
+                  <div className="w-8 h-8 bg-primary/90 border border-border rounded-base flex items-center justify-center flex-shrink-0 text-primary-foreground">
                     {index === currentIndex && isPlaying ? (
-                      <Pause className="w-4 h-4 text-black" />
+                      <Pause className="w-4 h-4 text-foreground" />
                     ) : (
-                      <Play className="w-4 h-4 text-black" />
+                      <Play className="w-4 h-4 text-foreground" />
                     )}
                   </div>
 
@@ -178,21 +178,21 @@ const PersistentPlayer = () => {
                       className="w-8 h-8 rounded-base object-cover"
                     />
                   ) : (
-                    <div className="w-8 h-8 bg-gray-200 rounded-base flex items-center justify-center">
-                      <Music className="w-4 h-4 text-gray-500" />
+                    <div className="w-8 h-8 bg-accent rounded-base flex items-center justify-center">
+                      <Music className="w-4 h-4 text-muted-foreground" />
                     </div>
                   )}
 
                   <div className="flex-1 min-w-0">
-                    <div className="font-medium text-sm truncate text-text">
+                    <div className="font-medium text-sm truncate text-foreground">
                       {track.title}
                     </div>
-                    <div className="text-xs text-gray-600 truncate">
+                    <div className="text-xs text-muted-foreground truncate">
                       {track.artist}
                     </div>
                   </div>
 
-                  <div className="text-xs text-gray-500">
+                  <div className="text-xs text-muted-foreground">
                     {track.duration || '0:00'}
                   </div>
 
@@ -220,7 +220,7 @@ const PersistentPlayer = () => {
           <div className="flex items-center space-x-2 sm:space-x-4">
             {/* Progress Bar Section */}
             <div className="flex items-center space-x-2 w-24 sm:w-48">
-              <span className="hidden sm:inline text-xs text-gray-500 font-mono w-8 text-right">
+              <span className="hidden sm:inline text-xs text-muted-foreground font-mono w-8 text-right">
                 {formatTime(currentTime)}
               </span>
               <div className="flex-1 relative">
@@ -231,13 +231,13 @@ const PersistentPlayer = () => {
                   value={currentTime}
                   onChange={handleProgressChange}
                   disabled={!duration}
-                  className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer disabled:cursor-not-allowed"
+                  className="w-full h-1 bg-accent rounded-lg appearance-none cursor-pointer disabled:cursor-not-allowed"
                   style={{
-                    background: `linear-gradient(to right, #FFDC58 0%, #FFDC58 ${progressPercentage}%, #e5e5e5 ${progressPercentage}%, #e5e5e5 100%)`,
+                    background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${progressPercentage}%, var(--color-border) ${progressPercentage}%, var(--color-border) 100%)`,
                   }}
                 />
               </div>
-              <span className="hidden sm:inline text-xs text-gray-500 font-mono w-8">
+              <span className="hidden sm:inline text-xs text-muted-foreground font-mono w-8">
                 {formatTime(duration)}
               </span>
             </div>
@@ -253,16 +253,16 @@ const PersistentPlayer = () => {
                   className="w-10 h-10 rounded-base object-cover"
                 />
               ) : (
-                <div className="w-10 h-10 bg-mainAccent border-2 border-black rounded-base flex items-center justify-center">
-                  <Music className="w-5 h-5 text-black" />
+                <div className="w-10 h-10 bg-primary/90 border border-border rounded-base flex items-center justify-center text-primary-foreground">
+                  <Music className="w-5 h-5 text-foreground" />
                 </div>
               )}
 
               <div className="flex-1 min-w-0">
-                <div className="font-medium text-sm truncate text-text">
+                <div className="font-medium text-sm truncate text-foreground">
                   {currentTrack?.title || 'No track selected'}
                 </div>
-                <div className="text-xs text-gray-600 truncate">
+                <div className="text-xs text-muted-foreground truncate">
                   {currentTrack?.artist || 'Unknown artist'}
                 </div>
               </div>
@@ -271,7 +271,7 @@ const PersistentPlayer = () => {
               {currentTrack && (
                 <div className="flex items-center space-x-1">
                   {currentTrack.genres && currentTrack.genres.length > 0 && (
-                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-base text-xs font-medium bg-mainAccent2 border border-gray-800 text-black">
+                    <span className="inline-flex items-center px-1.5 py-0.5 rounded-base text-xs font-medium bg-primary/90 border border-border text-primary-foreground">
                       {currentTrack.genres[0]}
                     </span>
                   )}
@@ -286,10 +286,10 @@ const PersistentPlayer = () => {
                 size="sm"
                 onClick={() => handleToggleFavorite(currentTrack.id)}
                 className={cn(
-                  'h-8 w-8 p-0 border border-gray-800 rounded-base icon-button',
+                  'h-8 w-8 p-0 border border-border rounded-base icon-button',
                   isFavorite(currentTrack.id)
-                    ? 'bg-red-100 hover:bg-red-200 text-red-600'
-                    : 'bg-white hover:bg-gray-100 text-gray-600',
+                    ? 'bg-destructive/10 hover:bg-destructive/10 text-destructive'
+                    : 'bg-card hover:bg-accent text-muted-foreground',
                 )}
               >
                 <Heart
@@ -308,10 +308,10 @@ const PersistentPlayer = () => {
                 size="sm"
                 onClick={toggleShuffle}
                 className={cn(
-                  'h-8 w-8 p-0 border border-gray-800 rounded-base icon-button',
+                  'h-8 w-8 p-0 border border-border rounded-base icon-button',
                   isShuffleEnabled
-                    ? 'bg-main hover:bg-mainAccent'
-                    : 'bg-white hover:bg-gray-100',
+                    ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                    : 'bg-card hover:bg-accent',
                 )}
               >
                 <Shuffle className="w-4 h-4" />
@@ -322,7 +322,7 @@ const PersistentPlayer = () => {
                 size="sm"
                 onClick={playPrevious}
                 disabled={queue.length === 0}
-                className="h-8 w-8 p-0 bg-white hover:bg-gray-100 border border-gray-800 rounded-base icon-button"
+                className="h-8 w-8 p-0 bg-card hover:bg-accent border border-border rounded-base icon-button"
               >
                 <SkipBack className="w-4 h-4" />
               </Button>
@@ -332,12 +332,12 @@ const PersistentPlayer = () => {
                 size="sm"
                 onClick={() => currentTrack && togglePlayPause(currentTrack)}
                 disabled={!currentTrack}
-                className="h-10 w-10 p-0 bg-main hover:bg-mainAccent border-2 border-gray-800 rounded-base play-button"
+                className="h-10 w-10 p-0 bg-primary hover:bg-primary/90 border border-border rounded-base play-button text-primary-foreground"
               >
                 {isPlaying ? (
-                  <Pause className="w-5 h-5 text-black" />
+                  <Pause className="w-5 h-5 text-foreground" />
                 ) : (
-                  <Play className="w-5 h-5 text-black" />
+                  <Play className="w-5 h-5 text-foreground" />
                 )}
               </Button>
 
@@ -346,7 +346,7 @@ const PersistentPlayer = () => {
                 size="sm"
                 onClick={playNext}
                 disabled={queue.length === 0}
-                className="h-8 w-8 p-0 bg-white hover:bg-gray-100 border border-gray-800 rounded-base icon-button"
+                className="h-8 w-8 p-0 bg-card hover:bg-accent border border-border rounded-base icon-button"
               >
                 <SkipForward className="w-4 h-4" />
               </Button>
@@ -356,10 +356,10 @@ const PersistentPlayer = () => {
                 size="sm"
                 onClick={toggleRepeat}
                 className={cn(
-                  'h-8 w-8 p-0 border border-gray-800 rounded-base icon-button',
+                  'h-8 w-8 p-0 border border-border rounded-base icon-button',
                   isRepeatEnabled
-                    ? 'bg-main hover:bg-mainAccent'
-                    : 'bg-white hover:bg-gray-100',
+                    ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                    : 'bg-card hover:bg-accent',
                 )}
               >
                 <Repeat className="w-4 h-4" />
@@ -373,7 +373,7 @@ const PersistentPlayer = () => {
                   variant="ghost"
                   size="sm"
                   onClick={toggleMute}
-                  className="h-8 w-8 p-0 bg-white hover:bg-gray-100 border border-gray-800 rounded-base icon-button"
+                  className="h-8 w-8 p-0 bg-card hover:bg-accent border border-border rounded-base icon-button"
                 >
                   {isMuted || volume === 0 ? (
                     <VolumeX className="w-4 h-4" />
@@ -391,9 +391,9 @@ const PersistentPlayer = () => {
                     onChange={(e) =>
                       handleVolumeChange([parseInt(e.target.value)])
                     }
-                    className="w-full h-1 bg-gray-200 rounded-lg appearance-none cursor-pointer interactive-element"
+                    className="w-full h-1 bg-accent rounded-lg appearance-none cursor-pointer interactive-element"
                     style={{
-                      background: `linear-gradient(to right, #FFDC58 0%, #FFDC58 ${volume}%, #e5e5e5 ${volume}%, #e5e5e5 100%)`,
+                      background: `linear-gradient(to right, var(--color-primary) 0%, var(--color-primary) ${volume}%, var(--color-border) ${volume}%, var(--color-border) 100%)`,
                     }}
                   />
                 </div>
@@ -404,10 +404,10 @@ const PersistentPlayer = () => {
                 size="sm"
                 onClick={() => setShowQueue(!showQueue)}
                 className={cn(
-                  'h-8 w-8 p-0 border border-gray-800 rounded-base icon-button',
+                  'h-8 w-8 p-0 border border-border rounded-base icon-button',
                   showQueue
-                    ? 'bg-main hover:bg-mainAccent'
-                    : 'bg-white hover:bg-gray-100',
+                    ? 'bg-primary hover:bg-primary/90 text-primary-foreground'
+                    : 'bg-card hover:bg-accent',
                 )}
               >
                 <List className="w-4 h-4" />

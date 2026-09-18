@@ -77,48 +77,48 @@ export function DiscogsConnectionCard({
     <Card className="p-6">
       <div className="flex items-start justify-between">
         <div className="flex items-start space-x-4">
-          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-            <Music className="w-6 h-6 text-gray-600" />
+          <div className="w-12 h-12 bg-muted rounded-lg flex items-center justify-center">
+            <Music className="w-6 h-6 text-muted-foreground" />
           </div>
           <div className="flex-1">
             <div className="flex items-center space-x-2 mb-1">
               <h3 className="text-lg font-semibold">Discogs</h3>
               {state === 'loading' ? (
-                <div className="flex items-center space-x-1 text-gray-400 text-sm">
+                <div className="flex items-center space-x-1 text-muted-foreground/70 text-sm">
                   <Loader2 className="w-4 h-4 animate-spin" />
                   <span>Checking...</span>
                 </div>
               ) : state === 'connected' ? (
-                <div className="flex items-center space-x-1 text-green-600 text-sm">
+                <div className="flex items-center space-x-1 text-ok text-sm">
                   <CheckCircle className="w-4 h-4" />
                   <span>Connected</span>
                 </div>
               ) : state === 'needs_reconnection' ? (
-                <div className="flex items-center space-x-1 text-amber-600 text-sm">
+                <div className="flex items-center space-x-1 text-primary text-sm">
                   <AlertCircle className="w-4 h-4" />
                   <span>Needs Reconnection</span>
                 </div>
               ) : (
-                <div className="flex items-center space-x-1 text-gray-400 text-sm">
+                <div className="flex items-center space-x-1 text-muted-foreground/70 text-sm">
                   <XCircle className="w-4 h-4" />
                   <span>Not connected</span>
                 </div>
               )}
             </div>
             {variant === 'default' && (
-              <p className="text-sm text-gray-600 mb-3">
+              <p className="text-sm text-muted-foreground mb-3">
                 Sync your vinyl and physical music collection from Discogs.
                 Browse releases, view details, and add tracks to your Crate
                 library.
               </p>
             )}
             {state === 'needs_reconnection' && (
-              <p className="text-xs text-amber-600 mb-2">
+              <p className="text-xs text-primary mb-2">
                 Reconnect Discogs so Crate can keep syncing your collection.
               </p>
             )}
             {discogs.username && (
-              <div className="text-xs text-gray-500 space-y-0.5">
+              <div className="text-xs text-muted-foreground space-y-0.5">
                 <p>Username: @{discogs.username}</p>
                 {isSyncing ? (
                   <p className="flex items-center">
@@ -126,7 +126,7 @@ export function DiscogsConnectionCard({
                     Syncing your collection...
                   </p>
                 ) : discogs.syncStatus === 'error' ? (
-                  <p className="text-red-600">
+                  <p className="text-destructive">
                     Last sync failed: {discogs.syncError}
                   </p>
                 ) : (
@@ -161,7 +161,7 @@ export function DiscogsConnectionCard({
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={handleDisconnect}
                 disabled={discogs.isDisconnecting}
               >
@@ -180,7 +180,7 @@ export function DiscogsConnectionCard({
               <Button
                 onClick={handleConnect}
                 disabled={discogs.isConnecting}
-                className="bg-amber-500 hover:bg-amber-600 text-white border-2 border-gray-800 shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all"
+                className="bg-primary hover:bg-primary text-white border border-border hover:shadow-none transition-all"
               >
                 {discogs.isConnecting ? (
                   <>
@@ -197,7 +197,7 @@ export function DiscogsConnectionCard({
               <Button
                 variant="ghost"
                 size="sm"
-                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="w-full text-destructive hover:text-destructive hover:bg-destructive/10"
                 onClick={handleDisconnect}
                 disabled={discogs.isDisconnecting}
               >
@@ -208,7 +208,7 @@ export function DiscogsConnectionCard({
             <Button
               onClick={handleConnect}
               disabled={discogs.isConnecting || state === 'loading'}
-              className="bg-main hover:bg-mainAccent border-2 border-gray-800 shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all"
+              className="bg-primary hover:bg-primary/90 border border-border hover:shadow-none transition-all text-primary-foreground"
             >
               {discogs.isConnecting ? (
                 <>

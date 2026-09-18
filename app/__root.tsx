@@ -3,9 +3,8 @@ import {
   HeadContent,
   Scripts,
   createRootRoute,
-  useRouterState,
 } from '@tanstack/react-router';
-import { Suspense, useEffect } from 'react';
+import { Suspense } from 'react';
 import { Toaster } from 'sonner';
 import appCss from './globals.css?url';
 import AppLayout from '@/lib/components/layout/Navigation/AppLayout';
@@ -54,40 +53,7 @@ export const Route = createRootRoute({
 });
 
 function RootBody({ children }: { children: React.ReactNode }) {
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isChatHome = pathname === '/analyze/chat';
-
-  useEffect(() => {
-    const body = document.body;
-    if (isChatHome) {
-      body.classList.add('crate-chat-home');
-    } else {
-      body.classList.remove('crate-chat-home');
-    }
-    return () => {
-      body.classList.remove('crate-chat-home');
-    };
-  }, [isChatHome]);
-
-  return (
-    <body
-      // Landing keeps yellow polka-dot; chat-home uses void via .crate-chat-home
-      style={
-        isChatHome
-          ? {
-              backgroundColor: 'hsl(240 12% 6%)',
-              backgroundImage: 'none',
-            }
-          : {
-              backgroundImage: 'radial-gradient(#FFDC58 1px, transparent 1px)',
-              backgroundSize: '10px 10px',
-            }
-      }
-      className={isChatHome ? 'crate-chat-home' : undefined}
-    >
-      {children}
-    </body>
-  );
+  return <body>{children}</body>;
 }
 
 function RootLayout() {
@@ -109,20 +75,11 @@ function RootLayout() {
           </ConvexAuthProvider>
         </ErrorBoundary>
         <Toaster
-          position="top-center"
-          expand={false}
-          closeButton
-          richColors
+          position="bottom-center"
+          theme="dark"
           toastOptions={{
-            style: {
-              border: '2px solid #1f2937', // gray-800
-              borderRadius: '12px',
-              fontSize: '14px',
-              fontWeight: '500',
-              backgroundColor: 'white',
-              color: '#1a1a1a',
-            },
-            className: 'shadow-light',
+            className:
+              '!bg-popover !text-popover-foreground !border !border-border !rounded-card',
           }}
         />
         <Scripts />

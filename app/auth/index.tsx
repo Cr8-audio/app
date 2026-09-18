@@ -34,7 +34,7 @@ function AuthenticatedRedirect() {
 
   if (user) {
     // Check if user has completed onboarding (has username)
-    if (!user.username || !user.onboardingComplete) {
+    if (!user.username) {
       return <Navigate to="/onboarding" replace />;
     }
 
@@ -54,9 +54,9 @@ function AuthenticatedRedirect() {
 function SignInForm() {
   return (
     <div className="flex items-center justify-center min-h-screen">
-      <div className="w-full max-w-md p-8 bg-white rounded-lg border-2 border-gray-800 shadow-light">
+      <div className="w-full max-w-md p-8 bg-card rounded-lg border border-border ">
         <h1 className="text-2xl font-bold mb-2">Sign In to Crate</h1>
-        <p className="text-gray-600 mb-6">
+        <p className="text-muted-foreground mb-6">
           Sign in with your Discogs account. New here? This creates your Crate
           account and syncs your collection.
         </p>

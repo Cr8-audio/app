@@ -54,8 +54,8 @@ export const PlaylistCard = ({
   return (
     <Card
       className={cn(
-        'group relative overflow-hidden transition-all hover:shadow-light cursor-pointer border-none',
-        isPlayingThisPlaylist && 'ring-2 ring-mainAccent',
+        'group relative overflow-hidden transition-all cursor-pointer border-none',
+        isPlayingThisPlaylist && 'ring-2 ring-primary',
       )}
       onClick={handleClick}
     >
@@ -64,7 +64,7 @@ export const PlaylistCard = ({
       <div className="absolute right-4 top-4 flex gap-2">
         <button
           className={cn(
-            'p-3 rounded-full bg-mainAccent text-text',
+            'p-3 rounded-full bg-primary/90 text-primary-foreground',
             isPlayingThisPlaylist
               ? 'opacity-100'
               : 'opacity-0 group-hover:opacity-100',
@@ -91,7 +91,7 @@ export const PlaylistCard = ({
         )}
       </div>
 
-      <CardHeader className="h-48 bg-gray-100">
+      <CardHeader className="h-48 bg-muted">
         {playlist.tracks?.length > 0 && playlist.tracks[0].artwork ? (
           <Image
             src={decodeURIComponent(
@@ -103,17 +103,17 @@ export const PlaylistCard = ({
             height={400}
           />
         ) : (
-          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-            <Play size={48} className="text-gray-400" />
+          <div className="w-full h-full bg-muted flex items-center justify-center">
+            <Play size={48} className="text-muted-foreground/70" />
           </div>
         )}
       </CardHeader>
 
-      <CardContent className="p-4 bg-bg space-y-3">
-        <CardTitle className="text-lg font-heading font-medium text-text mb-1">
+      <CardContent className="p-4 bg-background space-y-3">
+        <CardTitle className="text-lg font-medium text-foreground mb-1">
           {playlist?.title}
         </CardTitle>
-        <p className="text-small-subtitle text-text/70">
+        <p className="text-[10px] text-muted-foreground">
           {playlist?.tracks?.length} tracks
         </p>
 

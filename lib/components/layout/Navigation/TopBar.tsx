@@ -7,18 +7,15 @@ import { cn } from '@/lib/utils/tailwind';
 import { useAuthActions } from '@convex-dev/auth/react';
 import {
   Search,
-  Bell,
   Settings,
   LogOut,
   User,
   Command,
-  Plus,
   Menu,
   X,
   ListMusic,
   Brain,
   Home,
-  Zap,
   Clock,
   ArrowRight,
 } from 'lucide-react';
@@ -133,22 +130,6 @@ export default function TopBar({
     }
   };
 
-  const handleQuickAction = (action: string) => {
-    if (!username) return;
-
-    switch (action) {
-      case 'new-playlist':
-        navigate({ to: `/${username}/playlists/new` });
-        break;
-      case 'analyze-track':
-        navigate({ to: '/analyze' });
-        break;
-      case 'add-track':
-        navigate({ to: `/${username}/tracks/add` });
-        break;
-    }
-  };
-
   const generateCommands = (): CommandItem[] => {
     if (!username) return [];
 
@@ -196,14 +177,13 @@ export default function TopBar({
       },
       {
         id: 'nav-analyze',
-        title: 'AI Analysis',
-        description: 'Analyze music with AI-powered insights',
+        title: 'Chat',
+        description: 'Ask the DJ assistant about your collection',
         icon: Brain,
-        action: () => navigate({ to: '/analyze' }),
-        keywords: ['analyze', 'ai', 'analysis', 'insights', 'smart'],
+        action: () => navigate({ to: '/analyze/chat' }),
+        keywords: ['chat', 'assistant', 'ai', 'dj', 'ask'],
         category: 'navigation',
-        href: '/analyze',
-        badge: 'AI',
+        href: '/analyze/chat',
       },
       {
         id: 'nav-settings',
@@ -215,37 +195,6 @@ export default function TopBar({
         category: 'navigation',
         href: `/${username}/settings/connections`,
       },
-
-      // Quick Actions
-      {
-        id: 'action-new-playlist',
-        title: 'Create Playlist',
-        description: 'Start building a new playlist',
-        icon: Plus,
-        action: () => navigate({ to: `/${username}/playlists/new` }),
-        keywords: ['create', 'new', 'playlist', 'make'],
-        category: 'actions',
-        badge: 'Quick',
-      },
-      {
-        id: 'action-analyze-track',
-        title: 'Analyze Track',
-        description: 'Get AI-powered track analysis',
-        icon: Zap,
-        action: () => navigate({ to: '/analyze' }),
-        keywords: ['analyze', 'track', 'ai', 'quick'],
-        category: 'actions',
-        badge: 'AI',
-      },
-      {
-        id: 'action-add-track',
-        title: 'Add Track',
-        description: 'Add new music to your collection',
-        icon: ListMusic,
-        action: () => navigate({ to: `/${username}/tracks/add` }),
-        keywords: ['add', 'track', 'music', 'upload'],
-        category: 'actions',
-      },
     ];
 
     return commands;
@@ -256,7 +205,7 @@ export default function TopBar({
   const filteredCommands = commands.filter((command) => {
     if (!searchQuery) return true;
 
-    const searchTerms = searchQuery.toLowerCase().split(' ');
+    const searchTerms = searchQuery.toLowerCase().split('');
     return searchTerms.every(
       (term) =>
         command.title.toLowerCase().includes(term) ||
@@ -358,26 +307,26 @@ export default function TopBar({
       />
       <header
         className={cn(
-          'h-16 bg-white border-b-2 border-gray-800 transition-all duration-300 z-40 flex items-center justify-between px-6 w-full sticky top-0',
+          'h-16 bg-card border-b border-border transition-all duration-300 z-40 flex items-center justify-between px-6 w-full sticky top-0',
         )}
       >
         {/* Mobile Menu Button */}
         <button
           onClick={onMobileMenuToggle}
-          className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+          className="md:hidden p-2 rounded-lg hover:bg-accent transition-colors"
           aria-label="Toggle mobile menu"
         >
           {mobileMenuOpen ? (
-            <X className="w-5 h-5 active:text-main transition-colors" />
+            <X className="w-5 h-5 active:text-primary transition-colors" />
           ) : (
-            <Menu className="w-5 h-5 active:text-main transition-colors" />
+            <Menu className="w-5 h-5 active:text-primary transition-colors" />
           )}
         </button>
 
         {/* Search Bar */}
         <div className="flex-1 max-w-2xl mx-4 relative" ref={dropdownRef}>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-black" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-foreground" />
             <input
               ref={searchInputRef}
               type="text"
@@ -386,11 +335,11 @@ export default function TopBar({
               onChange={handleSearchChange}
               onFocus={handleSearchFocus}
               onKeyDown={handleSearchKeyDown}
-              className="w-full pl-10 pr-16 py-2 border-2 border-gray-800 rounded-base focus:outline-none focus:ring-0 text-sm transition-all placeholder:text-gray-500"
+              className="w-full pl-10 pr-16 py-2 border border-border rounded-base focus:outline-none focus:ring-0 text-sm transition-all placeholder:text-muted-foreground"
             />
             <div className="absolute right-3 top-1/2 transform -translate-y-1/2 flex items-center space-x-1">
               <kbd
-                className="px-2 py-1 text-xs bg-white border-2 border-gray-800 rounded-base text-black font-bold cursor-pointer hover:bg-gray-100 transition-colors"
+                className="px-2 py-1 text-xs bg-card border border-border rounded-base text-foreground font-bold cursor-pointer hover:bg-accent transition-colors"
                 onClick={() => setCommandPaletteOpen(true)}
               >
                 ⌘K
@@ -400,10 +349,10 @@ export default function TopBar({
 
           {/* Search Dropdown */}
           {searchDropdownOpen && (
-            <div className="absolute top-full left-0 right-0 mt-2 bg-white rounded-base shadow-light border-2 border-gray-800 max-h-80 overflow-y-auto z-50">
+            <div className="absolute top-full left-0 right-0 mt-2 bg-card rounded-base border border-border max-h-80 overflow-y-auto z-50">
               {!searchQuery && recentCommandItems.length > 0 && (
                 <div className="p-2">
-                  <div className="flex items-center px-2 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  <div className="flex items-center px-2 py-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">
                     <Clock className="w-3 h-3 mr-2" />
                     Recent
                   </div>
@@ -422,8 +371,8 @@ export default function TopBar({
                   ))}
                 </div>
               ) : (
-                <div className="p-6 text-center text-gray-500">
-                  <Search className="w-6 h-6 mx-auto mb-2 text-gray-300" />
+                <div className="p-6 text-center text-muted-foreground">
+                  <Search className="w-6 h-6 mx-auto mb-2 text-muted-foreground/70" />
                   <p className="text-sm">No commands found</p>
                 </div>
               )}
@@ -433,59 +382,17 @@ export default function TopBar({
 
         {/* Right Section */}
         <div className="flex items-center space-x-2">
-          {/* Quick Actions */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="p-2 hover:bg-gray-100"
-              >
-                <Plus className="w-4 h-4 active:text-main transition-colors" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuItem
-                onClick={() => handleQuickAction('new-playlist')}
-              >
-                <ListMusic className="w-4 h-4 mr-2" />
-                New Playlist
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() => handleQuickAction('analyze-track')}
-              >
-                <Brain className="w-4 h-4 mr-2" />
-                Analyze Track
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => handleQuickAction('add-track')}>
-                <Plus className="w-4 h-4 mr-2" />
-                Add Track
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          {/* Notifications */}
-          <Button
-            variant="ghost"
-            size="sm"
-            className="p-2 hover:bg-gray-100 relative"
-          >
-            <Bell className="w-4 h-4 active:text-main transition-colors" />
-            {/* Notification indicator */}
-            <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full text-xs"></span>
-          </Button>
-
           {/* User Menu */}
           {username ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="flex items-center space-x-2 hover:bg-gray-100 p-2"
+                  className="flex items-center space-x-2 hover:bg-accent p-2"
                 >
                   <Avatar className="w-8 h-8">
                     <AvatarImage src={user?.avatarUrl || ''} />
-                    <AvatarFallback className="bg-main text-black border-2 border-gray-800">
+                    <AvatarFallback className="bg-primary text-primary-foreground border border-border">
                       {username.charAt(0).toUpperCase()}
                     </AvatarFallback>
                   </Avatar>
@@ -512,7 +419,7 @@ export default function TopBar({
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={handleLogout}
-                  className="text-red-600"
+                  className="text-destructive"
                 >
                   <LogOut className="w-4 h-4 mr-2" />
                   Sign Out
@@ -551,19 +458,19 @@ function SearchCommandButton({
       onClick={onClick}
       className={cn(
         'w-full flex items-center p-2 rounded-base text-left transition-all duration-150 group',
-        isSelected ? 'bg-main text-black' : 'hover:bg-gray-100',
+        isSelected ? 'bg-primary text-primary-foreground' : 'hover:bg-accent',
       )}
     >
       <div
         className={cn(
           'flex items-center justify-center w-8 h-8 rounded-base mr-3 transition-colors',
-          isSelected ? 'bg-black/10' : 'bg-gray-100 group-hover:bg-gray-200',
+          isSelected ? 'bg-black/10' : 'bg-muted group-hover:bg-accent',
         )}
       >
         <Icon
           className={cn(
             'w-4 h-4 transition-colors',
-            isSelected ? 'text-black' : 'text-gray-600',
+            isSelected ? 'text-foreground' : 'text-muted-foreground',
           )}
         />
       </div>
@@ -573,7 +480,7 @@ function SearchCommandButton({
           <div
             className={cn(
               'text-sm font-medium truncate transition-colors',
-              isSelected ? 'text-black' : 'text-gray-900',
+              isSelected ? 'text-foreground' : 'text-foreground',
             )}
           >
             {command.title}
@@ -582,7 +489,9 @@ function SearchCommandButton({
             <span
               className={cn(
                 'ml-2 px-1.5 py-0.5 text-xs font-medium rounded-full',
-                isSelected ? 'bg-black/10 text-black' : 'bg-main/20 text-black',
+                isSelected
+                  ? 'bg-black/10 text-foreground'
+                  : 'bg-primary/20 text-foreground',
               )}
             >
               {command.badge}
@@ -593,7 +502,9 @@ function SearchCommandButton({
           <div
             className={cn(
               'text-xs truncate transition-colors',
-              isSelected ? 'text-black/70' : 'text-gray-500',
+              isSelected
+                ? 'text-primary-foreground/70'
+                : 'text-muted-foreground',
             )}
           >
             {command.description}
@@ -606,8 +517,8 @@ function SearchCommandButton({
           className={cn(
             'w-4 h-4 ml-2 transition-all duration-150',
             isSelected
-              ? 'text-black translate-x-0'
-              : 'text-gray-400 group-hover:translate-x-0.5',
+              ? 'text-foreground translate-x-0'
+              : 'text-muted-foreground/70 group-hover:translate-x-0.5',
           )}
         />
       )}

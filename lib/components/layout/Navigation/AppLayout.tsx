@@ -28,7 +28,7 @@ function ChatHomeChrome({ children }: { children: React.ReactNode }) {
         <div className="flex items-center gap-3 min-w-0">
           <Link
             to="/analyze/chat"
-            className="font-heading text-sm font-semibold tracking-tight text-[var(--crate-ink)]"
+            className="text-sm font-semibold tracking-tight text-[var(--crate-ink)]"
           >
             Crate
           </Link>
@@ -174,7 +174,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
+    <div className="h-screen flex flex-col overflow-hidden bg-muted">
       {/* Mobile Menu Overlay */}
       {isMobile && mobileMenuOpen && (
         <div
@@ -188,7 +188,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
         <div
           id="sidebar"
           className={cn(
-            'transition-all duration-300 z-[60] bg-white border-r border-gray-800 flex-shrink-0',
+            'transition-all duration-300 z-[60] bg-card border-r border-border flex-shrink-0',
             isMobile
               ? cn(
                   'fixed inset-y-0 left-0 h-full',
@@ -231,14 +231,14 @@ export default function AppLayout({ children }: AppLayoutProps) {
           {/* Quick access button for mobile - moved up to avoid player if present */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="pointer-events-auto w-12 h-12 bg-main text-black rounded-full shadow-lg flex items-center justify-center hover:bg-mainAccent transition-colors border-2 border-black"
+            className="pointer-events-auto w-12 h-12 bg-primary text-primary-foreground rounded-full shadow-lg flex items-center justify-center hover:bg-primary/90 transition-colors border border-border"
             aria-label="Toggle navigation"
           >
             {mobileMenuOpen ? (
-              <X className="w-6 h-6 active:text-main transition-colors" />
+              <X className="w-6 h-6 active:text-primary transition-colors" />
             ) : (
               <svg
-                className="w-6 h-6 active:text-main transition-colors"
+                className="w-6 h-6 active:text-primary transition-colors"
                 fill="none"
                 stroke="currentColor"
                 viewBox="0 0 24 24"

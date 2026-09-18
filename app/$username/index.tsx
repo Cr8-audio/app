@@ -54,19 +54,19 @@ const DashboardStats = ({ tracks }: { tracks: CrateTrack[] }) => {
       label: 'Total Tracks',
       value: stats.totalTracks,
       icon: Music,
-      color: 'bg-main border-2 border-gray-800',
+      color: 'bg-primary border border-border text-primary-foreground',
     },
     {
       label: 'Artists',
       value: stats.totalArtists,
       icon: Headphones,
-      color: 'bg-main border-2 border-gray-800',
+      color: 'bg-primary border border-border text-primary-foreground',
     },
     {
       label: 'Genres',
       value: stats.totalGenres,
       icon: Heart,
-      color: 'bg-main border-2 border-gray-800',
+      color: 'bg-primary border border-border text-primary-foreground',
     },
   ];
 
@@ -82,11 +82,13 @@ const DashboardStats = ({ tracks }: { tracks: CrateTrack[] }) => {
                   stat.color,
                 )}
               >
-                <stat.icon className="w-5 h-5 text-black" />
+                <stat.icon className="w-5 h-5 text-foreground" />
               </div>
               <div>
-                <p className="text-2xl font-semibold text-text">{stat.value}</p>
-                <p className="text-sm text-gray-600">{stat.label}</p>
+                <p className="text-2xl font-semibold text-foreground">
+                  {stat.value}
+                </p>
+                <p className="text-sm text-muted-foreground">{stat.label}</p>
               </div>
             </div>
           </CardContent>
@@ -165,7 +167,7 @@ const FavoritesSection = ({
 
   return (
     <Card variant="elevated">
-      <CardHeader className="border-b-2 border-gray-800 bg-bg">
+      <CardHeader className="border-b border-border bg-background">
         <CardTitle className="flex items-center space-x-2">
           <Heart className="w-5 h-5" />
           <span>Favourite list</span>
@@ -174,13 +176,13 @@ const FavoritesSection = ({
       <CardContent className="p-4">
         <div className="space-y-3">
           {isLoading ? (
-            <div className="text-center text-gray-500 py-8">
-              <div className="animate-spin w-8 h-8 border-2 border-mainAccent border-t-transparent rounded-full mx-auto mb-2" />
+            <div className="text-center text-muted-foreground py-8">
+              <div className="animate-spin w-8 h-8 border border-primary border-t-transparent rounded-full mx-auto mb-2" />
               <p>Loading favorites...</p>
             </div>
           ) : favoriteTracks.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              <Heart className="w-8 h-8 mx-auto mb-2 text-gray-400" />
+            <div className="text-center text-muted-foreground py-8">
+              <Heart className="w-8 h-8 mx-auto mb-2 text-muted-foreground/70" />
               <p>No favorite tracks yet</p>
               <p className="text-sm">
                 Use the heart icon in the player to add favorites
@@ -190,7 +192,7 @@ const FavoritesSection = ({
             favoriteTracks.map((track: CrateTrack) => (
               <div
                 key={track.id}
-                className="flex items-center space-x-3 p-3 rounded-base hover:bg-mainAccent/10 transition-colors group cursor-pointer active:bg-mainAccent/20 active:scale-[0.98]"
+                className="flex items-center space-x-3 p-3 rounded-base hover:bg-primary/10 transition-colors group cursor-pointer active:bg-primary/20 active:scale-[0.98]"
                 onClick={() => handlePlayTrack(track)}
               >
                 <Button
@@ -202,19 +204,19 @@ const FavoritesSection = ({
                   }}
                   disabled={!track.youtube_video_id || !isReady}
                   className={cn(
-                    'h-8 w-8 p-0 border border-gray-800 rounded-base',
+                    'h-8 w-8 p-0 border border-border rounded-base',
                     playingTrackId === track.id && isPlaying
-                      ? 'bg-main/20 hover:bg-main/30'
-                      : 'bg-main hover:bg-mainAccent',
+                      ? 'bg-primary/20 hover:bg-primary/30'
+                      : 'bg-primary hover:bg-primary/90 text-primary-foreground',
                   )}
                 >
                   {playingTrackId === track.id && isPlaying ? (
                     <>
-                      <Pause className="w-4 h-4 text-black" />
-                      <span className="absolute inset-0 rounded-full animate-pulse-light bg-main/30" />
+                      <Pause className="w-4 h-4 text-foreground" />
+                      <span className="absolute inset-0 rounded-full animate-pulse-light bg-primary/30" />
                     </>
                   ) : (
-                    <Play className="w-4 h-4 text-black" />
+                    <Play className="w-4 h-4 text-foreground" />
                   )}
                 </Button>
 
@@ -227,16 +229,16 @@ const FavoritesSection = ({
                     className="w-10 h-10 rounded-base object-cover"
                   />
                 ) : (
-                  <div className="w-10 h-10 bg-mainAccent border-2 border-gray-800 rounded-base flex items-center justify-center">
-                    <Music className="w-5 h-5 text-black" />
+                  <div className="w-10 h-10 bg-primary/90 border border-border rounded-base flex items-center justify-center text-primary-foreground">
+                    <Music className="w-5 h-5 text-foreground" />
                   </div>
                 )}
 
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm truncate text-text">
+                  <div className="font-medium text-sm truncate text-foreground">
                     {track.title}
                   </div>
-                  <div className="text-xs text-gray-600 truncate">
+                  <div className="text-xs text-muted-foreground truncate">
                     {track.artist}
                   </div>
                 </div>
@@ -248,7 +250,7 @@ const FavoritesSection = ({
                     e.stopPropagation();
                     handleToggleFavorite(track.id);
                   }}
-                  className="h-8 w-8 p-0 bg-red-100 hover:bg-red-200 text-red-600 border border-gray-800 rounded-base"
+                  className="h-8 w-8 p-0 bg-destructive/10 hover:bg-destructive/10 text-destructive border border-border rounded-base"
                 >
                   <Heart className="w-4 h-4 fill-current" />
                 </Button>
@@ -257,7 +259,7 @@ const FavoritesSection = ({
           )}
         </div>
 
-        <div className="mt-4 pt-4 border-t-2 border-gray-800">
+        <div className="mt-4 pt-4 border-t border-border">
           <Link
             to="/$username/tracks"
             params={{
@@ -281,21 +283,21 @@ const QuickActionsSection = ({ username }: { username: string }) => {
       description: 'Browse your Discogs collection',
       icon: Search,
       href: `/${username}/collection`,
-      color: 'bg-main border-2 border-gray-800',
+      color: 'bg-primary border border-border text-primary-foreground',
     },
     {
       title: 'Create Playlist',
       description: 'Organize your favorite tracks',
       icon: Plus,
       href: `/${username}/playlists`,
-      color: 'bg-main border-2 border-gray-800',
+      color: 'bg-primary border border-border text-primary-foreground',
     },
     {
       title: 'Shuffle Play',
       description: 'Start a random mix',
       icon: Shuffle,
       href: '#',
-      color: 'bg-main border-2 border-gray-800',
+      color: 'bg-primary border border-border text-primary-foreground',
       action: 'shuffle',
     },
   ];
@@ -321,7 +323,7 @@ const QuickActionsSection = ({ username }: { username: string }) => {
 
   return (
     <Card variant="elevated">
-      <CardHeader className="border-b-2 border-gray-800 bg-bg">
+      <CardHeader className="border-b border-border bg-background">
         <CardTitle className="flex items-center space-x-2">
           <TrendingUp className="w-5 h-5" />
           <span>Quick Actions</span>
@@ -335,12 +337,12 @@ const QuickActionsSection = ({ username }: { username: string }) => {
                 <Button
                   variant="ghost"
                   onClick={() => handleAction(action.action!)}
-                  className="h-auto p-4 text-left justify-start bg-white hover:bg-mainAccent/10 border-2 border-gray-800 rounded-base shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all text-text w-full active:bg-mainAccent/20 active:scale-[0.98]"
+                  className="h-auto p-4 text-left justify-start bg-card hover:bg-primary/10 border border-border rounded-base hover:shadow-none transition-all text-foreground w-full active:bg-primary/20 active:scale-[0.98]"
                 >
                   <div className="flex items-center space-x-3">
                     <div
                       className={cn(
-                        'p-2 rounded-base text-black flex items-center justify-center',
+                        'p-2 rounded-base text-foreground flex items-center justify-center',
                         action.color,
                       )}
                     >
@@ -348,7 +350,7 @@ const QuickActionsSection = ({ username }: { username: string }) => {
                     </div>
                     <div>
                       <div className="font-medium text-sm">{action.title}</div>
-                      <div className="text-xs text-gray-600">
+                      <div className="text-xs text-muted-foreground">
                         {action.description}
                       </div>
                     </div>
@@ -358,12 +360,12 @@ const QuickActionsSection = ({ username }: { username: string }) => {
                 <Link to={action.href}>
                   <Button
                     variant="ghost"
-                    className="h-auto p-4 text-left justify-start bg-white hover:bg-mainAccent/10 border-2 border-gray-800 rounded-base shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all text-text w-full active:bg-mainAccent/20 active:scale-[0.98]"
+                    className="h-auto p-4 text-left justify-start bg-card hover:bg-primary/10 border border-border rounded-base hover:shadow-none transition-all text-foreground w-full active:bg-primary/20 active:scale-[0.98]"
                   >
                     <div className="flex items-center space-x-3">
                       <div
                         className={cn(
-                          'p-2 rounded-base text-black flex items-center justify-center',
+                          'p-2 rounded-base text-foreground flex items-center justify-center',
                           action.color,
                         )}
                       >
@@ -373,7 +375,7 @@ const QuickActionsSection = ({ username }: { username: string }) => {
                         <div className="font-medium text-sm">
                           {action.title}
                         </div>
-                        <div className="text-xs text-gray-600">
+                        <div className="text-xs text-muted-foreground">
                           {action.description}
                         </div>
                       </div>
@@ -399,10 +401,10 @@ const WelcomeSection = ({ username }: { username: string }) => {
 
   return (
     <div className="mb-8">
-      <h1 className="text-3xl font-semibold text-text mb-2">
+      <h1 className="text-3xl font-semibold text-foreground mb-2">
         {getGreeting()}, {username}!
       </h1>
-      <p className="text-gray-600">
+      <p className="text-muted-foreground">
         Ready to explore your music collection? Here&apos;s what&apos;s
         happening with your tracks.
       </p>

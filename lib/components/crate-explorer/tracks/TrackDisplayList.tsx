@@ -55,7 +55,7 @@ const TrackDisplayList = () => {
 
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-[auto_1fr_auto] gap-4 p-3 border-2 border-border dark:border-darkBorder rounded-base group items-center">
+      <div className="grid grid-cols-[auto_1fr_auto] gap-4 p-3 border border-border rounded-base group items-center">
         <div className="flex items-center gap-3">
           <div className="relative">
             <img
@@ -78,16 +78,16 @@ const TrackDisplayList = () => {
             </button>
           </div>
           <div>
-            <div className="font-medium text-text dark:text-darkText">
+            <div className="font-medium text-foreground ">
               {trackResult.title}
             </div>
-            <div className="text-sm text-text/60 dark:text-darkText/60">
+            <div className="text-sm text-muted-foreground ">
               {trackResult.year} · {trackResult.country || 'Unknown'}
             </div>
           </div>
         </div>
 
-        <div className="text-sm text-text/60 dark:text-darkText/60">
+        <div className="text-sm text-muted-foreground ">
           <div>{trackResult.genre?.join(', ') || 'No Genre'}</div>
           <div>{trackResult.style?.join(', ') || 'No Style'}</div>
         </div>

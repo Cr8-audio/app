@@ -32,16 +32,13 @@ function OnboardingPage() {
   useEffect(() => {
     if (!user) return;
 
-    // If onboarding complete, go to dashboard
-    if (user.onboardingComplete && user.username) {
-      navigate({ to: `/${user.username}`, replace: true });
-      return;
-    }
-
-    // If user has username but not complete, they're on connections step
-    if (user.username && user.onboardingStep === 'connections') {
-      navigate({ to: '/onboarding/connect', replace: true });
-      return;
+    // Onboarding is just picking a username; Discogs is already connected.
+    if (user.username) {
+      navigate({
+        to: '/$username',
+        params: { username: user.username },
+        replace: true,
+      });
     }
   }, [user, navigate]);
 
@@ -101,8 +98,12 @@ function OnboardingPage() {
         displayName: displayName || username,
       });
 
-      toast.success(`Great! Now let's connect your music.`);
-      navigate({ to: '/onboarding/connect', replace: true });
+      toast.success('Welcome to Crate. Your collection is syncing.');
+      navigate({
+        to: '/$username',
+        params: { username: username.toLowerCase() },
+        replace: true,
+      });
     } catch (error) {
       console.error('Failed to set username:', error);
       toast.error(
@@ -128,14 +129,16 @@ function OnboardingPage() {
   return (
     <div className="min-h-screen flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg border-2 border-gray-800 shadow-light p-8">
+        <div className="bg-card rounded-lg border border-border p-8">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="w-16 h-16 mx-auto mb-4">
               <img src="/logo.svg" alt="Crate Logo" className="w-full h-full" />
             </div>
             <h1 className="text-2xl font-bold mb-2">Welcome to Crate!</h1>
-            <p className="text-gray-600">Choose your username to get started</p>
+            <p className="text-muted-foreground">
+              Choose your username to get started
+            </p>
           </div>
 
           {/* Form */}
@@ -155,7 +158,7 @@ function OnboardingPage() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value.toLowerCase())}
                   placeholder="johndoe"
-                  className="w-full px-4 py-3 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-main"
+                  className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                   disabled={isSubmitting}
                   autoFocus
                   required
@@ -163,19 +166,19 @@ function OnboardingPage() {
                 {username.length >= 3 && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     {checkAvailability === undefined ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+                      <Loader2 className="w-5 h-5 animate-spin text-muted-foreground/70" />
                     ) : isAvailable ? (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <CheckCircle className="w-5 h-5 text-ok" />
                     ) : (
-                      <XCircle className="w-5 h-5 text-red-600" />
+                      <XCircle className="w-5 h-5 text-destructive" />
                     )}
                   </div>
                 )}
               </div>
 
               {/* Preview URL */}
-              <p className="mt-2 text-sm text-gray-500">
-                Your profile:{' '}
+              <p className="mt-2 text-sm text-muted-foreground">
+                Your profile:{''}
                 <span className="font-mono">
                   crate.audio/{username || '...'}
                 </span>
@@ -183,19 +186,19 @@ function OnboardingPage() {
 
               {/* Validation Messages */}
               {validationError && (
-                <p className="mt-2 text-sm text-red-600">{validationError}</p>
+                <p className="mt-2 text-sm text-destructive">
+                  {validationError}
+                </p>
               )}
               {!validationError &&
                 checkAvailability &&
                 !checkAvailability.available && (
-                  <p className="mt-2 text-sm text-red-600">
+                  <p className="mt-2 text-sm text-destructive">
                     {checkAvailability.error}
                   </p>
                 )}
               {!validationError && isAvailable && (
-                <p className="mt-2 text-sm text-green-600">
-                  Username is available!
-                </p>
+                <p className="mt-2 text-sm text-ok">Username is available!</p>
               )}
             </div>
 
@@ -213,10 +216,10 @@ function OnboardingPage() {
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="John Doe"
-                className="w-full px-4 py-3 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-main"
+                className="w-full px-4 py-3 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
                 disabled={isSubmitting}
               />
-              <p className="mt-2 text-sm text-gray-500">
+              <p className="mt-2 text-sm text-muted-foreground">
                 This is how your name will appear on your profile
               </p>
             </div>
@@ -225,7 +228,7 @@ function OnboardingPage() {
             <Button
               type="submit"
               disabled={!canSubmit}
-              className="w-full py-6 text-lg font-semibold bg-main hover:bg-mainAccent border-2 border-gray-800 shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full py-6 text-lg font-semibold bg-primary hover:bg-primary/90 border border-border hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed text-primary-foreground"
             >
               {isSubmitting ? (
                 <>
@@ -239,8 +242,8 @@ function OnboardingPage() {
           </form>
 
           {/* Info */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-xs text-gray-600 text-center">
+          <div className="mt-6 p-4 bg-muted rounded-lg border border-border">
+            <p className="text-xs text-muted-foreground text-center">
               You can change your username later in settings
             </p>
           </div>

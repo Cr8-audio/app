@@ -3,16 +3,14 @@ import { cva, type VariantProps } from 'class-variance-authority';
 import { cn } from '@/lib/utils/tailwind';
 
 const cardVariants = cva(
-  'rounded-base bg-white text-text border-2 border-gray-800 transition-all',
+  'rounded-card border border-border bg-card text-card-foreground',
   {
     variants: {
       variant: {
-        default: 'shadow-light',
-        interactive:
-          'shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none cursor-pointer active:bg-mainAccent/10 active:scale-[0.98] active:translate-x-boxShadowX active:translate-y-boxShadowY active:shadow-none',
-        elevated:
-          'shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none',
-        flat: 'shadow-none',
+        default: '',
+        interactive: 'cursor-pointer transition-colors hover:bg-accent',
+        elevated: 'bg-popover',
+        flat: 'border-transparent',
       },
     },
     defaultVariants: {
@@ -55,10 +53,7 @@ const CardTitle = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn(
-      'font-semibold leading-none tracking-tight text-text font-heading',
-      className,
-    )}
+    className={cn('font-semibold leading-none tracking-tight', className)}
     {...props}
   />
 ));
@@ -70,7 +65,7 @@ const CardDescription = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <div
     ref={ref}
-    className={cn('text-sm text-gray-600', className)}
+    className={cn('text-sm text-muted-foreground', className)}
     {...props}
   />
 ));

@@ -30,7 +30,7 @@ function ChatPage() {
       navigate({ to: '/', replace: true });
       return;
     }
-    if (user && (!user.username || !user.onboardingComplete)) {
+    if (user && !user.username) {
       navigate({ to: '/onboarding', replace: true });
     }
   }, [user, navigate]);
@@ -45,7 +45,7 @@ function ChatPage() {
   }
 
   // Redirecting (spinner while navigate runs)
-  if (user === null || !user.username || !user.onboardingComplete) {
+  if (user === null || !user.username) {
     return (
       <div className="flex min-h-[400px] items-center justify-center bg-[var(--crate-void)]">
         <LoadingSpinner />

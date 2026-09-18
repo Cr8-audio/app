@@ -23,7 +23,7 @@ const TrackListItem = ({
   return (
     <div
       key={track.position}
-      className="grid grid-cols-[auto_1fr_auto] gap-4 p-3 border-2 border-border dark:border-darkBorder rounded-base group items-center hover:bg-border/10"
+      className="grid grid-cols-[auto_1fr_auto] gap-4 p-3 border border-border rounded-base group items-center hover:bg-border/10"
     >
       <div className="w-8 flex items-center justify-center">
         <Button
@@ -42,17 +42,15 @@ const TrackListItem = ({
       </div>
 
       <div>
-        <div className="font-medium text-text dark:text-darkText">
-          {track.title}
-        </div>
+        <div className="font-medium text-foreground ">{track.title}</div>
         {track.extra_artists && (
-          <div className="text-sm text-text/60 dark:text-darkText/60">
+          <div className="text-sm text-muted-foreground ">
             {track.extra_artists}
           </div>
         )}
       </div>
 
-      <div className="text-text/60 dark:text-darkText/60">{track.duration}</div>
+      <div className="text-muted-foreground ">{track.duration}</div>
     </div>
   );
 };
@@ -65,7 +63,7 @@ export function TrackList({
 }: TrackListProps) {
   return (
     <div className="space-y-2">
-      <div className="grid grid-cols-[auto_1fr_auto] gap-4 p-2 text-sm text-text/60 dark:text-darkText/60">
+      <div className="grid grid-cols-[auto_1fr_auto] gap-4 p-2 text-sm text-muted-foreground ">
         <div className="w-8">#</div>
         <div>TITLE</div>
         <div className="flex items-center gap-1">
