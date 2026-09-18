@@ -19,12 +19,21 @@ name = "crate-app"
 #   { pattern = "staging.cr8.audio", custom_domain = true }
 # ]
 
+# PR previews run on the cr8.audio account, on workers.dev only.
+# The workflow deploys each one as crate-app-pr-<number>.
+[env.preview]
+name = "crate-app-preview"
+account_id = "2f84630cfef8a6b13712d41a0e8d9afc"
+
 # Environment variables
 [env.production.vars]
 ENVIRONMENT = "production"
 
 [env.staging.vars]
 ENVIRONMENT = "staging"
+
+[env.preview.vars]
+ENVIRONMENT = "preview"
 
 # Note: Build is handled by GitHub Actions, not wrangler
 # See .github/workflows/deploy-*.yaml

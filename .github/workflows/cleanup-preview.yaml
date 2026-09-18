@@ -13,7 +13,7 @@ jobs:
       - name: Delete Preview Worker
         uses: cloudflare/wrangler-action@v3
         with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          apiToken: ${{ secrets.CLOUDFLARE_PRODUCTION_API_TOKEN }}
+          accountId: 2f84630cfef8a6b13712d41a0e8d9afc
           command: delete --name crate-app-pr-${{ github.event.pull_request.number }} --force
 
