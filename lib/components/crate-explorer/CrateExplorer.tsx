@@ -10,11 +10,6 @@ import ViewToggleButtons from './ViewToggleButtons';
 import SearchView from './SearchView';
 import CollectionView from './CollectionView';
 
-interface CollectionStats {
-  total: number;
-  loaded: number;
-}
-
 const CrateExplorer = ({}: CrateExplorerProps) => {
   const {
     query,
@@ -26,7 +21,7 @@ const CrateExplorer = ({}: CrateExplorerProps) => {
   } = useDiscogsSearch();
   const {
     collection,
-    pagination,
+    total: collectionTotal,
     loading: collectionLoading,
     error: collectionError,
     needsConnection: collectionNeedsConnection,
@@ -40,27 +35,13 @@ const CrateExplorer = ({}: CrateExplorerProps) => {
   useEffect(() => {
     initializePlayer();
   }, [initializePlayer]);
-  const [collectionStats, setCollectionStats] = useState<CollectionStats>({
-    total: 0,
-    loaded: 0,
-  });
-
-  useEffect(() => {
-    if (pagination) {
-      setCollectionStats({
-        total: pagination.items,
-        loaded: collection.length,
-      });
-    }
-  }, [collection, pagination]);
-
   return (
     <div className="w-full max-w-6xl mx-auto p-6">
       <div className="flex justify-between items-center mb-6">
         <ViewToggleButtons
           view={view}
           onViewChange={setView}
-          collectionCount={collectionStats.total}
+          collectionCount={collectionTotal}
         />
         <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
       </div>

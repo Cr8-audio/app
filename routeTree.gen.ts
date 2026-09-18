@@ -26,8 +26,6 @@ import { Route as ApiAiChatRouteImport } from './app/api/ai/chat'
 import { Route as UsernameSettingsConnectionsRouteImport } from './app/$username/settings/connections'
 import { Route as ApiExternalYoutubeSearchRouteImport } from './app/api/external/youtube/search'
 import { Route as ApiExternalYoutubeVideoIdRouteImport } from './app/api/external/youtube/$videoId'
-import { Route as ApiExternalDiscogsSearchRouteImport } from './app/api/external/discogs/search'
-import { Route as ApiExternalDiscogsReleaseIdRouteImport } from './app/api/external/discogs/release/$id'
 
 const WaitlistRoute = WaitlistRouteImport.update({
   id: '/waitlist',
@@ -117,18 +115,6 @@ const ApiExternalYoutubeVideoIdRoute =
     path: '/api/external/youtube/$videoId',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiExternalDiscogsSearchRoute =
-  ApiExternalDiscogsSearchRouteImport.update({
-    id: '/api/external/discogs/search',
-    path: '/api/external/discogs/search',
-    getParentRoute: () => rootRouteImport,
-  } as any)
-const ApiExternalDiscogsReleaseIdRoute =
-  ApiExternalDiscogsReleaseIdRouteImport.update({
-    id: '/api/external/discogs/release/$id',
-    path: '/api/external/discogs/release/$id',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -146,10 +132,8 @@ export interface FileRoutesByFullPath {
   '/api/ai/chat': typeof ApiAiChatRoute
   '/connect/discogs/callback': typeof ConnectDiscogsCallbackRoute
   '/$username/settings': typeof UsernameSettingsIndexRoute
-  '/api/external/discogs/search': typeof ApiExternalDiscogsSearchRoute
   '/api/external/youtube/$videoId': typeof ApiExternalYoutubeVideoIdRoute
   '/api/external/youtube/search': typeof ApiExternalYoutubeSearchRoute
-  '/api/external/discogs/release/$id': typeof ApiExternalDiscogsReleaseIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -167,10 +151,8 @@ export interface FileRoutesByTo {
   '/api/ai/chat': typeof ApiAiChatRoute
   '/connect/discogs/callback': typeof ConnectDiscogsCallbackRoute
   '/$username/settings': typeof UsernameSettingsIndexRoute
-  '/api/external/discogs/search': typeof ApiExternalDiscogsSearchRoute
   '/api/external/youtube/$videoId': typeof ApiExternalYoutubeVideoIdRoute
   '/api/external/youtube/search': typeof ApiExternalYoutubeSearchRoute
-  '/api/external/discogs/release/$id': typeof ApiExternalDiscogsReleaseIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -189,10 +171,8 @@ export interface FileRoutesById {
   '/api/ai/chat': typeof ApiAiChatRoute
   '/connect/discogs/callback': typeof ConnectDiscogsCallbackRoute
   '/$username/settings/': typeof UsernameSettingsIndexRoute
-  '/api/external/discogs/search': typeof ApiExternalDiscogsSearchRoute
   '/api/external/youtube/$videoId': typeof ApiExternalYoutubeVideoIdRoute
   '/api/external/youtube/search': typeof ApiExternalYoutubeSearchRoute
-  '/api/external/discogs/release/$id': typeof ApiExternalDiscogsReleaseIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -212,10 +192,8 @@ export interface FileRouteTypes {
     | '/api/ai/chat'
     | '/connect/discogs/callback'
     | '/$username/settings'
-    | '/api/external/discogs/search'
     | '/api/external/youtube/$videoId'
     | '/api/external/youtube/search'
-    | '/api/external/discogs/release/$id'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -233,10 +211,8 @@ export interface FileRouteTypes {
     | '/api/ai/chat'
     | '/connect/discogs/callback'
     | '/$username/settings'
-    | '/api/external/discogs/search'
     | '/api/external/youtube/$videoId'
     | '/api/external/youtube/search'
-    | '/api/external/discogs/release/$id'
   id:
     | '__root__'
     | '/'
@@ -254,10 +230,8 @@ export interface FileRouteTypes {
     | '/api/ai/chat'
     | '/connect/discogs/callback'
     | '/$username/settings/'
-    | '/api/external/discogs/search'
     | '/api/external/youtube/$videoId'
     | '/api/external/youtube/search'
-    | '/api/external/discogs/release/$id'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -275,10 +249,8 @@ export interface RootRouteChildren {
   ApiAiChatRoute: typeof ApiAiChatRoute
   ConnectDiscogsCallbackRoute: typeof ConnectDiscogsCallbackRoute
   UsernameSettingsIndexRoute: typeof UsernameSettingsIndexRoute
-  ApiExternalDiscogsSearchRoute: typeof ApiExternalDiscogsSearchRoute
   ApiExternalYoutubeVideoIdRoute: typeof ApiExternalYoutubeVideoIdRoute
   ApiExternalYoutubeSearchRoute: typeof ApiExternalYoutubeSearchRoute
-  ApiExternalDiscogsReleaseIdRoute: typeof ApiExternalDiscogsReleaseIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -402,20 +374,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiExternalYoutubeVideoIdRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/external/discogs/search': {
-      id: '/api/external/discogs/search'
-      path: '/api/external/discogs/search'
-      fullPath: '/api/external/discogs/search'
-      preLoaderRoute: typeof ApiExternalDiscogsSearchRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/external/discogs/release/$id': {
-      id: '/api/external/discogs/release/$id'
-      path: '/api/external/discogs/release/$id'
-      fullPath: '/api/external/discogs/release/$id'
-      preLoaderRoute: typeof ApiExternalDiscogsReleaseIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
   }
 }
 
@@ -445,10 +403,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiAiChatRoute: ApiAiChatRoute,
   ConnectDiscogsCallbackRoute: ConnectDiscogsCallbackRoute,
   UsernameSettingsIndexRoute: UsernameSettingsIndexRoute,
-  ApiExternalDiscogsSearchRoute: ApiExternalDiscogsSearchRoute,
   ApiExternalYoutubeVideoIdRoute: ApiExternalYoutubeVideoIdRoute,
   ApiExternalYoutubeSearchRoute: ApiExternalYoutubeSearchRoute,
-  ApiExternalDiscogsReleaseIdRoute: ApiExternalDiscogsReleaseIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -1,11 +1,16 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { query, internalMutation, type QueryCtx } from './_generated/server';
 import type { Doc } from './_generated/dataModel';
-import { pickCollectionOwnerKey, releasesToRemove } from './lib/discogsOAuth';
+import {
+  pickCollectionOwnerKey,
+  releasesToRemove,
+  toCollectionRelease,
+} from './lib/discogsOAuth';
 import { v } from 'convex/values';
 
 /**
- * Get user's Discogs collection from the database
+ * The signed-in user's synced Discogs collection, in the Discogs
+ * collection-release shape (`{ id, basic_information }`) the UI renders.
  */
 export const getCollection = query({
   args: {},
@@ -14,54 +19,36 @@ export const getCollection = query({
     if (!userId) {
       return [];
     }
-
     const user = await ctx.db.get(userId);
     if (!user) {
       return [];
     }
 
-    // Try multiple strategies to find user's releases
-    let userReleases: any[] = [];
+    const ownerKey = await resolveCollectionOwnerKey(ctx, user);
+    const userReleases = await ctx.db
+      .query('user_releases')
+      .withIndex('by_user', (q) => q.eq('user_id', ownerKey))
+      .collect();
 
-    if (user.supabaseUserId) {
-      userReleases = await ctx.db
-        .query('user_releases')
-        .withIndex('by_user', (q) => q.eq('user_id', user.supabaseUserId!))
-        .collect();
-    }
-
-    if (userReleases.length === 0 && user.email) {
-      userReleases = await ctx.db
-        .query('user_releases')
-        .withIndex('by_user', (q) => q.eq('user_id', user.email!))
-        .collect();
-    }
-
-    if (userReleases.length === 0) {
-      userReleases = await ctx.db
-        .query('user_releases')
-        .withIndex('by_user', (q) => q.eq('user_id', userId))
-        .collect();
-    }
-
-    if (userReleases.length === 0) {
-      return [];
-    }
-
-    // Get release details
     const releases = await Promise.all(
-      userReleases.map(async (ur) => {
-        const release = await ctx.db
+      userReleases.map((ur) =>
+        ctx.db
           .query('discogs_releases')
           .withIndex('by_discogs_id', (q) =>
             q.eq('discogs_release_id', ur.discogs_release_id),
           )
-          .first();
-        return release;
-      }),
+          .first(),
+      ),
     );
 
-    return releases.filter(Boolean);
+    return releases.flatMap((release) => {
+      if (!release) return [];
+      const normalized = toCollectionRelease(
+        release.discogs_release_id,
+        release.basic_release_data ?? release.discogs_release_data,
+      );
+      return normalized ? [normalized] : [];
+    });
   },
 });
 
