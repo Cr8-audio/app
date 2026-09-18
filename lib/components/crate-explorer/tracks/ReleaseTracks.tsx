@@ -1,4 +1,3 @@
-import { PlaybackError } from '@/lib/types';
 import { TrackList } from './TrackList';
 import { useEffect } from 'react';
 import { usePlayerStore } from '@/lib/stores';
@@ -25,8 +24,6 @@ const ReleaseTracks = ({ releaseId }: Props) => {
   });
 
   const loading = convexTracks === undefined;
-  const error = null; // Convex handles errors differently
-
   // Map Convex tracks to CrateTrack format
   const tracks: CrateTrack[] = (convexTracks || []).map((track) => ({
     ...track,
@@ -73,9 +70,9 @@ const ReleaseTracks = ({ releaseId }: Props) => {
 
   if (loading) {
     return (
-      <div className="animate-pulse space-y-2">
+      <div className="space-y-2 animate-pulse">
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="h-16 bg-border/10 rounded-base" />
+          <div key={i} className="h-12 rounded-xl bg-muted" />
         ))}
       </div>
     );
@@ -83,8 +80,8 @@ const ReleaseTracks = ({ releaseId }: Props) => {
 
   if (tracks.length === 0) {
     return (
-      <div className="text-muted-foreground p-4 text-center">
-        <p>No tracks found for this release</p>
+      <div className="p-6 text-center text-sm text-muted-foreground">
+        <p>No tracks found for this release.</p>
       </div>
     );
   }

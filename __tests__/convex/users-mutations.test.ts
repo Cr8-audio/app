@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { getUsernameValidationError } from '@/convex/lib/username';
 
 /**
  * Tests for user mutation business logic.
@@ -12,19 +13,8 @@ function validateUsername(username: string): {
   valid: boolean;
   error?: string;
 } {
-  if (username.length < 3 || username.length > 30) {
-    return { valid: false, error: 'Username must be 3-30 characters' };
-  }
-
-  if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-    return {
-      valid: false,
-      error:
-        'Username can only contain letters, numbers, underscores, and hyphens',
-    };
-  }
-
-  return { valid: true };
+  const error = getUsernameValidationError(username);
+  return error ? { valid: false, error } : { valid: true };
 }
 
 // Onboarding step validation logic
@@ -103,6 +93,14 @@ describe('User Mutations - Business Logic', () => {
       const username = 'TestUser';
       expect(username.toLowerCase()).toBe('testuser');
     });
+
+    it('rejects usernames reserved for app routes', () => {
+      const result = validateUsername('analyze');
+      expect(result).toEqual({
+        valid: false,
+        error: 'That username is reserved by Crate',
+      });
+    });
   });
 
   describe('updateOnboardingStep logic', () => {
@@ -136,15 +134,17 @@ describe('User Mutations - Business Logic', () => {
   });
 
   describe('setUsername mutation flow', () => {
-    it('sets onboardingStep to connections after username set', () => {
+    it('completes onboarding after username is set', () => {
       // Simulating what setUsername mutation does after success
       const updates = {
         username: 'testuser'.toLowerCase(),
         displayName: 'Test User',
-        onboardingStep: 'connections',
+        onboardingStep: 'complete',
+        onboardingComplete: true,
       };
 
-      expect(updates.onboardingStep).toBe('connections');
+      expect(updates.onboardingStep).toBe('complete');
+      expect(updates.onboardingComplete).toBe(true);
       expect(updates.username).toBe('testuser');
     });
 

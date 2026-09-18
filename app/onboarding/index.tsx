@@ -1,12 +1,13 @@
-import { createFileRoute, useNavigate } from '@tanstack/react-router';
-import { useState, useEffect } from 'react';
-import { suggestUsername } from '@/convex/lib/discogsOAuth';
-import { useQuery, useMutation } from 'convex/react';
+import { useEffect, useState } from 'react';
+import { createFileRoute, Navigate, useNavigate } from '@tanstack/react-router';
+import { useMutation, useQuery } from 'convex/react';
+import { Check, CheckCircle, Loader2, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
 import { api } from '@/convex/_generated/api';
+import { suggestUsername } from '@/convex/lib/discogsOAuth';
+import { getUsernameValidationError } from '@/convex/lib/username';
 import { Button } from '@/lib/components/ui/button';
 import { LoadingSpinner } from '@/lib/components/ui/loading';
-import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
-import { toast } from 'sonner';
 
 export const Route = createFileRoute('/onboarding/')({
   component: OnboardingPage,
@@ -22,30 +23,19 @@ function OnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
 
-  // Check username availability (skip if empty or invalid)
   const checkAvailability = useQuery(
     api.users.checkUsernameAvailable,
     username.length >= 3 && !validationError ? { username } : 'skip',
   );
 
-  // Redirect based on onboarding state
   useEffect(() => {
     if (!user) return;
 
-    // If onboarding complete, go to dashboard
-    if (user.onboardingComplete && user.username) {
-      navigate({ to: `/${user.username}`, replace: true });
-      return;
-    }
-
-    // If user has username but not complete, they're on connections step
-    if (user.username && user.onboardingStep === 'connections') {
-      navigate({ to: '/onboarding/connect', replace: true });
-      return;
+    if (user.username) {
+      navigate({ to: '/analyze/chat', replace: true });
     }
   }, [user, navigate]);
 
-  // Suggest the Discogs username (set as displayName at sign-in)
   useEffect(() => {
     if (user?.displayName && !username) {
       setUsername(suggestUsername(user.displayName) ?? '');
@@ -53,35 +43,18 @@ function OnboardingPage() {
     }
   }, [user?.displayName, username]);
 
-  // Client-side validation
   useEffect(() => {
     if (!username) {
       setValidationError(null);
       return;
     }
 
-    if (username.length < 3) {
-      setValidationError('Username must be at least 3 characters');
-      return;
-    }
-
-    if (username.length > 30) {
-      setValidationError('Username must be less than 30 characters');
-      return;
-    }
-
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      setValidationError(
-        'Only letters, numbers, underscores, and hyphens allowed',
-      );
-      return;
-    }
-
-    setValidationError(null);
+    const error = getUsernameValidationError(username);
+    setValidationError(error);
   }, [username]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
 
     if (validationError) {
       toast.error(validationError);
@@ -101,8 +74,8 @@ function OnboardingPage() {
         displayName: displayName || username,
       });
 
-      toast.success(`Great! Now let's connect your music.`);
-      navigate({ to: '/onboarding/connect', replace: true });
+      toast.success('Welcome to Crate. Your collection is syncing.');
+      navigate({ to: '/analyze/chat', replace: true });
     } catch (error) {
       console.error('Failed to set username:', error);
       toast.error(
@@ -112,140 +85,231 @@ function OnboardingPage() {
     }
   };
 
-  // Show loading while fetching user data
-  if (!user) {
+  if (user === undefined) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <LoadingSpinner />
+      <div className="flex min-h-screen flex-col items-center justify-center gap-3 bg-background">
+        <LoadingSpinner className="h-5 w-5" />
+        <p className="text-sm text-muted-foreground">
+          Preparing your collection…
+        </p>
       </div>
     );
+  }
+
+  if (user === null) {
+    return <Navigate to="/auth" replace />;
   }
 
   const isUsernameValid = username.length >= 3 && !validationError;
   const isAvailable = checkAvailability?.available === true;
   const canSubmit = isUsernameValid && isAvailable && !isSubmitting;
+  const availabilityError =
+    !validationError && checkAvailability && !checkAvailability.available
+      ? checkAvailability.error
+      : null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-lg border-2 border-gray-800 shadow-light p-8">
-          {/* Header */}
-          <div className="text-center mb-8">
-            <div className="w-16 h-16 mx-auto mb-4">
-              <img src="/logo.svg" alt="Crate Logo" className="w-full h-full" />
-            </div>
-            <h1 className="text-2xl font-bold mb-2">Welcome to Crate!</h1>
-            <p className="text-gray-600">Choose your username to get started</p>
-          </div>
+    <main className="relative min-h-screen overflow-hidden bg-background px-5 py-6 text-foreground sm:px-8 sm:py-10 lg:px-10">
+      <div
+        className="pointer-events-none absolute -right-32 top-0 h-96 w-96 rounded-full bg-primary/10 blur-3xl"
+        aria-hidden="true"
+      />
 
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Username Input */}
-            <div>
-              <label
-                htmlFor="username"
-                className="block text-sm font-medium mb-2"
-              >
-                Username
-              </label>
-              <div className="relative">
-                <input
-                  id="username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value.toLowerCase())}
-                  placeholder="johndoe"
-                  className="w-full px-4 py-3 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-main"
-                  disabled={isSubmitting}
-                  autoFocus
-                  required
-                />
-                {username.length >= 3 && (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    {checkAvailability === undefined ? (
-                      <Loader2 className="w-5 h-5 animate-spin text-gray-400" />
+      <div className="relative mx-auto w-full max-w-6xl">
+        <div className="mb-10 flex items-center justify-between">
+          <div className="inline-flex items-center gap-3">
+            <span className="grid h-9 w-9 place-items-center rounded-full bg-foreground">
+              <span className="h-3 w-3 rounded-full border-[3px] border-background bg-primary" />
+            </span>
+            <span className="text-lg font-semibold tracking-[-0.04em]">
+              Crate
+            </span>
+          </div>
+          <span className="font-mono text-[0.65rem] uppercase tracking-[0.16em] text-muted-foreground">
+            Step 1 of 1
+          </span>
+        </div>
+
+        <div className="grid items-start gap-10 lg:grid-cols-[0.9fr_1.1fr] lg:gap-20">
+          <section className="max-w-lg pt-3" aria-labelledby="onboarding-title">
+            <p className="mb-6 flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              <span className="h-px w-8 bg-primary" />
+              One last detail
+            </p>
+            <h1
+              id="onboarding-title"
+              className="text-5xl font-medium leading-[0.96] tracking-[-0.055em] sm:text-6xl"
+            >
+              Make the collection yours.
+            </h1>
+            <p className="mt-6 max-w-md text-base leading-7 text-muted-foreground">
+              Pick the name people will see around Crate. Your Discogs
+              connection is ready; we’ll start bringing in your collection after
+              this.
+            </p>
+
+            <div className="mt-9 rounded-2xl border border-border bg-card p-5 shadow-sm">
+              <div className="flex items-start gap-3">
+                <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-primary">
+                  <Check className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <div>
+                  <p className="text-sm font-semibold">Discogs connected</p>
+                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
+                    Signed in as {user.displayName || 'your Discogs account'}.
+                    No second connection step needed.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            className="rounded-[1.5rem] border border-border bg-card p-6 shadow-xl sm:p-8"
+            aria-label="Choose your Crate username"
+          >
+            <div className="mb-7">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Your Crate identity
+              </p>
+              <h2 className="mt-2 text-2xl font-medium tracking-[-0.035em]">
+                Choose how you’ll appear
+              </h2>
+            </div>
+
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <label
+                  htmlFor="username"
+                  className="mb-2 block text-sm font-semibold"
+                >
+                  Username
+                </label>
+                <div className="relative">
+                  <input
+                    id="username"
+                    type="text"
+                    value={username}
+                    onChange={(event) =>
+                      setUsername(event.target.value.toLowerCase())
+                    }
+                    placeholder="yourname"
+                    className="h-12 w-full rounded-xl border border-input bg-background px-4 pr-12 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground/70 focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={isSubmitting}
+                    aria-invalid={Boolean(validationError || availabilityError)}
+                    aria-describedby="username-preview username-status"
+                    autoCapitalize="none"
+                    autoComplete="username"
+                    spellCheck={false}
+                    autoFocus
+                    required
+                  />
+                  {validationError ? (
+                    <XCircle
+                      className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-destructive"
+                      aria-hidden="true"
+                    />
+                  ) : username.length >= 3 ? (
+                    checkAvailability === undefined ? (
+                      <Loader2
+                        className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 animate-spin text-muted-foreground"
+                        aria-hidden="true"
+                      />
                     ) : isAvailable ? (
-                      <CheckCircle className="w-5 h-5 text-green-600" />
+                      <CheckCircle
+                        className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-ok"
+                        aria-hidden="true"
+                      />
                     ) : (
-                      <XCircle className="w-5 h-5 text-red-600" />
+                      <XCircle
+                        className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-destructive"
+                        aria-hidden="true"
+                      />
+                    )
+                  ) : null}
+                </div>
+
+                <div className="mt-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-1 text-xs">
+                  <p id="username-preview" className="text-muted-foreground">
+                    crate.audio/
+                    <span className="font-mono text-foreground">
+                      {username || 'yourname'}
+                    </span>
+                  </p>
+                  <div
+                    id="username-status"
+                    className="min-h-5 text-right"
+                    aria-live="polite"
+                  >
+                    {validationError && (
+                      <p className="text-destructive">{validationError}</p>
+                    )}
+                    {availabilityError && (
+                      <p className="text-destructive">{availabilityError}</p>
+                    )}
+                    {!validationError && isAvailable && (
+                      <p className="text-ok">Available</p>
                     )}
                   </div>
-                )}
+                </div>
               </div>
 
-              {/* Preview URL */}
-              <p className="mt-2 text-sm text-gray-500">
-                Your profile:{' '}
-                <span className="font-mono">
-                  crate.audio/{username || '...'}
-                </span>
-              </p>
-
-              {/* Validation Messages */}
-              {validationError && (
-                <p className="mt-2 text-sm text-red-600">{validationError}</p>
-              )}
-              {!validationError &&
-                checkAvailability &&
-                !checkAvailability.available && (
-                  <p className="mt-2 text-sm text-red-600">
-                    {checkAvailability.error}
-                  </p>
-                )}
-              {!validationError && isAvailable && (
-                <p className="mt-2 text-sm text-green-600">
-                  Username is available!
+              <div>
+                <div className="mb-2 flex items-baseline justify-between gap-4">
+                  <label
+                    htmlFor="displayName"
+                    className="text-sm font-semibold"
+                  >
+                    Display name
+                  </label>
+                  <span className="text-xs text-muted-foreground">
+                    Optional
+                  </span>
+                </div>
+                <input
+                  id="displayName"
+                  type="text"
+                  value={displayName}
+                  onChange={(event) => setDisplayName(event.target.value)}
+                  placeholder="The name people know you by"
+                  className="h-12 w-full rounded-xl border border-input bg-background px-4 text-sm text-foreground shadow-sm outline-none transition placeholder:text-muted-foreground/70 focus:border-primary focus:ring-4 focus:ring-primary/10 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={isSubmitting}
+                  autoComplete="name"
+                  aria-describedby="display-name-help"
+                />
+                <p
+                  id="display-name-help"
+                  className="mt-2 text-xs leading-5 text-muted-foreground"
+                >
+                  We’ve used your Discogs display name. Edit it if you like.
                 </p>
-              )}
-            </div>
+              </div>
 
-            {/* Display Name Input */}
-            <div>
-              <label
-                htmlFor="displayName"
-                className="block text-sm font-medium mb-2"
+              <Button
+                type="submit"
+                disabled={!canSubmit}
+                className="h-12 w-full rounded-xl text-sm font-semibold shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:translate-y-0"
               >
-                Display Name (Optional)
-              </label>
-              <input
-                id="displayName"
-                type="text"
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="John Doe"
-                className="w-full px-4 py-3 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-main"
-                disabled={isSubmitting}
-              />
-              <p className="mt-2 text-sm text-gray-500">
-                This is how your name will appear on your profile
-              </p>
-            </div>
+                {isSubmitting ? (
+                  <>
+                    <Loader2
+                      className="h-4 w-4 animate-spin"
+                      aria-hidden="true"
+                    />
+                    Opening your Crate…
+                  </>
+                ) : (
+                  'Enter Crate'
+                )}
+              </Button>
+            </form>
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              disabled={!canSubmit}
-              className="w-full py-6 text-lg font-semibold bg-main hover:bg-mainAccent border-2 border-gray-800 shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Creating your profile...
-                </>
-              ) : (
-                'Continue'
-              )}
-            </Button>
-          </form>
-
-          {/* Info */}
-          <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <p className="text-xs text-gray-600 text-center">
-              You can change your username later in settings
+            <p className="mt-5 border-t border-border pt-5 text-center text-xs leading-5 text-muted-foreground">
+              This becomes the address for your personal Crate.
             </p>
-          </div>
+          </section>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

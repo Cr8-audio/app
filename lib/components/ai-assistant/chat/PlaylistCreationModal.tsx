@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/lib/components/ui/button';
 import { Input } from '@/lib/components/ui/input';
 import { Label } from '@/lib/components/ui/label';
@@ -43,6 +43,12 @@ export default function PlaylistCreationModal({
   const createPlaylistWithTracks = useMutation(
     api.playlists.createPlaylistWithTracks,
   );
+
+  useEffect(() => {
+    if (isOpen) {
+      setSelectedTracks(new Set(suggestedTracks.map((track) => track.id)));
+    }
+  }, [isOpen, suggestedTracks]);
 
   const toggleTrackSelection = (trackId: string) => {
     const newSelection = new Set(selectedTracks);
@@ -102,35 +108,45 @@ export default function PlaylistCreationModal({
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col bg-bg border-2 border-black shadow-light">
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="flex max-h-[85vh] max-w-2xl flex-col overflow-hidden">
         <DialogHeader>
-          <DialogTitle className="text-text font-heading">
-            Create Playlist from AI Suggestions
+          <p className="eyebrow">Save the find</p>
+          <DialogTitle className="text-xl text-foreground">
+            Turn these tracks into a playlist
           </DialogTitle>
+          <p className="text-sm text-muted-foreground">
+            Name the idea now. You can keep shaping the order later.
+          </p>
         </DialogHeader>
 
         <div className="space-y-4 flex-1 overflow-hidden flex flex-col">
           {/* Playlist Info */}
           <div className="space-y-3">
             <div>
-              <Label htmlFor="playlist-name" className="text-text font-medium">
-                Playlist Name
+              <Label
+                htmlFor="playlist-name"
+                className="text-foreground font-medium"
+              >
+                Playlist name
               </Label>
               <Input
                 id="playlist-name"
                 value={playlistName}
                 onChange={(e) => setPlaylistName(e.target.value)}
-                placeholder="Enter playlist name..."
-                className="mt-1 border-2 border-black bg-white focus:ring-main focus:border-main"
+                placeholder="Late room, early morning…"
+                className="mt-1.5"
               />
             </div>
             <div>
               <Label
                 htmlFor="playlist-description"
-                className="text-text font-medium"
+                className="text-foreground font-medium"
               >
-                Description (Optional)
+                Note{' '}
+                <span className="font-normal text-muted-foreground">
+                  (optional)
+                </span>
               </Label>
               <textarea
                 id="playlist-description"
@@ -138,8 +154,8 @@ export default function PlaylistCreationModal({
                 onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
                   setDescription(e.target.value)
                 }
-                placeholder="Describe your playlist..."
-                className="mt-1 resize-none flex min-h-[60px] w-full rounded-base border-2 border-black bg-white px-3 py-2 text-sm text-text placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-main focus:border-main"
+                placeholder="What is this set for?"
+                className="mt-1.5 flex min-h-[72px] w-full resize-none rounded-[0.75rem] border border-input bg-popover px-3.5 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-ring/15"
                 rows={2}
               />
             </div>
@@ -148,7 +164,7 @@ export default function PlaylistCreationModal({
           {/* Track Selection */}
           <div className="flex-1 overflow-hidden flex flex-col">
             <div className="flex items-center justify-between mb-3">
-              <Label className="text-text font-medium">
+              <Label className="text-foreground font-medium">
                 Select Tracks ({selectedTracks.size}/{suggestedTracks.length})
               </Label>
               <div className="flex space-x-2">
@@ -158,7 +174,7 @@ export default function PlaylistCreationModal({
                   onClick={() =>
                     setSelectedTracks(new Set(suggestedTracks.map((t) => t.id)))
                   }
-                  className="border-2 border-black bg-white hover:bg-main hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none shadow-light transition-all"
+                  className="text-[0.68rem]"
                 >
                   Select All
                 </Button>
@@ -166,49 +182,66 @@ export default function PlaylistCreationModal({
                   variant="outline"
                   size="sm"
                   onClick={() => setSelectedTracks(new Set())}
-                  className="border-2 border-black bg-white hover:bg-red-100 hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none shadow-light transition-all"
+                  className="text-[0.68rem]"
                 >
                   Clear All
                 </Button>
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2 border-2 border-black rounded-base p-3 bg-white">
+            <div className="flex-1 space-y-2 overflow-y-auto rounded-[1rem] border border-border/70 bg-muted/35 p-2">
               {suggestedTracks.map((track) => {
                 const isSelected = selectedTracks.has(track.id);
                 return (
                   <Card
                     key={track.id}
-                    className={`cursor-pointer transition-all border-2 border-black rounded-base shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none ${
-                      isSelected ? 'bg-main' : 'bg-white hover:bg-bg'
+                    className={`cursor-pointer rounded-[0.85rem] border shadow-none transition-colors ${
+                      isSelected
+                        ? 'border-primary/25 bg-accent'
+                        : 'border-transparent bg-card hover:border-border'
                     }`}
                     onClick={() => toggleTrackSelection(track.id)}
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter' || event.key === ' ') {
+                        event.preventDefault();
+                        toggleTrackSelection(track.id);
+                      }
+                    }}
+                    role="checkbox"
+                    aria-checked={isSelected}
+                    tabIndex={0}
                   >
                     <CardContent className="p-3">
                       <div className="flex items-center space-x-3">
-                        <div className="w-10 h-10 bg-mainAccent border-2 border-black rounded-base flex items-center justify-center">
+                        <div
+                          className={`flex h-10 w-10 items-center justify-center rounded-[0.7rem] ${
+                            isSelected
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted text-muted-foreground'
+                          }`}
+                        >
                           {isSelected ? (
-                            <Check className="w-5 h-5 text-black" />
+                            <Check className="h-4 w-4" />
                           ) : (
-                            <Music className="w-5 h-5 text-black" />
+                            <Music className="h-4 w-4" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-sm truncate text-text font-heading">
+                          <h4 className="font-medium text-sm truncate text-foreground ">
                             {track.title}
                           </h4>
-                          <p className="text-xs text-gray-600 truncate">
+                          <p className="text-xs text-muted-foreground truncate">
                             {track.artist}
                           </p>
                           <div className="flex items-center space-x-2 mt-1">
                             {track.bpm && (
-                              <span className="bg-white border border-black text-xs px-2 py-0.5 rounded-base text-text font-mono">
+                              <span className="rounded-full bg-card px-2 py-0.5 font-mono text-[0.62rem] text-muted-foreground">
                                 {track.bpm} BPM
                               </span>
                             )}
-                            {track.genres && track.genres.length > 0 && (
-                              <span className="border border-black text-xs px-2 py-0.5 rounded-base text-text">
-                                {track.genres[0]}
+                            {track.genres && (
+                              <span className="rounded-full bg-card px-2 py-0.5 text-[0.62rem] text-muted-foreground">
+                                {track.genres.split(',')[0]?.trim()}
                               </span>
                             )}
                           </div>
@@ -223,19 +256,10 @@ export default function PlaylistCreationModal({
         </div>
 
         <DialogFooter>
-          <Button
-            variant="outline"
-            onClick={onClose}
-            disabled={isCreating}
-            className="border-2 border-black bg-white hover:bg-gray-100 text-text shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all"
-          >
+          <Button variant="outline" onClick={onClose} disabled={isCreating}>
             Cancel
           </Button>
-          <Button
-            onClick={handleCreatePlaylist}
-            disabled={isCreating}
-            className="bg-main hover:bg-mainAccent border-2 border-black text-text font-medium shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all"
-          >
+          <Button onClick={handleCreatePlaylist} disabled={isCreating}>
             {isCreating ? (
               <>
                 <Plus className="w-4 h-4 mr-2 animate-spin" />

@@ -1,20 +1,27 @@
 import { useState } from 'react';
 import { useAction } from 'convex/react';
+import { ArrowUpRight, Disc3, LoaderCircle } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/lib/components/ui/button';
-import { LoaderCircle } from 'lucide-react';
 import {
   DISCOGS_RETURN_KEY,
   DISCOGS_SIGN_IN_NONCE_KEY,
 } from '@/lib/hooks/useDiscogsConnection';
+import { cn } from '@/lib/utils/tailwind';
+
+interface SignInButtonProps {
+  className?: string;
+}
 
 function randomNonce(): string {
   const bytes = crypto.getRandomValues(new Uint8Array(32));
-  return Array.from(bytes, (b) => b.toString(16).padStart(2, '0')).join('');
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join(
+    '',
+  );
 }
 
 /** "Continue with Discogs": the only way to sign in to Crate. */
-const SignInButton = () => {
+const SignInButton = ({ className }: SignInButtonProps) => {
   const startSignIn = useAction(api.discogs.startSignIn);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,16 +47,37 @@ const SignInButton = () => {
   };
 
   return (
-    <div className="space-y-4">
+    <div className="w-full">
       <Button
+        type="button"
         onClick={handleSignIn}
         disabled={isLoading}
-        className="w-full flex items-center justify-center gap-2"
+        aria-busy={isLoading}
+        className={cn(
+          'h-12 w-full rounded-xl px-4 text-sm font-semibold shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md active:translate-y-0 disabled:translate-y-0',
+          className,
+        )}
       >
-        {isLoading && <LoaderCircle className="h-4 w-4 animate-spin" />}
-        {isLoading ? 'Redirecting to Discogs…' : 'Continue with Discogs'}
+        {isLoading ? (
+          <LoaderCircle className="h-4 w-4 animate-spin" aria-hidden="true" />
+        ) : (
+          <Disc3 className="h-4 w-4" aria-hidden="true" />
+        )}
+        <span>{isLoading ? 'Opening Discogs…' : 'Continue with Discogs'}</span>
+        {!isLoading && (
+          <ArrowUpRight className="ml-auto h-4 w-4" aria-hidden="true" />
+        )}
       </Button>
-      {error && <p className="text-sm text-red-600">{error}</p>}
+      <div className="min-h-6" aria-live="polite">
+        {error && (
+          <p
+            role="alert"
+            className="mt-2 rounded-lg bg-destructive/10 px-3 py-2 text-sm text-destructive"
+          >
+            {error}
+          </p>
+        )}
+      </div>
     </div>
   );
 };

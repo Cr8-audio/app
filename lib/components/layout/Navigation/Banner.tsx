@@ -17,7 +17,7 @@ export default function Banner({
   authElement,
 }: BannerProps) {
   return (
-    <header className="text-black p-6 flex justify-between items-center">
+    <header className="text-foreground p-6 flex justify-between items-center">
       <div className="flex items-center">
         <Link to="/">
           <img

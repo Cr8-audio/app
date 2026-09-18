@@ -2,7 +2,7 @@ import { useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useConvexAuth } from 'convex/react';
 
-type OnboardingStep = 'username' | 'connections' | 'complete';
+type OnboardingStep = 'username' | 'complete';
 
 /**
  * Custom hook to manage authentication state
@@ -20,13 +20,8 @@ export function useAuth() {
   const isLoading = isAuthLoading || (isAuthenticated && user === undefined);
 
   // Determine current onboarding step
-  const getOnboardingStep = (): OnboardingStep => {
-    if (!user) return 'username';
-    if (user.onboardingComplete) return 'complete';
-    if (user.onboardingStep) return user.onboardingStep as OnboardingStep;
-    if (user.username) return 'connections';
-    return 'username';
-  };
+  const getOnboardingStep = (): OnboardingStep =>
+    user?.username ? 'complete' : 'username';
 
   const onboardingStep = getOnboardingStep();
 
@@ -43,13 +38,10 @@ export function useAuth() {
     isLoading,
 
     // Onboarding state
-    needsOnboarding:
-      isAuthenticated &&
-      user !== undefined &&
-      (!user?.username || !user?.onboardingComplete),
+    // Onboarding is picking a username (Discogs sign-in connected the rest).
+    needsOnboarding: isAuthenticated && user !== undefined && !user?.username,
     onboardingStep,
     needsUsername: onboardingStep === 'username',
-    needsConnections: onboardingStep === 'connections',
     onboardingComplete: onboardingStep === 'complete',
   };
 }

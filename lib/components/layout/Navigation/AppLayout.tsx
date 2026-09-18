@@ -1,262 +1,159 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
-import { Link, useRouterState } from '@tanstack/react-router';
+import { Link, Navigate, useLocation } from '@tanstack/react-router';
+import { Disc3, LibraryBig, ListMusic, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { cn } from '@/lib/utils/tailwind';
-import { useKeyboardNavigation } from '@/lib/hooks/useKeyboardNavigation';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import PersistentPlayer from '@/lib/components/ui/persistent-player';
-import { X, Home } from 'lucide-react';
-import { useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { LoadingSpinner } from '@/lib/components/ui/loading';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-function ChatHomeChrome({ children }: { children: React.ReactNode }) {
-  const { username, displayName } = useAuth();
-  const tracks = useQuery(api.tracks.getUserTracks);
-  const trackCount = tracks?.length;
+function MobileNavigation({ username }: { username: string }) {
+  const { pathname } = useLocation();
+  const items = [
+    {
+      label: 'Ask',
+      href: '/analyze/chat',
+      icon: MessageCircle,
+      active: pathname.startsWith('/analyze'),
+    },
+    {
+      label: 'Library',
+      href: `/${username}/tracks`,
+      icon: LibraryBig,
+      active:
+        pathname.startsWith(`/${username}/tracks`) ||
+        pathname.startsWith(`/${username}/collection`),
+    },
+    {
+      label: 'Playlists',
+      href: `/${username}/playlists`,
+      icon: ListMusic,
+      active: pathname.startsWith(`/${username}/playlists`),
+    },
+  ];
 
   return (
-    <div className="crate-chat-home flex h-screen flex-col overflow-hidden bg-[var(--crate-void)] text-[var(--crate-ink)]">
-      {/* Minimal identity + crate status — no sidebar/topbar */}
-      <header className="flex h-12 flex-shrink-0 items-center justify-between border-b border-[var(--crate-rule)] px-4">
-        <div className="flex items-center gap-3 min-w-0">
+    <nav
+      aria-label="Primary navigation"
+      className="grid h-[4.35rem] flex-shrink-0 grid-cols-3 border-t border-border/80 bg-card/95 px-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+    >
+      {items.map((item) => {
+        const Icon = item.icon;
+        return (
           <Link
-            to="/analyze/chat"
-            className="font-heading text-sm font-semibold tracking-tight text-[var(--crate-ink)]"
-          >
-            Crate
-          </Link>
-          <span
-            className="hidden h-1 w-1 rounded-full bg-[var(--crate-rule)] sm:inline-block"
-            aria-hidden
-          />
-          <p className="truncate text-xs text-[var(--crate-ink-muted)]">
-            {displayName || username || 'DJ'}
-            {typeof trackCount === 'number' ? (
-              <span className="font-mono"> · {trackCount} in crate</span>
-            ) : (
-              <span> · loading crate…</span>
+            key={item.label}
+            to={item.href}
+            aria-current={item.active ? 'page' : undefined}
+            className={cn(
+              'relative flex min-w-0 flex-col items-center justify-center gap-1 text-[0.68rem] font-medium transition-colors',
+              item.active
+                ? 'text-primary'
+                : 'text-muted-foreground hover:text-foreground',
             )}
-          </p>
-        </div>
-        {username ? (
-          <Link
-            to="/$username"
-            params={{ username }}
-            className="inline-flex items-center gap-1.5 rounded-[var(--radius-chip)] border border-[var(--crate-rule)] bg-[var(--crate-panel)] px-2.5 py-1 text-[10px] text-[var(--crate-ink-muted)] transition-colors duration-150 ease-out hover:bg-[var(--crate-accent-soft)] hover:text-[var(--crate-ink)]"
-            title="Overview (dashboard)"
           >
-            <Home className="h-3 w-3" aria-hidden />
-            Overview
+            {item.active && (
+              <span className="absolute top-0 h-0.5 w-8 rounded-full bg-primary" />
+            )}
+            <Icon className="h-[1.15rem] w-[1.15rem]" strokeWidth={1.8} />
+            <span className="truncate">{item.label}</span>
           </Link>
-        ) : null}
-      </header>
+        );
+      })}
+    </nav>
+  );
+}
 
-      <main className="relative flex min-h-0 flex-1 flex-col overflow-hidden">
-        {children}
-      </main>
-
-      <div className="flex-shrink-0 z-[60]">
-        <PersistentPlayer />
+function BareLoadingState() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-foreground text-background">
+          <Disc3 className="h-5 w-5" />
+        </span>
+        <LoadingSpinner />
       </div>
     </div>
   );
 }
 
 export default function AppLayout({ children }: AppLayoutProps) {
-  const { isAuthenticated } = useAuth();
-  const pathname = useRouterState({ select: (s) => s.location.pathname });
-  const isChatHome = pathname === '/analyze/chat';
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
+  const { pathname } = useLocation();
+  const { isAuthenticated, isLoading, username } = useAuth();
+  const normalizedPath =
+    pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname;
+  const isAlwaysBareRoute =
+    normalizedPath === '/' ||
+    normalizedPath === '/auth' ||
+    normalizedPath === '/connect/discogs/callback';
+  const isOnboardingRoute = normalizedPath === '/onboarding';
 
-  // Enable keyboard navigation
-  useKeyboardNavigation();
-
-  // Handle responsive behavior and persistence
-  useEffect(() => {
-    // Check localStorage for sidebar state
-    const savedState = localStorage.getItem('crate-sidebar-collapsed');
-    if (savedState !== null) {
-      setSidebarCollapsed(JSON.parse(savedState));
-    }
-
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-
-      // On mobile, always start with sidebar collapsed
-      if (mobile) {
-        setSidebarCollapsed(true);
-        setMobileMenuOpen(false);
-      }
-    };
-
-    handleResize();
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  // Persist sidebar state
-  const toggleSidebar = useCallback(() => {
-    setSidebarCollapsed((prev) => {
-      const next = !prev;
-      localStorage.setItem('crate-sidebar-collapsed', JSON.stringify(next));
-      return next;
-    });
-  }, []);
-
-  // Close mobile menu when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (mobileMenuOpen && isMobile) {
-        const sidebar = document.getElementById('sidebar');
-        if (sidebar && !sidebar.contains(event.target as Node)) {
-          setMobileMenuOpen(false);
-        }
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [mobileMenuOpen, isMobile]);
-
-  // Handle keyboard shortcuts
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      // CMD/Ctrl + B to toggle sidebar (skip on chat-home — no sidebar)
-      if ((event.metaKey || event.ctrlKey) && event.key === 'b') {
-        if (isChatHome) return;
-        event.preventDefault();
-        if (isMobile) {
-          setMobileMenuOpen(!mobileMenuOpen);
-        } else {
-          toggleSidebar();
-        }
-      }
-
-      // CMD/Ctrl + K for search (handled by TopBar)
-      if ((event.metaKey || event.ctrlKey) && event.key === 'k') {
-        if (isChatHome) return;
-        event.preventDefault();
-        // Focus search input
-        const searchInput = document.querySelector(
-          'input[placeholder*="Search"]',
-        ) as HTMLInputElement;
-        searchInput?.focus();
-      }
-
-      // Escape to close mobile menu
-      if (event.key === 'Escape' && mobileMenuOpen) {
-        setMobileMenuOpen(false);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [sidebarCollapsed, mobileMenuOpen, isMobile, isChatHome, toggleSidebar]);
-
-  // Don't render navigation for unauthenticated users
-  if (!isAuthenticated) {
-    return <div className="min-h-screen">{children}</div>;
+  if (isAlwaysBareRoute) return <>{children}</>;
+  if (isLoading) return <BareLoadingState />;
+  if (!isAuthenticated) return <Navigate to="/auth" replace />;
+  if (!username) {
+    return isOnboardingRoute ? (
+      <>{children}</>
+    ) : (
+      <Navigate to="/onboarding" replace />
+    );
   }
 
-  // Chat is primary home — void shell, no sidebar/topbar
-  if (isChatHome) {
-    return <ChatHomeChrome>{children}</ChatHomeChrome>;
+  if (isOnboardingRoute) return <Navigate to="/analyze/chat" replace />;
+
+  const [routeUsername, section, subSection] = normalizedPath
+    .split('/')
+    .filter(Boolean);
+  const isUsernameRoute =
+    routeUsername !== undefined &&
+    routeUsername !== 'analyze' &&
+    routeUsername !== 'connect';
+
+  if (isUsernameRoute && routeUsername !== username) {
+    const params = { username };
+
+    if (section === 'tracks') {
+      return <Navigate to="/$username/tracks" params={params} replace />;
+    }
+    if (section === 'collection') {
+      return <Navigate to="/$username/collection" params={params} replace />;
+    }
+    if (section === 'playlists') {
+      return <Navigate to="/$username/playlists" params={params} replace />;
+    }
+    if (section === 'settings' || subSection === 'connections') {
+      return (
+        <Navigate
+          to="/$username/settings/connections"
+          params={params}
+          replace
+        />
+      );
+    }
+
+    return <Navigate to="/$username" params={params} replace />;
   }
 
   return (
-    <div className="h-screen flex flex-col overflow-hidden bg-gray-50">
-      {/* Mobile Menu Overlay */}
-      {isMobile && mobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-[55] md:hidden"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
+    <div className="flex h-screen h-dvh min-h-0 flex-col overflow-hidden bg-background">
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <Sidebar />
 
-      <div className="flex flex-1 overflow-hidden relative">
-        {/* Sidebar Wrapper */}
-        <div
-          id="sidebar"
-          className={cn(
-            'transition-all duration-300 z-[60] bg-white border-r border-gray-800 flex-shrink-0',
-            isMobile
-              ? cn(
-                  'fixed inset-y-0 left-0 h-full',
-                  mobileMenuOpen ? 'translate-x-0' : '-translate-x-full',
-                )
-              : cn('relative', sidebarCollapsed ? 'w-16' : 'w-64'),
-          )}
-        >
-          <Sidebar
-            collapsed={!isMobile && sidebarCollapsed}
-            onToggle={() => {
-              if (isMobile) {
-                setMobileMenuOpen(!mobileMenuOpen);
-              } else {
-                toggleSidebar();
-              }
-            }}
-          />
-        </div>
-
-        {/* Main Content Wrapper */}
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden relative">
-          {/* Top Bar */}
-          <TopBar
-            sidebarCollapsed={sidebarCollapsed}
-            onMobileMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)}
-            mobileMenuOpen={mobileMenuOpen}
-          />
-
-          {/* Scrollable Page Content */}
-          <main className="flex-1 overflow-y-auto">
-            <div className="p-6 max-w-7xl mx-auto">{children}</div>
+        <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <TopBar />
+          <main className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            <div className="h-full min-h-full">{children}</div>
           </main>
+          <MobileNavigation username={username} />
         </div>
       </div>
 
-      {/* Mobile Navigation Helper */}
-      {isMobile && (
-        <div className="fixed bottom-24 right-4 flex flex-col space-y-2 z-30 pointer-events-none">
-          {/* Quick access button for mobile - moved up to avoid player if present */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="pointer-events-auto w-12 h-12 bg-main text-black rounded-full shadow-lg flex items-center justify-center hover:bg-mainAccent transition-colors border-2 border-black"
-            aria-label="Toggle navigation"
-          >
-            {mobileMenuOpen ? (
-              <X className="w-6 h-6 active:text-main transition-colors" />
-            ) : (
-              <svg
-                className="w-6 h-6 active:text-main transition-colors"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M4 6h16M4 12h16M4 18h16"
-                />
-              </svg>
-            )}
-          </button>
-        </div>
-      )}
-
-      {/* Persistent Music Player - Stacks at bottom */}
-      <div className="flex-shrink-0 z-[60]">
+      <div className="relative z-[60] flex-shrink-0">
         <PersistentPlayer />
       </div>
     </div>

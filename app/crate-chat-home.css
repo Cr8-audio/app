@@ -1,60 +1,8 @@
-/* Crate chat-home (nocturnal) — imported only for /analyze/chat via .crate-chat-home scope */
-
-@layer base {
-  .crate-chat-home {
-    --crate-void: hsl(240 12% 6%);
-    --crate-ink: hsl(40 12% 92%);
-    --crate-ink-muted: hsl(240 8% 58%);
-    --crate-panel: hsl(240 10% 9%);
-    --crate-panel-raised: hsl(240 9% 12%);
-    --crate-rule: hsl(240 8% 18%);
-    --crate-accent: hsl(42 95% 55%);
-    --crate-accent-soft: hsl(42 60% 40% / 0.18);
-    --crate-source: hsl(18 70% 55%);
-    --crate-ok: hsl(150 40% 45%);
-    --radius-card: 12px;
-    --radius-chip: 999px;
-    --radius-composer: 16px;
-
-    --color-background: 240 12% 6%;
-    --color-foreground: 40 12% 92%;
-    --color-card: 240 9% 12%;
-    --color-card-foreground: 40 12% 92%;
-    --color-muted: 240 10% 9%;
-    --color-muted-foreground: 240 8% 58%;
-    --color-border: 240 8% 18%;
-    --color-input: 240 8% 18%;
-    --color-ring: 42 95% 55%;
-    --color-accent: 42 60% 40%;
-    --color-accent-foreground: 40 12% 92%;
-    --color-primary: 42 95% 55%;
-    --color-primary-foreground: 240 12% 6%;
-
-    background-color: var(--crate-void);
-    color: var(--crate-ink);
-    background-image: none !important;
-  }
-
-  body.crate-chat-home {
-    background-color: var(--crate-void);
-    background-image: none !important;
-  }
-}
-
 @layer components {
-  .crate-chat-home button:active,
-  .crate-chat-home [role='button']:active {
-    background-color: transparent;
-  }
-
-  .crate-chat-home .crate-play-affordance:active {
-    background-color: var(--crate-accent);
-  }
-
   @keyframes crate-dig-enter {
     from {
       opacity: 0;
-      transform: translateY(6px);
+      transform: translateY(8px);
     }
     to {
       opacity: 1;
@@ -62,31 +10,27 @@
     }
   }
 
-  @keyframes crate-confirm-pulse {
-    0%,
-    100% {
-      box-shadow: 0 0 0 0 transparent;
-    }
-    40% {
-      box-shadow: 0 0 0 1px var(--crate-accent);
-    }
+  .crate-thread {
+    width: min(100%, 46rem);
   }
 
-  .crate-chat-home .crate-thread {
-    max-width: 42rem;
+  .crate-turn {
+    animation: crate-dig-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
   }
 
-  .crate-chat-home .crate-turn + .crate-turn {
-    margin-top: 12px;
+  .crate-turn + .crate-turn {
+    margin-top: 1.25rem;
   }
 
-  .crate-chat-home .crate-dig-cluster {
-    margin-top: 20px;
+  .crate-dig-cluster {
+    margin-top: 1.25rem;
   }
 
-  .crate-chat-home .crate-composer-well {
+  .crate-composer-well {
+    border: 1px solid hsl(220 14% 84%);
     border-radius: var(--radius-composer);
-    background: var(--crate-panel-raised);
-    border: 1px solid var(--crate-rule);
+    background: hsl(0 0% 100% / 0.96);
+    box-shadow: 0 20px 60px -38px hsl(228 20% 20% / 0.65);
+    backdrop-filter: blur(16px);
   }
 }

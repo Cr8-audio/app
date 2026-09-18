@@ -9,13 +9,11 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './app/__root'
-import { Route as WaitlistRouteImport } from './app/waitlist'
-import { Route as AnalyzeRouteImport } from './app/analyze'
 import { Route as IndexRouteImport } from './app/index'
 import { Route as OnboardingIndexRouteImport } from './app/onboarding/index'
 import { Route as AuthIndexRouteImport } from './app/auth/index'
+import { Route as AnalyzeIndexRouteImport } from './app/analyze.index'
 import { Route as UsernameIndexRouteImport } from './app/$username/index'
-import { Route as OnboardingConnectRouteImport } from './app/onboarding/connect'
 import { Route as AnalyzeChatRouteImport } from './app/analyze.chat'
 import { Route as UsernameTracksRouteImport } from './app/$username/tracks'
 import { Route as UsernamePlaylistsRouteImport } from './app/$username/playlists'
@@ -26,16 +24,6 @@ import { Route as UsernameSettingsConnectionsRouteImport } from './app/$username
 import { Route as ApiExternalYoutubeSearchRouteImport } from './app/api/external/youtube/search'
 import { Route as ApiExternalYoutubeVideoIdRouteImport } from './app/api/external/youtube/$videoId'
 
-const WaitlistRoute = WaitlistRouteImport.update({
-  id: '/waitlist',
-  path: '/waitlist',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AnalyzeRoute = AnalyzeRouteImport.update({
-  id: '/analyze',
-  path: '/analyze',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -51,20 +39,20 @@ const AuthIndexRoute = AuthIndexRouteImport.update({
   path: '/auth/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AnalyzeIndexRoute = AnalyzeIndexRouteImport.update({
+  id: '/analyze/',
+  path: '/analyze/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UsernameIndexRoute = UsernameIndexRouteImport.update({
   id: '/$username/',
   path: '/$username/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OnboardingConnectRoute = OnboardingConnectRouteImport.update({
-  id: '/onboarding/connect',
-  path: '/onboarding/connect',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AnalyzeChatRoute = AnalyzeChatRouteImport.update({
-  id: '/chat',
-  path: '/chat',
-  getParentRoute: () => AnalyzeRoute,
+  id: '/analyze/chat',
+  path: '/analyze/chat',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const UsernameTracksRoute = UsernameTracksRouteImport.update({
   id: '/$username/tracks',
@@ -112,14 +100,12 @@ const ApiExternalYoutubeVideoIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/analyze': typeof AnalyzeRouteWithChildren
-  '/waitlist': typeof WaitlistRoute
   '/$username/collection': typeof UsernameCollectionRoute
   '/$username/playlists': typeof UsernamePlaylistsRoute
   '/$username/tracks': typeof UsernameTracksRoute
   '/analyze/chat': typeof AnalyzeChatRoute
-  '/onboarding/connect': typeof OnboardingConnectRoute
   '/$username': typeof UsernameIndexRoute
+  '/analyze': typeof AnalyzeIndexRoute
   '/auth': typeof AuthIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/$username/settings/connections': typeof UsernameSettingsConnectionsRoute
@@ -130,14 +116,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/analyze': typeof AnalyzeRouteWithChildren
-  '/waitlist': typeof WaitlistRoute
   '/$username/collection': typeof UsernameCollectionRoute
   '/$username/playlists': typeof UsernamePlaylistsRoute
   '/$username/tracks': typeof UsernameTracksRoute
   '/analyze/chat': typeof AnalyzeChatRoute
-  '/onboarding/connect': typeof OnboardingConnectRoute
   '/$username': typeof UsernameIndexRoute
+  '/analyze': typeof AnalyzeIndexRoute
   '/auth': typeof AuthIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/$username/settings/connections': typeof UsernameSettingsConnectionsRoute
@@ -149,14 +133,12 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/analyze': typeof AnalyzeRouteWithChildren
-  '/waitlist': typeof WaitlistRoute
   '/$username/collection': typeof UsernameCollectionRoute
   '/$username/playlists': typeof UsernamePlaylistsRoute
   '/$username/tracks': typeof UsernameTracksRoute
   '/analyze/chat': typeof AnalyzeChatRoute
-  '/onboarding/connect': typeof OnboardingConnectRoute
   '/$username/': typeof UsernameIndexRoute
+  '/analyze/': typeof AnalyzeIndexRoute
   '/auth/': typeof AuthIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/$username/settings/connections': typeof UsernameSettingsConnectionsRoute
@@ -169,14 +151,12 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/analyze'
-    | '/waitlist'
     | '/$username/collection'
     | '/$username/playlists'
     | '/$username/tracks'
     | '/analyze/chat'
-    | '/onboarding/connect'
     | '/$username'
+    | '/analyze'
     | '/auth'
     | '/onboarding'
     | '/$username/settings/connections'
@@ -187,14 +167,12 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/analyze'
-    | '/waitlist'
     | '/$username/collection'
     | '/$username/playlists'
     | '/$username/tracks'
     | '/analyze/chat'
-    | '/onboarding/connect'
     | '/$username'
+    | '/analyze'
     | '/auth'
     | '/onboarding'
     | '/$username/settings/connections'
@@ -205,14 +183,12 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
-    | '/analyze'
-    | '/waitlist'
     | '/$username/collection'
     | '/$username/playlists'
     | '/$username/tracks'
     | '/analyze/chat'
-    | '/onboarding/connect'
     | '/$username/'
+    | '/analyze/'
     | '/auth/'
     | '/onboarding/'
     | '/$username/settings/connections'
@@ -224,13 +200,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  AnalyzeRoute: typeof AnalyzeRouteWithChildren
-  WaitlistRoute: typeof WaitlistRoute
   UsernameCollectionRoute: typeof UsernameCollectionRoute
   UsernamePlaylistsRoute: typeof UsernamePlaylistsRoute
   UsernameTracksRoute: typeof UsernameTracksRoute
-  OnboardingConnectRoute: typeof OnboardingConnectRoute
+  AnalyzeChatRoute: typeof AnalyzeChatRoute
   UsernameIndexRoute: typeof UsernameIndexRoute
+  AnalyzeIndexRoute: typeof AnalyzeIndexRoute
   AuthIndexRoute: typeof AuthIndexRoute
   OnboardingIndexRoute: typeof OnboardingIndexRoute
   UsernameSettingsConnectionsRoute: typeof UsernameSettingsConnectionsRoute
@@ -242,20 +217,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/waitlist': {
-      id: '/waitlist'
-      path: '/waitlist'
-      fullPath: '/waitlist'
-      preLoaderRoute: typeof WaitlistRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/analyze': {
-      id: '/analyze'
-      path: '/analyze'
-      fullPath: '/analyze'
-      preLoaderRoute: typeof AnalyzeRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -277,6 +238,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/analyze/': {
+      id: '/analyze/'
+      path: '/analyze'
+      fullPath: '/analyze'
+      preLoaderRoute: typeof AnalyzeIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$username/': {
       id: '/$username/'
       path: '/$username'
@@ -284,19 +252,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsernameIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/onboarding/connect': {
-      id: '/onboarding/connect'
-      path: '/onboarding/connect'
-      fullPath: '/onboarding/connect'
-      preLoaderRoute: typeof OnboardingConnectRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/analyze/chat': {
       id: '/analyze/chat'
-      path: '/chat'
+      path: '/analyze/chat'
       fullPath: '/analyze/chat'
       preLoaderRoute: typeof AnalyzeChatRouteImport
-      parentRoute: typeof AnalyzeRoute
+      parentRoute: typeof rootRouteImport
     }
     '/$username/tracks': {
       id: '/$username/tracks'
@@ -357,26 +318,14 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AnalyzeRouteChildren {
-  AnalyzeChatRoute: typeof AnalyzeChatRoute
-}
-
-const AnalyzeRouteChildren: AnalyzeRouteChildren = {
-  AnalyzeChatRoute: AnalyzeChatRoute,
-}
-
-const AnalyzeRouteWithChildren =
-  AnalyzeRoute._addFileChildren(AnalyzeRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  AnalyzeRoute: AnalyzeRouteWithChildren,
-  WaitlistRoute: WaitlistRoute,
   UsernameCollectionRoute: UsernameCollectionRoute,
   UsernamePlaylistsRoute: UsernamePlaylistsRoute,
   UsernameTracksRoute: UsernameTracksRoute,
-  OnboardingConnectRoute: OnboardingConnectRoute,
+  AnalyzeChatRoute: AnalyzeChatRoute,
   UsernameIndexRoute: UsernameIndexRoute,
+  AnalyzeIndexRoute: AnalyzeIndexRoute,
   AuthIndexRoute: AuthIndexRoute,
   OnboardingIndexRoute: OnboardingIndexRoute,
   UsernameSettingsConnectionsRoute: UsernameSettingsConnectionsRoute,

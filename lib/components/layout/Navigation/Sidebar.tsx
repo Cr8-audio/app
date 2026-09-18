@@ -1,182 +1,144 @@
-import { useLocation, Link } from '@tanstack/react-router';
+import { Link, useLocation } from '@tanstack/react-router';
+import {
+  Disc3,
+  LibraryBig,
+  ListMusic,
+  MessageCircle,
+  SlidersHorizontal,
+} from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { cn } from '@/lib/utils/tailwind';
-import { Home, Music, ListMusic, Search, MessageCircle } from 'lucide-react';
-import { useState, useEffect } from 'react';
 import {
   Avatar,
   AvatarFallback,
   AvatarImage,
 } from '@/lib/components/ui/avatar';
 
-interface SidebarProps {
-  collapsed?: boolean;
-  onToggle?: () => void;
-}
-
-export default function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
+export default function Sidebar() {
   const { pathname } = useLocation();
   const { username, user } = useAuth();
-  const [isCollapsed, setIsCollapsed] = useState(collapsed);
-
-  // Sync internal state with prop
-  useEffect(() => {
-    setIsCollapsed(collapsed);
-  }, [collapsed]);
-
-  const handleToggle = () => {
-    const newCollapsed = !isCollapsed;
-    setIsCollapsed(newCollapsed);
-    onToggle?.();
-  };
 
   if (!username) return null;
 
   const navigationItems = [
     {
-      name: 'Chat',
+      name: 'Ask',
+      description: 'Dig with your assistant',
       href: '/analyze/chat',
       icon: MessageCircle,
-      description: 'DJ Assistant',
+      active: pathname.startsWith('/analyze'),
     },
     {
-      name: 'Tracks',
+      name: 'Library',
+      description: 'Tracks and releases',
       href: `/${username}/tracks`,
-      icon: Music,
-      description: 'Library',
+      icon: LibraryBig,
+      active:
+        pathname.startsWith(`/${username}/tracks`) ||
+        pathname.startsWith(`/${username}/collection`),
     },
     {
       name: 'Playlists',
+      description: 'Sets in progress',
       href: `/${username}/playlists`,
       icon: ListMusic,
-      description: 'Collections',
-    },
-    {
-      name: 'Collection',
-      href: `/${username}/collection`,
-      icon: Search,
-      description: 'Discogs',
-    },
-    {
-      name: 'Overview',
-      href: `/${username}`,
-      icon: Home,
-      description: 'Dashboard',
+      active: pathname.startsWith(`/${username}/playlists`),
     },
   ];
 
   return (
-    <aside
-      className={cn(
-        'h-full bg-white border-r-2 border-gray-800 transition-all duration-300 flex flex-col',
-        isCollapsed ? 'w-20' : 'w-72',
-      )}
-    >
-      {/* Sidebar Header */}
-      <div
-        className={cn(
-          'flex items-center px-6 border-b-2 border-gray-800 h-16 transition-all',
-          isCollapsed ? 'justify-center' : 'justify-start',
-        )}
+    <aside className="hidden h-full w-[15.5rem] flex-shrink-0 flex-col border-r border-border/70 bg-card/75 px-4 py-5 backdrop-blur-xl md:flex">
+      <Link
+        to="/$username"
+        params={{ username }}
+        className="mb-9 flex items-center gap-3 rounded-xl px-2 py-1.5"
+        aria-label="Crate overview"
       >
-        <div
-          onClick={handleToggle}
-          className={cn(
-            'flex items-center transition-all cursor-pointer hover:scale-105 active:scale-95',
-            !isCollapsed && 'space-x-3',
-          )}
-        >
-          <div className="relative w-8 h-8 shrink-0">
-            <img
-              src="/logo.svg"
-              alt="Crate Logo"
-              className="w-full h-full object-contain"
-            />
-          </div>
-          {!isCollapsed && (
-            <span className="font-bold text-xl tracking-tight">Crate</span>
-          )}
-        </div>
-      </div>
+        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-foreground text-background shadow-sm">
+          <Disc3 className="h-[1.15rem] w-[1.15rem]" strokeWidth={1.8} />
+        </span>
+        <span className="text-[1.05rem] font-semibold tracking-[-0.025em]">
+          crate
+        </span>
+      </Link>
 
-      {/* Navigation Items */}
-      <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto no-scrollbar">
+      <nav aria-label="Primary navigation" className="space-y-1.5">
         {navigationItems.map((item) => {
           const Icon = item.icon;
-          const isActive =
-            pathname === item.href ||
-            (item.href !== `/${username}` &&
-              item.href !== '/analyze/chat' &&
-              pathname.startsWith(item.href));
-
           return (
             <Link
               key={item.name}
               to={item.href}
+              aria-current={item.active ? 'page' : undefined}
               className={cn(
-                'group flex items-center space-x-3 px-4 py-3 rounded-base transition-all duration-200 relative border-2',
-                isActive
-                  ? 'bg-main border-gray-800 shadow-light'
-                  : 'bg-transparent border-transparent hover:bg-gray-100 hover:border-gray-800 text-gray-600 hover:text-black',
-                isCollapsed && 'justify-center px-2',
+                'group flex items-center gap-3 rounded-xl px-3 py-3 transition-colors duration-150',
+                item.active
+                  ? 'bg-accent text-accent-foreground'
+                  : 'text-muted-foreground hover:bg-muted/70 hover:text-foreground',
               )}
             >
-              <Icon
+              <span
                 className={cn(
-                  'w-5 h-5 shrink-0 transition-colors',
-                  isActive ? 'text-black' : 'text-current',
+                  'flex h-8 w-8 items-center justify-center rounded-[0.65rem] transition-colors',
+                  item.active
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-transparent text-muted-foreground group-hover:bg-card group-hover:text-foreground',
                 )}
-              />
-
-              {!isCollapsed && (
-                <div className="flex-1 min-w-0">
-                  <div
-                    className={cn(
-                      'font-medium truncate',
-                      isActive ? 'text-black' : 'text-current',
-                    )}
-                  >
-                    {item.name}
-                  </div>
-                </div>
-              )}
-
-              {/* Tooltip for collapsed state */}
-              {isCollapsed && (
-                <div className="absolute left-full ml-4 px-3 py-1.5 bg-black text-white text-sm font-medium rounded-base shadow-light opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-50 border-2 border-white">
+              >
+                <Icon className="h-4 w-4" strokeWidth={1.8} />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-sm font-semibold leading-tight">
                   {item.name}
-                </div>
-              )}
+                </span>
+                <span
+                  className={cn(
+                    'mt-0.5 block truncate text-[0.68rem]',
+                    item.active
+                      ? 'text-accent-foreground/65'
+                      : 'text-muted-foreground/75',
+                  )}
+                >
+                  {item.description}
+                </span>
+              </span>
             </Link>
           );
         })}
       </nav>
 
-      {/* User Section */}
-      <div className="p-6 border-t-2 border-gray-800 bg-white">
-        <div
-          className={cn(
-            'flex items-center space-x-3 p-2 rounded-base border-2 transition-all cursor-pointer group',
-            isCollapsed
-              ? 'justify-center bg-transparent border-transparent hover:bg-white hover:border-gray-800 hover:shadow-light'
-              : 'bg-white border-gray-800 shadow-light hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none active:bg-gray-100',
-          )}
+      <div className="mt-auto space-y-3">
+        <Link
+          to="/$username/settings/connections"
+          params={{ username }}
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-muted-foreground transition-colors hover:bg-muted/70 hover:text-foreground"
         >
-          <Avatar className="w-9 h-9 border-2 border-gray-800 shrink-0">
+          <span className="relative flex h-8 w-8 items-center justify-center rounded-[0.65rem] bg-muted">
+            <SlidersHorizontal className="h-4 w-4" strokeWidth={1.8} />
+          </span>
+          <span>
+            <span className="block text-xs font-semibold text-foreground">
+              Discogs collection
+            </span>
+            <span className="block text-[0.68rem]">Manage connection</span>
+          </span>
+        </Link>
+
+        <div className="flex items-center gap-3 border-t border-border/70 px-2 pt-4">
+          <Avatar className="h-9 w-9 border border-border/70">
             <AvatarImage src={user?.avatarUrl ?? ''} />
-            <AvatarFallback className="bg-main font-bold text-sm">
-              {username?.charAt(0).toUpperCase() ?? ''}
+            <AvatarFallback className="bg-foreground text-xs font-semibold text-background">
+              {username.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-
-          {!isCollapsed && (
-            <div className="flex-1 min-w-0 overflow-hidden">
-              <div className="font-medium text-sm truncate text-black">
-                {username}
-              </div>
-              <div className="text-xs text-gray-500 truncate">View Profile</div>
-            </div>
-          )}
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-foreground">
+              {user?.displayName || username}
+            </p>
+            <p className="truncate text-[0.68rem] text-muted-foreground">
+              @{username}
+            </p>
+          </div>
         </div>
       </div>
     </aside>

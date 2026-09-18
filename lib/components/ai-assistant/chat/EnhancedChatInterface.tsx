@@ -1,14 +1,7 @@
 'use client';
 
-import { useCallback, useRef, useEffect, useState } from 'react';
-// prettier-ignore
-import {
-  Send,
-  Bot,
-  Plus,
-  Sparkles,
-  MessageSquare,
-} from 'lucide-react';
+import { useCallback, useRef, useEffect, useState, useMemo } from 'react';
+import { Plus, Sparkles, ArrowUp, Disc3, LibraryBig } from 'lucide-react';
 import { Button } from '@/lib/components/ui/button';
 import { Input } from '@/lib/components/ui/input';
 import {
@@ -30,7 +23,7 @@ import { usePlayerStore } from '@/lib/stores';
 import { useTrackSorting } from '@/lib/hooks/useTrackSorting';
 import { toast } from 'sonner';
 import PlaylistCreationModal from './PlaylistCreationModal';
-import ReleaseDigCard, { STUB_RELEASE_DIG } from './ReleaseDigCard';
+import ReleaseDigCard from './ReleaseDigCard';
 import { useMutation, useQuery } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 
@@ -39,7 +32,7 @@ interface EnhancedChatInterfaceProps {
   onTracksFilter: (filteredTracks: CrateTrack[]) => void;
   isOpen: boolean;
   onClose: () => void;
-  variant?: 'default' | 'nocturnal';
+  initialPrompt?: string;
 }
 
 interface ParsedTrack {
@@ -88,7 +81,7 @@ const findMatchingTrack = (
   );
   if (match) return match;
   match = tracks.find((t) => {
-    const titleWords = suggestion.title.toLowerCase().split(' ');
+    const titleWords = suggestion.title.toLowerCase().split(/\s+/);
     const trackTitle = t.title.toLowerCase();
     return titleWords.some(
       (word) => trackTitle.includes(word) && word.length > 2,
@@ -97,29 +90,18 @@ const findMatchingTrack = (
   return match || null;
 };
 
-const SUGGESTED_PROMPTS = [
-  'Find tracks around 128 BPM for a house set',
-  'Suggest tracks that mix well with techno',
-  'Show me tracks for a chill downtempo session',
-  'Find high-energy tracks above 140 BPM',
-  'What tracks work well for peak time?',
-  'Suggest tracks with similar vibes to deep house',
-];
-
 const TypingIndicator = () => (
-  <div className="flex items-center space-x-2 p-4">
-    <div className="flex h-8 w-8 items-center justify-center rounded-base border border-[var(--crate-rule)] bg-[var(--crate-panel-raised)]">
-      <Bot className="h-4 w-4 text-[var(--crate-accent)]" />
+  <div className="flex items-center gap-3 py-3">
+    <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+      <Disc3 className="h-4 w-4" />
     </div>
-    <div className="flex items-center space-x-1 rounded-xl border border-[var(--crate-rule)] bg-[var(--crate-panel)] px-4 py-2">
-      <div className="flex space-x-1">
-        <div className="h-2 w-2 animate-bounce rounded-full bg-[var(--crate-accent)] [animation-delay:-0.3s]" />
-        <div className="h-2 w-2 animate-bounce rounded-full bg-[var(--crate-accent)] [animation-delay:-0.15s]" />
-        <div className="h-2 w-2 animate-bounce rounded-full bg-[var(--crate-accent)]" />
+    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+      <div className="flex gap-1">
+        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.3s]" />
+        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary [animation-delay:-0.15s]" />
+        <div className="h-1.5 w-1.5 animate-bounce rounded-full bg-primary" />
       </div>
-      <span className="ml-2 text-sm font-medium text-[var(--crate-ink-muted)]">
-        Digging…
-      </span>
+      <span>Digging through your collection…</span>
     </div>
   </div>
 );
@@ -143,13 +125,13 @@ const MessageBubble = ({
   return (
     <div
       className={cn(
-        'crate-turn flex w-full',
+        'crate-turn flex w-full py-1',
         isUser ? 'justify-end' : 'justify-start',
       )}
     >
       <div
         className={cn(
-          'flex max-w-full items-start space-x-4',
+          'flex w-full max-w-full items-start gap-3',
           isUser && 'flex-row-reverse space-x-reverse',
         )}
       >
@@ -157,39 +139,37 @@ const MessageBubble = ({
           {isUser ? (
             <Avatar className="h-8 w-8">
               <AvatarImage src={userAvatar} />
-              <AvatarFallback className="border border-[var(--crate-rule)] bg-[var(--crate-panel-raised)] text-sm text-[var(--crate-ink)]">
+              <AvatarFallback className="bg-muted text-sm text-foreground">
                 {userAvatar?.charAt(0)?.toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
           ) : (
-            <div className="flex h-8 w-8 items-center justify-center rounded-base border border-[var(--crate-rule)] bg-[var(--crate-panel-raised)]">
-              <Bot className="h-4 w-4 text-[var(--crate-accent)]" />
+            <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-foreground text-background">
+              <Disc3 className="h-4 w-4" />
             </div>
           )}
         </div>
         <div
           className={cn(
-            'flex min-w-0 flex-1 flex-col space-y-3',
+            'flex min-w-0 flex-1 flex-col gap-3',
             isUser ? 'items-end' : 'items-start',
           )}
         >
           <div
             className={cn(
-              'max-w-full break-words rounded-xl border border-[var(--crate-rule)] px-4 py-3',
+              'max-w-full break-words text-sm leading-7',
               isUser
-                ? 'bg-[var(--crate-panel-raised)] text-[var(--crate-ink)]'
-                : 'bg-[var(--crate-panel)] text-[var(--crate-ink)]',
+                ? 'max-w-[34rem] rounded-[1rem] bg-accent px-4 py-2.5 text-accent-foreground'
+                : 'w-full pt-1 text-foreground',
             )}
           >
-            <div className="whitespace-pre-wrap text-sm leading-relaxed">
-              {message.content}
-            </div>
+            <div className="whitespace-pre-wrap">{message.content}</div>
           </div>
           {!isUser && matchedTracks.length > 0 && (
             <div className="crate-dig-cluster mt-5 w-full max-w-full space-y-3">
-              <div className="flex items-center justify-between rounded-xl border border-[var(--crate-rule)] bg-[var(--crate-panel-raised)] p-3">
-                <div className="flex items-center space-x-2 text-sm text-[var(--crate-ink)]">
-                  <Sparkles className="h-4 w-4 text-[var(--crate-accent)]" />
+              <div className="flex flex-col gap-3 rounded-[1rem] border border-border/70 bg-card p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2 text-sm text-foreground">
+                  <Sparkles className="h-4 w-4 text-primary" />
                   <span className="font-medium">
                     Found {matchedTracks.length} matching tracks
                   </span>
@@ -198,7 +178,7 @@ const MessageBubble = ({
                   size="sm"
                   variant="outline"
                   onClick={() => onCreatePlaylist(matchedTracks)}
-                  className="h-8 flex-shrink-0 rounded-full border border-[var(--crate-rule)] bg-[var(--crate-accent)] text-xs text-[var(--crate-void)] shadow-none hover:translate-x-0 hover:translate-y-0 hover:brightness-110"
+                  className="h-9 flex-shrink-0 rounded-[0.7rem] text-xs"
                 >
                   <Plus className="mr-1 h-3 w-3" />
                   Create Playlist
@@ -236,11 +216,10 @@ export default function EnhancedChatInterface({
   onTracksFilter,
   isOpen,
   onClose,
-  variant = 'nocturnal',
+  initialPrompt,
 }: EnhancedChatInterfaceProps) {
   void isOpen;
   void onClose;
-  void variant;
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const user = useQuery(api.users.getCurrentUser);
   const { setOrderingConfig } = useTrackSorting(tracks);
@@ -251,12 +230,40 @@ export default function EnhancedChatInterface({
   >(new Map());
   const [playlistModalOpen, setPlaylistModalOpen] = useState(false);
   const [playlistTracks, setPlaylistTracks] = useState<CrateTrack[]>([]);
-  const [input, setInput] = useState('');
+  const [input, setInput] = useState(initialPrompt ?? '');
   const [isSending, setIsSending] = useState(false);
   const processedMessageIds = useRef<Set<string>>(new Set());
   const getOrCreateChatThread = useMutation(api.chat.getOrCreateChatThread);
   const sendMessage = useMutation(api.chat.sendMessage);
   const [threadId, setThreadId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initialPrompt) setInput(initialPrompt);
+  }, [initialPrompt]);
+
+  const suggestedPrompts = useMemo(() => {
+    const genres = tracks.flatMap((track) =>
+      Array.isArray(track.genres)
+        ? track.genres
+        : typeof track.genres === 'string' && track.genres
+          ? track.genres.split(',').map((genre) => genre.trim())
+          : [],
+    );
+    const leadingGenre = genres.find(Boolean);
+    const bpms = tracks
+      .map((track) => track.bpm)
+      .filter((bpm): bpm is number => typeof bpm === 'number');
+    const centerBpm = bpms.length
+      ? Math.round(bpms.reduce((sum, bpm) => sum + bpm, 0) / bpms.length)
+      : 124;
+    return [
+      leadingGenre
+        ? `Build a warm-up set from my ${leadingGenre} records`
+        : 'Build a warm-up set from my collection',
+      `Find a smooth five-track run around ${centerBpm} BPM`,
+      'Show me an unexpected transition hiding in my crate',
+    ];
+  }, [tracks]);
 
   useEffect(() => {
     let cancelled = false;
@@ -409,55 +416,57 @@ export default function EnhancedChatInterface({
   };
 
   return (
-    <div className="flex h-full max-w-full flex-col overflow-hidden bg-[var(--crate-void)] text-[var(--crate-ink)]">
+    <div className="flex h-full max-w-full flex-col overflow-hidden bg-background text-foreground">
       <div className="flex-1 overflow-x-hidden overflow-y-auto">
-        <div className="crate-thread mx-auto w-full max-w-[42rem] space-y-3 p-4">
+        <div className="crate-thread mx-auto w-full space-y-3 px-4 py-6 sm:px-6 sm:py-8">
           {uiMessages.length === 0 && (
-            <div className="mb-6 space-y-5">
-              <div className="space-y-2">
-                <h1 className="font-heading text-xl font-semibold tracking-tight text-[var(--crate-ink)]">
-                  Dig the crate
+            <div className="mx-auto flex min-h-full max-w-[42rem] flex-col justify-center py-4 sm:py-10">
+              <div className="flex items-center gap-2 text-xs font-semibold text-primary">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-accent text-accent-foreground">
+                  <Sparkles className="h-3.5 w-3.5" />
+                </span>
+                <span>Personal DJ assistant</span>
+              </div>
+              <div className="mt-5 max-w-2xl">
+                <h1 className="text-3xl font-semibold leading-[1.05] tracking-[-0.045em] text-foreground sm:text-5xl">
+                  Ask the music you already own.
                 </h1>
-                <p className="text-sm leading-relaxed text-[var(--crate-ink-muted)]">
-                  One composer. Discogs as ground truth. Ask for a vibe, BPM
-                  lane, or mix-out — results land as dig cards in this thread.
-                </p>
-                <p className="font-mono text-xs text-[var(--crate-ink-muted)]">
-                  {tracks.length} tracks ready
+                <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
+                  Describe a room, an energy, or a tricky mix-out. Crate digs
+                  through your collection and keeps every answer grounded in
+                  tracks from your shelves.
                 </p>
               </div>
-              <div className="crate-dig-cluster space-y-3">
-                <p className="text-[10px] uppercase tracking-wider text-[var(--crate-ink-muted)]">
-                  Dig card · stub
-                </p>
-                <ReleaseDigCard
-                  release={STUB_RELEASE_DIG}
-                  onPlay={() =>
-                    toast.message('Play stub — wire to player in #140')
-                  }
-                  onOpenFocus={() =>
-                    toast.message('Focus panel stub — coming with dig cards')
-                  }
-                />
+
+              <div className="mt-7 flex flex-wrap gap-x-5 gap-y-2 border-y border-border/70 py-3 text-[0.7rem] font-medium text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <LibraryBig className="h-3.5 w-3.5" />
+                  {tracks.length.toLocaleString()} tracks ready
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Disc3 className="h-3.5 w-3.5" />
+                  Discogs-grounded
+                </span>
               </div>
+
               {showSuggestions && (
-                <div className="mt-5 max-w-full space-y-4">
-                  <div className="flex items-center space-x-2 text-sm text-[var(--crate-ink-muted)]">
-                    <Sparkles className="h-4 w-4 text-[var(--crate-accent)]" />
-                    <span className="font-medium">Suggested dig</span>
-                  </div>
-                  <div className="grid max-w-full grid-cols-1 gap-3">
-                    {SUGGESTED_PROMPTS.map((prompt, index) => (
-                      <Button
-                        key={index}
-                        variant="outline"
-                        size="sm"
-                        className="h-auto w-full justify-start rounded-xl border border-[var(--crate-rule)] bg-[var(--crate-panel)] p-4 text-left text-wrap text-[var(--crate-ink)] shadow-none transition-all hover:translate-x-0 hover:translate-y-0 hover:bg-[var(--crate-accent-soft)]"
-                        onClick={() => handleSuggestedPrompt(prompt)}
+                <div className="mt-8 max-w-full">
+                  <p className="eyebrow">Start with a direction</p>
+                  <div className="mt-3 grid max-w-full gap-2.5 sm:grid-cols-3">
+                    {suggestedPrompts.map((suggestion, index) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        className="group flex min-h-28 w-full flex-col justify-between rounded-[1rem] border border-border/75 bg-card p-4 text-left shadow-soft transition-[transform,border-color,box-shadow] hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-float"
+                        onClick={() => handleSuggestedPrompt(suggestion)}
                       >
-                        <MessageSquare className="mr-3 h-4 w-4 flex-shrink-0" />
-                        <span className="text-left text-sm">{prompt}</span>
-                      </Button>
+                        <span className="text-[0.65rem] font-semibold tabular-nums text-primary">
+                          0{index + 1}
+                        </span>
+                        <span className="mt-4 text-xs font-medium leading-5 text-foreground">
+                          {suggestion}
+                        </span>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -487,17 +496,17 @@ export default function EnhancedChatInterface({
         </div>
       </div>
 
-      <div className="sticky bottom-0 z-10 flex-shrink-0 border-t border-[var(--crate-rule)] bg-[var(--crate-void)] p-4">
+      <div className="sticky bottom-0 z-10 flex-shrink-0 border-t border-border/70 bg-background/95 px-4 py-3 backdrop-blur-xl sm:px-6 sm:py-4">
         <form
           onSubmit={onSubmit}
-          className="crate-thread crate-composer-well mx-auto flex max-w-[42rem] space-x-3 p-2"
+          className="crate-thread crate-composer-well mx-auto flex items-center gap-2 p-2"
         >
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Dig a BPM, vibe, or mix-out…"
+            placeholder="Ask for a vibe, BPM lane, or mix-out…"
             disabled={isLoading || !threadId}
-            className="h-11 flex-1 rounded-[var(--radius-composer)] border-0 bg-transparent text-[var(--crate-ink)] placeholder:text-[var(--crate-ink-muted)] focus-visible:ring-1 focus-visible:ring-[var(--crate-accent)]"
+            className="h-11 flex-1 rounded-[0.8rem] border-0 bg-transparent text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0"
           />
           <TooltipProvider>
             <Tooltip>
@@ -505,12 +514,18 @@ export default function EnhancedChatInterface({
                 <Button
                   type="submit"
                   disabled={isLoading || !threadId || !input.trim()}
-                  className="crate-play-affordance h-11 flex-shrink-0 rounded-full border-0 bg-[var(--crate-accent)] px-4 text-[var(--crate-void)] shadow-none transition-all duration-150 ease-out hover:translate-x-0 hover:translate-y-0 hover:brightness-110 active:scale-[0.96]"
+                  size="icon"
+                  className="h-10 w-10 flex-shrink-0 rounded-[0.75rem]"
+                  aria-label="Send message"
                 >
-                  <Send className="h-4 w-4" />
+                  {isLoading ? (
+                    <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground/40 border-t-primary-foreground" />
+                  ) : (
+                    <ArrowUp className="h-4 w-4" />
+                  )}
                 </Button>
               </TooltipTrigger>
-              <TooltipContent className="border border-[var(--crate-rule)] bg-[var(--crate-panel)] text-[var(--crate-ink)]">
+              <TooltipContent className="border border-border bg-popover text-foreground">
                 <p>Send message</p>
               </TooltipContent>
             </Tooltip>

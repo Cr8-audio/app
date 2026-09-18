@@ -23,13 +23,13 @@ const TrackListItem = ({
   return (
     <div
       key={track.position}
-      className="grid grid-cols-[auto_1fr_auto] gap-4 p-3 border-2 border-border dark:border-darkBorder rounded-base group items-center hover:bg-border/10"
+      className="grid grid-cols-[auto_1fr_auto] items-center gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-muted/70 sm:px-3"
     >
-      <div className="w-8 flex items-center justify-center">
+      <div className="flex w-9 items-center justify-center">
         <Button
-          variant="noShadow"
+          variant="ghost"
           size="icon"
-          className="w-8 h-8"
+          className="h-9 w-9 rounded-full"
           onClick={onPlayToggle}
           disabled={!track.youtube_video_id || !isPlayerReady}
         >
@@ -42,17 +42,17 @@ const TrackListItem = ({
       </div>
 
       <div>
-        <div className="font-medium text-text dark:text-darkText">
-          {track.title}
-        </div>
+        <div className="text-sm font-medium text-foreground">{track.title}</div>
         {track.extra_artists && (
-          <div className="text-sm text-text/60 dark:text-darkText/60">
+          <div className="mt-0.5 truncate text-xs text-muted-foreground">
             {track.extra_artists}
           </div>
         )}
       </div>
 
-      <div className="text-text/60 dark:text-darkText/60">{track.duration}</div>
+      <div className="text-xs tabular-nums text-muted-foreground">
+        {track.duration || '—'}
+      </div>
     </div>
   );
 };
@@ -64,13 +64,13 @@ export function TrackList({
   isPlayerReady,
 }: TrackListProps) {
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-[auto_1fr_auto] gap-4 p-2 text-sm text-text/60 dark:text-darkText/60">
-        <div className="w-8">#</div>
-        <div>TITLE</div>
+    <div className="space-y-1">
+      <div className="grid grid-cols-[auto_1fr_auto] gap-3 px-3 pb-2 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <div className="w-9 text-center">#</div>
+        <div>Title</div>
         <div className="flex items-center gap-1">
-          <Clock className="w-4 h-4" />
-          <span>TIME</span>
+          <Clock className="h-3.5 w-3.5" />
+          <span>Time</span>
         </div>
       </div>
 

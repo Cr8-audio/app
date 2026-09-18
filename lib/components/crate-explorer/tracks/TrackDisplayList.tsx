@@ -1,27 +1,14 @@
 import { useState } from 'react';
-import { Button } from '@/lib/components/ui/button';
 import {
   Play,
   Pause,
-  Heart,
-  MoreHorizontal,
   ChevronUp,
   ChevronDown,
-  Plus,
-  ListPlus,
   Loader2,
+  Music,
 } from 'lucide-react';
 import ReleaseTracks from './ReleaseTracks';
 import { useTrackContext } from './TrackDisplay';
-import { usePlaylists } from '@/lib/hooks/usePlaylists';
-import { convertSearchResultToTrack } from '@/lib/utils/track-conversion';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/lib/components/ui/dropdown-menu';
-import { toast } from 'sonner';
 
 const TrackDisplayList = () => {
   const {
@@ -32,118 +19,90 @@ const TrackDisplayList = () => {
     dateAdded,
   } = useTrackContext();
   const [showTracks, setShowTracks] = useState(false);
-  const { playlists, addTrackToPlaylist } = usePlaylists();
-
-  const handleAddToPlaylist = async (playlistId: string) => {
-    if (!trackResult) return;
-
-    try {
-      const track = convertSearchResultToTrack(trackResult) as any;
-      // Note: External tracks need to be added to the database first
-      // For now, we'll show a message
-      if (track._id) {
-        await addTrackToPlaylist(playlistId, track._id);
-      } else {
-        toast.info('External tracks cannot be added to playlists yet');
-      }
-    } catch (error) {
-      console.error('Error adding to playlist:', error);
-    }
-  };
 
   if (!trackResult) return null;
 
+  const artwork = trackResult.thumb || trackResult.cover_image;
+
   return (
-    <div className="space-y-2">
-      <div className="grid grid-cols-[auto_1fr_auto] gap-4 p-3 border-2 border-border dark:border-darkBorder rounded-base group items-center">
-        <div className="flex items-center gap-3">
-          <div className="relative">
+    <article className="overflow-hidden rounded-2xl border border-border/70 bg-card">
+      <div className="group flex items-center gap-3 p-3 sm:gap-4 sm:p-4">
+        <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-muted sm:h-20 sm:w-20">
+          {artwork ? (
             <img
-              src={trackResult.thumb || '/api/placeholder/50/50'}
+              src={artwork}
               alt={trackResult.title}
-              className="w-12 h-12 rounded-base object-cover"
+              className="h-full w-full object-cover"
             />
-            <button
-              onClick={trackOnPlayToggle}
-              disabled={trackIsLoading}
-              className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-base disabled:opacity-100"
-            >
-              {trackIsLoading ? (
-                <Loader2 className="w-5 h-5 text-white animate-spin" />
-              ) : trackIsPlaying ? (
-                <Pause className="w-5 h-5 text-white" />
-              ) : (
-                <Play className="w-5 h-5 text-white" />
-              )}
-            </button>
-          </div>
-          <div>
-            <div className="font-medium text-text dark:text-darkText">
-              {trackResult.title}
+          ) : (
+            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+              <Music className="h-5 w-5" aria-hidden="true" />
             </div>
-            <div className="text-sm text-text/60 dark:text-darkText/60">
-              {trackResult.year} · {trackResult.country || 'Unknown'}
-            </div>
-          </div>
-        </div>
-
-        <div className="text-sm text-text/60 dark:text-darkText/60">
-          <div>{trackResult.genre?.join(', ') || 'No Genre'}</div>
-          <div>{trackResult.style?.join(', ') || 'No Style'}</div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            variant="noShadow"
-            size="icon"
-            onClick={() => setShowTracks(!showTracks)}
+          )}
+          <button
+            type="button"
+            onClick={trackOnPlayToggle}
+            disabled={trackIsLoading}
+            className="absolute inset-0 flex items-center justify-center bg-black/45 text-white transition-colors hover:bg-black/55 disabled:opacity-100 sm:bg-black/0 sm:group-hover:bg-black/45"
+            aria-label={trackIsPlaying ? 'Pause release' : 'Play release'}
           >
-            {showTracks ? (
-              <ChevronUp className="w-4 h-4" />
+            {trackIsLoading ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : trackIsPlaying ? (
+              <Pause className="h-5 w-5" />
             ) : (
-              <ChevronDown className="w-4 h-4" />
+              <Play className="h-5 w-5 sm:opacity-0 sm:group-hover:opacity-100" />
             )}
-          </Button>
+          </button>
+        </div>
 
-          {/* Add to Playlist Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="noShadow" size="icon" title="Add to Playlist">
-                <ListPlus className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {playlists && playlists.length > 0 ? (
-                playlists.map((playlist) => (
-                  <DropdownMenuItem
-                    key={playlist.id}
-                    onClick={() => handleAddToPlaylist(playlist.id)}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    {playlist.title}
-                  </DropdownMenuItem>
-                ))
-              ) : (
-                <DropdownMenuItem disabled>No playlists found</DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+        <div className="min-w-0 flex-1">
+          <h3 className="truncate text-sm font-semibold text-foreground sm:text-base">
+            {trackResult.title}
+          </h3>
+          <p className="mt-1 truncate text-xs text-muted-foreground sm:text-sm">
+            {[trackResult.year, trackResult.country]
+              .filter(Boolean)
+              .join(' · ') || 'Release'}
+          </p>
+          <p className="mt-1 hidden truncate text-xs text-muted-foreground sm:block">
+            {trackResult.genre?.join(' · ') ||
+              trackResult.style?.join(' · ') ||
+              trackResult.label?.[0]}
+          </p>
+        </div>
 
-          <Button variant="noShadow" size="icon">
-            <Heart className="w-4 h-4" />
-          </Button>
-          <Button variant="noShadow" size="icon">
-            <MoreHorizontal className="w-4 h-4" />
-          </Button>
+        <div className="flex shrink-0 items-center">
+          <button
+            type="button"
+            onClick={() => setShowTracks((current) => !current)}
+            className="flex min-h-10 items-center gap-2 rounded-lg px-2 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:px-3"
+            aria-expanded={showTracks}
+          >
+            <span className="hidden sm:inline">
+              {showTracks ? 'Hide tracks' : 'View tracks'}
+            </span>
+            {showTracks ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ChevronDown className="h-4 w-4" />
+            )}
+          </button>
         </div>
       </div>
 
+      {dateAdded && (
+        <div className="border-t border-border/60 px-4 py-2 text-[11px] text-muted-foreground sm:hidden">
+          Added {new Date(dateAdded).toLocaleDateString()}
+        </div>
+      )}
+
       {showTracks && (
-        <div className="ml-16">
+        <div className="border-t border-border/60 bg-background/50 p-3 sm:p-4">
           <ReleaseTracks releaseId={trackResult.id} />
         </div>
       )}
-    </div>
+    </article>
   );
 };
 

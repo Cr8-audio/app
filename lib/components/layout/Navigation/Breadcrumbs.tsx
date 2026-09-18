@@ -113,7 +113,7 @@ export default function Breadcrumbs() {
   }
 
   return (
-    <nav className="flex items-center space-x-2 text-sm text-gray-600 mb-6 px-2">
+    <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-6 px-2">
       <ol className="flex items-center space-x-2">
         {breadcrumbs.map((item, index) => {
           const isLast = index === breadcrumbs.length - 1;
@@ -122,14 +122,14 @@ export default function Breadcrumbs() {
           return (
             <li key={item.href || item.label} className="flex items-center">
               {index > 0 && (
-                <ChevronRight className="w-4 h-4 mx-2 text-gray-400" />
+                <ChevronRight className="w-4 h-4 mx-2 text-muted-foreground/70" />
               )}
 
               {isLast ? (
                 <span
                   className={cn(
                     'flex items-center font-medium',
-                    item.current ? 'text-gray-900' : 'text-gray-600',
+                    item.current ? 'text-foreground' : 'text-muted-foreground',
                   )}
                 >
                   {Icon && <Icon className="w-4 h-4 mr-2" />}
@@ -138,7 +138,7 @@ export default function Breadcrumbs() {
               ) : (
                 <Link
                   to={item.href!}
-                  className="flex items-center hover:text-gray-900 transition-colors"
+                  className="flex items-center hover:text-foreground transition-colors"
                 >
                   {Icon && <Icon className="w-4 h-4 mr-2" />}
                   {item.label}
@@ -167,9 +167,9 @@ export function PageHeader({
       <Breadcrumbs />
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">{title}</h1>
+          <h1 className="text-2xl font-bold text-foreground">{title}</h1>
           {description && (
-            <p className="mt-1 text-sm text-gray-500">{description}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
           )}
         </div>
         {children && (

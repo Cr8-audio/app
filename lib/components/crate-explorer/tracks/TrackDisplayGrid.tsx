@@ -1,27 +1,7 @@
 import { useState } from 'react';
-import { Button } from '@/lib/components/ui/button';
-import {
-  Play,
-  Pause,
-  Heart,
-  MoreHorizontal,
-  ChevronDown,
-  ListMusic,
-  Plus,
-  ListPlus,
-  Loader2,
-} from 'lucide-react';
+import { Play, Pause, ChevronUp, ListMusic, Loader2 } from 'lucide-react';
 import ReleaseTracks from './ReleaseTracks';
 import { useTrackContext } from './TrackDisplay';
-import { usePlaylists } from '@/lib/hooks/usePlaylists';
-import { convertSearchResultToTrack } from '@/lib/utils/track-conversion';
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from '@/lib/components/ui/dropdown-menu';
-import { toast } from 'sonner';
 
 const TrackDisplayGrid = () => {
   const {
@@ -32,125 +12,86 @@ const TrackDisplayGrid = () => {
     dateAdded,
   } = useTrackContext();
   const [showTracks, setShowTracks] = useState(false);
-  const { playlists, addTrackToPlaylist } = usePlaylists();
-
-  const handleAddToPlaylist = async (playlistId: string) => {
-    if (!trackResult) return;
-
-    try {
-      const track = convertSearchResultToTrack(trackResult) as any;
-      // Note: External tracks need to be added to the database first
-      if (track._id) {
-        await addTrackToPlaylist(playlistId, track._id);
-      } else {
-        toast.info('External tracks cannot be added to playlists yet');
-      }
-    } catch (error) {
-      console.error('Error adding to playlist:', error);
-    }
-  };
 
   if (!trackResult) return null;
 
   return (
-    <div className="relative border-2 border-border dark:border-darkBorder rounded-base p-3">
-      {showTracks && (
-        <div className="absolute inset-0 z-10 bg-background/95 dark:bg-darkBg/95 backdrop-blur-sm rounded-base overflow-y-auto">
-          <div className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-medium text-text dark:text-darkText">
-                {trackResult.title}
-              </h3>
-              <Button
-                variant="noShadow"
-                size="icon"
-                onClick={() => setShowTracks(false)}
-              >
-                <ChevronDown className="w-4 h-4" />
-              </Button>
-            </div>
-            <ReleaseTracks releaseId={trackResult.id} />
+    <article className="group overflow-hidden rounded-2xl border border-border/70 bg-card transition-colors hover:border-border">
+      <div className="relative aspect-square overflow-hidden bg-muted">
+        {trackResult.cover_image ? (
+          <img
+            src={trackResult.cover_image}
+            alt={trackResult.title}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
+            <ListMusic className="h-10 w-10" aria-hidden="true" />
           </div>
-        </div>
-      )}
-
-      <div className="relative group mb-3">
-        <img
-          src={trackResult.cover_image || '/api/placeholder/300/300'}
-          alt={trackResult.title}
-          className="w-full aspect-square object-cover rounded-base"
-        />
-        <div className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-base">
-          <div className="flex gap-2">
-            <button
-              onClick={trackOnPlayToggle}
-              disabled={trackIsLoading}
-              className="p-2 rounded-full bg-background/20 hover:bg-background/40 transition-colors disabled:opacity-80"
-            >
-              {trackIsLoading ? (
-                <Loader2 className="w-8 h-8 text-white animate-spin" />
-              ) : trackIsPlaying ? (
-                <Pause className="w-8 h-8 text-white" />
-              ) : (
-                <Play className="w-8 h-8 text-white" />
-              )}
-            </button>
-            <button
-              onClick={() => setShowTracks(true)}
-              className="p-2 rounded-full bg-background/20 hover:bg-background/40 transition-colors"
-            >
-              <ListMusic className="w-8 h-8 text-white" />
-            </button>
-          </div>
-        </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+        <button
+          type="button"
+          onClick={trackOnPlayToggle}
+          disabled={trackIsLoading}
+          className="absolute bottom-3 right-3 flex h-11 w-11 items-center justify-center rounded-full bg-white text-black shadow-sm transition-transform hover:scale-105 disabled:opacity-80 sm:translate-y-2 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100"
+          aria-label={trackIsPlaying ? 'Pause release' : 'Play release'}
+        >
+          {trackIsLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : trackIsPlaying ? (
+            <Pause className="h-5 w-5" />
+          ) : (
+            <Play className="ml-0.5 h-5 w-5" />
+          )}
+        </button>
+        {trackResult.year && (
+          <span className="absolute bottom-3 left-3 rounded-full bg-black/55 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur-sm">
+            {trackResult.year}
+          </span>
+        )}
       </div>
 
-      <div className="flex justify-between items-start">
-        <div>
-          <h3 className="font-medium text-text dark:text-darkText mb-1">
+      <div className="space-y-4 p-4">
+        <div className="min-w-0">
+          <h3 className="line-clamp-2 text-sm font-semibold leading-5 text-foreground">
             {trackResult.title}
           </h3>
-          <div className="text-sm text-text/60 dark:text-darkText/60 mb-2">
-            {trackResult.year} · {trackResult.country || 'Unknown'}
-          </div>
-          <div className="text-sm text-text/60 dark:text-darkText/60">
-            {trackResult.genre?.join(', ') || 'No Genre'}
-          </div>
+          <p className="mt-1 truncate text-xs text-muted-foreground">
+            {trackResult.genre?.slice(0, 2).join(' · ') ||
+              trackResult.label?.[0] ||
+              'Release'}
+          </p>
         </div>
-        <div className="flex gap-2">
-          {/* Add to Playlist Dropdown */}
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="noShadow" size="icon" title="Add to Playlist">
-                <ListPlus className="w-4 h-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {playlists && playlists.length > 0 ? (
-                playlists.map((playlist) => (
-                  <DropdownMenuItem
-                    key={playlist.id}
-                    onClick={() => handleAddToPlaylist(playlist.id)}
-                  >
-                    <Plus className="mr-2 h-4 w-4" />
-                    {playlist.title}
-                  </DropdownMenuItem>
-                ))
-              ) : (
-                <DropdownMenuItem disabled>No playlists found</DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
 
-          <Button variant="noShadow" size="icon">
-            <Heart className="w-4 h-4" />
-          </Button>
-          <Button variant="noShadow" size="icon">
-            <MoreHorizontal className="w-4 h-4" />
-          </Button>
+        <div className="flex items-center border-t border-border/60 pt-3">
+          <button
+            type="button"
+            onClick={() => setShowTracks((current) => !current)}
+            className="inline-flex min-h-9 items-center gap-2 rounded-lg px-1 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            {showTracks ? (
+              <ChevronUp className="h-4 w-4" />
+            ) : (
+              <ListMusic className="h-4 w-4" />
+            )}
+            {showTracks ? 'Hide tracks' : 'View tracks'}
+          </button>
         </div>
+
+        {dateAdded && (
+          <p className="text-[11px] text-muted-foreground">
+            Added {new Date(dateAdded).toLocaleDateString()}
+          </p>
+        )}
       </div>
-    </div>
+
+      {showTracks && (
+        <div className="border-t border-border/60 bg-background/50 p-3">
+          <ReleaseTracks releaseId={trackResult.id} />
+        </div>
+      )}
+    </article>
   );
 };
 
