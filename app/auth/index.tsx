@@ -39,7 +39,9 @@ function AuthenticatedRedirect() {
     }
 
     // User has username, redirect to their profile
-    return <Navigate to={`/${user.username}`} replace />;
+    return (
+      <Navigate to="/$username" params={{ username: user.username }} replace />
+    );
   }
 
   return (

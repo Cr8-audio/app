@@ -1,5 +1,5 @@
-import { CrateTrack } from '@/types';
-import { Playlist as DbPlaylist } from '@/types';
+import { CrateTrack } from '@/lib/types';
+import { Playlist as DbPlaylist } from '@/lib/types';
 
 export interface PlaylistWithTracks extends DbPlaylist {
   tracks: CrateTrack[];
