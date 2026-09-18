@@ -7,7 +7,7 @@ import { components } from '../_generated/api';
  * Tools (#98) attach here later; playlist/collection truth stays in domain mutations.
  */
 const anthropic = createAnthropic({
-  // Set ANTHROPIC_API_KEY in the Convex dashboard (same key as workers /api/ai/chat).
+  // Set ANTHROPIC_API_KEY on the Convex deployment.
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
 
@@ -45,6 +45,6 @@ Examples:
 
 export const djAgent = new Agent(components.agent as any, {
   name: 'DJ Assistant',
-  chat: anthropic('claude-3-5-sonnet-20241022'),
+  chat: anthropic('claude-opus-5'),
   instructions: SYSTEM_PROMPT,
 });
