@@ -1,9 +1,8 @@
-import { QueryClient } from '@tanstack/react-query';
 import {
   Outlet,
   HeadContent,
   Scripts,
-  createRootRouteWithContext,
+  createRootRoute,
   useRouterState,
 } from '@tanstack/react-router';
 import { Suspense, useEffect } from 'react';
@@ -24,9 +23,7 @@ if (!convexUrl) {
 
 const convex = new ConvexReactClient(convexUrl);
 
-export const Route = createRootRouteWithContext<{
-  queryClient: QueryClient;
-}>()({
+export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: 'utf-8' },

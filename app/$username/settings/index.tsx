@@ -11,7 +11,13 @@ function SettingsPage() {
 
   // Redirect to connections page by default
   if (username) {
-    return <Navigate to={`/${routeUsername}/settings/connections`} replace />;
+    return (
+      <Navigate
+        to="/$username/settings/connections"
+        params={{ username: routeUsername }}
+        replace
+      />
+    );
   }
 
   return null;

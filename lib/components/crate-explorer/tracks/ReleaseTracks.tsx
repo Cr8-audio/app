@@ -32,17 +32,6 @@ const ReleaseTracks = ({ releaseId }: Props) => {
     ...track,
     id: track.id || track._id,
     _convexId: track._id,
-    // Parse genres and styles from comma-separated strings if needed
-    genres: track.genres
-      ? typeof track.genres === 'string'
-        ? track.genres.split(',').map((g: string) => g.trim())
-        : track.genres
-      : [],
-    styles: track.styles
-      ? typeof track.styles === 'string'
-        ? track.styles.split(',').map((s: string) => s.trim())
-        : track.styles
-      : [],
   })) as CrateTrack[];
 
   useEffect(() => {
