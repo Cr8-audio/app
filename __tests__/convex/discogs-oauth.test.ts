@@ -1,0 +1,82 @@
+import { describe, it, expect } from 'vitest';
+import {
+  OAUTH_REQUEST_TTL_MS,
+  discogsCallbackUrl,
+  isAllowedAppOrigin,
+  isRequestExpired,
+  pickCollectionOwnerKey,
+  releasesToRemove,
+} from '@/convex/lib/discogsOAuth';
+
+describe('isAllowedAppOrigin', () => {
+  it.each([
+    'https://cr8.audio',
+    'https://www.cr8.audio',
+    'http://localhost:1995',
+    'https://crate-app.someaccount.workers.dev',
+    'https://crate-app-pr-144.someaccount.workers.dev',
+  ])('allows %s', (origin) => {
+    expect(isAllowedAppOrigin(origin)).toBe(true);
+  });
+
+  it.each([
+    'https://crate.audio', // no longer ours
+    'https://staging.crate.audio',
+    'http://cr8.audio',
+    'https://cr8.audio.evil.com',
+    'https://evil-crate-app.someaccount.workers.dev',
+    'https://crate-app-pr-1.someaccount.workers.dev.evil.com',
+    'http://localhost:3000',
+  ])('rejects %s', (origin) => {
+    expect(isAllowedAppOrigin(origin)).toBe(false);
+  });
+});
+
+describe('discogsCallbackUrl', () => {
+  it('points at the client callback route', () => {
+    expect(discogsCallbackUrl('https://cr8.audio')).toBe(
+      'https://cr8.audio/connect/discogs/callback',
+    );
+  });
+});
+
+describe('isRequestExpired', () => {
+  it('is valid inside the TTL and expired after it', () => {
+    expect(isRequestExpired(0, OAUTH_REQUEST_TTL_MS)).toBe(false);
+    expect(isRequestExpired(0, OAUTH_REQUEST_TTL_MS + 1)).toBe(true);
+  });
+});
+
+describe('pickCollectionOwnerKey', () => {
+  it('reuses the first key that already has releases', () => {
+    expect(
+      pickCollectionOwnerKey(
+        [
+          { key: 'supabase-id', hasRows: false },
+          { key: 'dj@example.com', hasRows: true },
+          { key: 'convex-id', hasRows: true },
+        ],
+        'convex-id',
+      ),
+    ).toBe('dj@example.com');
+  });
+
+  it('falls back to the Convex id for a new collection', () => {
+    expect(
+      pickCollectionOwnerKey(
+        [{ key: 'dj@example.com', hasRows: false }],
+        'convex-id',
+      ),
+    ).toBe('convex-id');
+  });
+});
+
+describe('releasesToRemove', () => {
+  it('returns stored ids missing from Discogs, comparing numbers and strings', () => {
+    expect(releasesToRemove([1, '2', '3'], ['1', 3])).toEqual(['2']);
+  });
+
+  it('removes nothing when everything is still in the collection', () => {
+    expect(releasesToRemove(['1'], ['1', '2'])).toEqual([]);
+  });
+});

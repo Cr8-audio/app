@@ -1,6 +1,18 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
 import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import type { Doc } from './_generated/dataModel';
+
+/** Public queries must never hand OAuth tokens to the browser. */
+function withoutTokens(connection: Doc<'user_music_connections'>) {
+  const {
+    accessToken: _accessToken,
+    accessTokenSecret: _accessTokenSecret,
+    refreshToken: _refreshToken,
+    ...rest
+  } = connection;
+  return rest;
+}
 
 /**
  * Get all music service connections for the current user
@@ -13,10 +25,11 @@ export const getUserConnections = query({
       throw new Error('Not authenticated');
     }
 
-    return await ctx.db
+    const connections = await ctx.db
       .query('user_music_connections')
       .withIndex('by_user', (q) => q.eq('userId', userId))
       .collect();
+    return connections.map(withoutTokens);
   },
 });
 
@@ -31,12 +44,13 @@ export const getConnectionByProvider = query({
       throw new Error('Not authenticated');
     }
 
-    return await ctx.db
+    const connection = await ctx.db
       .query('user_music_connections')
       .withIndex('by_user_provider', (q) =>
         q.eq('userId', userId).eq('provider', provider),
       )
       .first();
+    return connection ? withoutTokens(connection) : null;
   },
 });
 

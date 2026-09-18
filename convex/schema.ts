@@ -40,9 +40,28 @@ export default defineSchema({
     providerUserId: v.string(),
     providerUsername: v.optional(v.string()),
     providerData: v.optional(v.any()), // Store additional provider-specific data
+    // OAuth 1.0a (Discogs) signs every call with the token *and* its secret.
+    // Server-only: never return this (or accessToken) from a public query.
+    accessTokenSecret: v.optional(v.string()),
+    syncStatus: v.optional(
+      v.union(v.literal('syncing'), v.literal('done'), v.literal('error')),
+    ),
+    syncError: v.optional(v.string()),
+    lastSyncedAt: v.optional(v.number()),
+    releaseCount: v.optional(v.number()),
   })
     .index('by_user', ['userId'])
     .index('by_user_provider', ['userId', 'provider']),
+
+  // Discogs OAuth request tokens between "Connect" and the callback.
+  discogs_oauth_requests: defineTable({
+    userId: v.id('users'),
+    requestToken: v.string(),
+    requestTokenSecret: v.string(),
+    createdAt: v.number(),
+  })
+    .index('by_request_token', ['requestToken'])
+    .index('by_user', ['userId']),
 
   discogs_releases: defineTable({
     discogs_release_id: v.union(v.string(), v.number()), // Can be either
