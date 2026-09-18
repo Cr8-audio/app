@@ -1,476 +1,423 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { Suspense, useEffect, useState } from 'react';
-import { usePlayerStore } from '@/lib/stores';
+import { useEffect, useMemo, useState } from 'react';
+import { useQuery } from 'convex/react';
+import { Image } from '@unpic/react';
+import {
+  ArrowRight,
+  Disc3,
+  Heart,
+  LibraryBig,
+  ListMusic,
+  Music2,
+  Pause,
+  Play,
+  Send,
+  Sparkles,
+} from 'lucide-react';
+import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { useFavorites } from '@/lib/hooks/useFavorites';
-import { Button } from '@/lib/components/ui/button';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/lib/components/ui/card';
-import {
-  Music,
-  Play,
-  Pause,
-  TrendingUp,
-  Shuffle,
-  Heart,
-  Search,
-  Plus,
-  Headphones,
-} from 'lucide-react';
-import { cn } from '@/lib/utils/tailwind';
+import { usePlayerStore } from '@/lib/stores';
 import { CrateTrack } from '@/lib/types';
-import { Image } from '@unpic/react';
+import { Button } from '@/lib/components/ui/button';
 import { LoadingSpinner } from '@/lib/components/ui/loading';
+import { cn } from '@/lib/utils/tailwind';
 import { toast } from 'sonner';
-import { useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
 
 export const Route = createFileRoute('/$username/')({
-  component: UserProfilePage,
+  component: UserOverviewPage,
 });
 
-const DashboardStats = ({ tracks }: { tracks: CrateTrack[] }) => {
-  const stats = {
-    totalTracks: tracks.length,
-    totalGenres: new Set(tracks.flatMap((t) => t.genres || [])).size,
-    avgBpm:
-      tracks.filter((t) => t.bpm).length > 0
-        ? Math.round(
-            tracks
-              .filter((t) => t.bpm)
-              .reduce((acc, t) => acc + (t.bpm || 0), 0) /
-              tracks.filter((t) => t.bpm).length,
-          )
-        : 0,
-    totalArtists: new Set(tracks.map((t) => t.artist)).size,
-  };
-
-  const statItems = [
-    {
-      label: 'Total Tracks',
-      value: stats.totalTracks,
-      icon: Music,
-      color: 'bg-main border-2 border-gray-800',
-    },
-    {
-      label: 'Artists',
-      value: stats.totalArtists,
-      icon: Headphones,
-      color: 'bg-main border-2 border-gray-800',
-    },
-    {
-      label: 'Genres',
-      value: stats.totalGenres,
-      icon: Heart,
-      color: 'bg-main border-2 border-gray-800',
-    },
-  ];
+function CollectionArtwork({ tracks }: { tracks: CrateTrack[] }) {
+  const artworks = tracks.filter((track) => track.artwork).slice(0, 4);
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-      {statItems.map((stat) => (
-        <Card key={stat.label} variant="elevated">
-          <CardContent className="p-4">
-            <div className="flex items-center space-x-3">
-              <div
-                className={cn(
-                  'p-2 rounded-base flex items-center justify-center',
-                  stat.color,
-                )}
-              >
-                <stat.icon className="w-5 h-5 text-black" />
-              </div>
-              <div>
-                <p className="text-2xl font-semibold text-text">{stat.value}</p>
-                <p className="text-sm text-gray-600">{stat.label}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+    <div className="relative mx-auto h-[15rem] w-[15rem] sm:h-[18rem] sm:w-[18rem]">
+      <div className="absolute inset-[12%] rounded-full bg-foreground shadow-float">
+        <div className="absolute inset-[14%] rounded-full border border-white/10" />
+        <div className="absolute inset-[28%] rounded-full border border-white/10" />
+        <div className="absolute inset-[44%] rounded-full bg-primary" />
+      </div>
+      {artworks.map((track, index) => {
+        const positions = [
+          '-left-1 top-2 rotate-[-7deg]',
+          '-right-2 top-5 rotate-[8deg]',
+          'bottom-0 left-6 rotate-[4deg]',
+          'bottom-2 right-5 rotate-[-5deg]',
+        ];
+        return (
+          <div
+            key={track.id}
+            className={cn(
+              'absolute h-[42%] w-[42%] overflow-hidden rounded-[1.05rem] border-[5px] border-card bg-muted shadow-float',
+              positions[index],
+            )}
+          >
+            <Image
+              src={track.artwork!}
+              alt=""
+              width={140}
+              height={140}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        );
+      })}
+      {artworks.length === 0 && (
+        <div className="absolute inset-[23%] flex items-center justify-center rounded-[1.4rem] bg-primary text-primary-foreground shadow-float rotate-[-4deg]">
+          <Disc3 className="h-12 w-12" strokeWidth={1.4} />
+        </div>
+      )}
     </div>
   );
-};
+}
 
-const FavoritesSection = ({
-  allTracks,
-  username,
+function TrackCard({
+  track,
+  isPlaying,
+  onPlay,
 }: {
-  allTracks: CrateTrack[];
-  username: string;
-}) => {
-  const {
-    togglePlayPause,
-    playingTrackId,
-    isPlaying,
-    setQueue,
-    isReady,
-    initializePlayer,
-  } = usePlayerStore();
-  const {
-    getFavoriteTracksFromAllTracks,
-    toggleFavorite,
-    isFavorite,
-    isLoading,
-  } = useFavorites();
-  const favoriteTracks = getFavoriteTracksFromAllTracks(allTracks).slice(0, 6);
+  track: CrateTrack;
+  isPlaying: boolean;
+  onPlay: () => void;
+}) {
+  return (
+    <article className="group min-w-0">
+      <div className="relative aspect-square overflow-hidden rounded-[1.1rem] bg-muted shadow-soft">
+        {track.artwork ? (
+          <Image
+            src={track.artwork}
+            alt={`${track.title} artwork`}
+            width={300}
+            height={300}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.025]"
+          />
+        ) : (
+          <div className="flex h-full w-full items-center justify-center bg-muted text-muted-foreground">
+            <Music2 className="h-8 w-8" strokeWidth={1.4} />
+          </div>
+        )}
+        <button
+          type="button"
+          onClick={onPlay}
+          className="absolute bottom-3 right-3 flex h-10 w-10 items-center justify-center rounded-full bg-foreground text-background shadow-lg transition-transform hover:scale-105 active:scale-95 sm:translate-y-1 sm:opacity-0 sm:group-hover:translate-y-0 sm:group-hover:opacity-100 sm:focus-visible:translate-y-0 sm:focus-visible:opacity-100"
+          aria-label={`${isPlaying ? 'Pause' : 'Play'} ${track.title}`}
+        >
+          {isPlaying ? (
+            <Pause className="h-4 w-4" fill="currentColor" />
+          ) : (
+            <Play className="ml-0.5 h-4 w-4" fill="currentColor" />
+          )}
+        </button>
+      </div>
+      <h3 className="mt-3 truncate text-sm font-semibold text-foreground">
+        {track.title}
+      </h3>
+      <p className="mt-0.5 truncate text-xs text-muted-foreground">
+        {track.artist}
+      </p>
+    </article>
+  );
+}
 
-  // Initialize player when component mounts
+function OverviewContent({ username }: { username: string }) {
+  const navigate = useNavigate();
+  const { displayName } = useAuth();
+  const convexTracks = useQuery(api.tracks.getUserTracks);
+  const playlists = useQuery(api.playlists.getUserPlaylists);
+  const { getFavoriteTracksFromAllTracks } = useFavorites();
+  const {
+    initializePlayer,
+    isReady,
+    isPlaying,
+    playingTrackId,
+    setQueue,
+    togglePlayPause,
+  } = usePlayerStore();
+  const [prompt, setPrompt] = useState('');
+
   useEffect(() => {
     initializePlayer();
   }, [initializePlayer]);
 
-  const handlePlayTrack = (track: CrateTrack) => {
-    if (!track.youtube_video_id) {
-      toast.error('No audio available for this track');
-      return;
-    }
-
-    if (!isReady) {
-      toast.error('Player is still loading...');
-      return;
-    }
-
-    try {
-      // Set up the queue with favorite tracks, but use all tracks for context
-      const trackIndex = allTracks.findIndex((t) => t.id === track.id);
-      setQueue(allTracks, trackIndex);
-      togglePlayPause(track);
-    } catch (error) {
-      console.error('Error playing track:', error);
-      toast.error('Failed to play track');
-    }
-  };
-
-  const handleToggleFavorite = async (trackId: string) => {
-    const wasFavorite = isFavorite(trackId);
-
-    try {
-      await toggleFavorite(trackId);
-
-      if (wasFavorite) {
-        toast.success('Removed from favorites');
-      } else {
-        toast.success('Added to favorites');
-      }
-    } catch (error) {
-      console.error('Error toggling favorite:', error);
-      toast.error('Failed to update favorites');
-    }
-  };
-
-  return (
-    <Card variant="elevated">
-      <CardHeader className="border-b-2 border-gray-800 bg-bg">
-        <CardTitle className="flex items-center space-x-2">
-          <Heart className="w-5 h-5" />
-          <span>Favourite list</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-4">
-        <div className="space-y-3">
-          {isLoading ? (
-            <div className="text-center text-gray-500 py-8">
-              <div className="animate-spin w-8 h-8 border-2 border-mainAccent border-t-transparent rounded-full mx-auto mb-2" />
-              <p>Loading favorites...</p>
-            </div>
-          ) : favoriteTracks.length === 0 ? (
-            <div className="text-center text-gray-500 py-8">
-              <Heart className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-              <p>No favorite tracks yet</p>
-              <p className="text-sm">
-                Use the heart icon in the player to add favorites
-              </p>
-            </div>
-          ) : (
-            favoriteTracks.map((track: CrateTrack) => (
-              <div
-                key={track.id}
-                className="flex items-center space-x-3 p-3 rounded-base hover:bg-mainAccent/10 transition-colors group cursor-pointer active:bg-mainAccent/20 active:scale-[0.98]"
-                onClick={() => handlePlayTrack(track)}
-              >
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handlePlayTrack(track);
-                  }}
-                  disabled={!track.youtube_video_id || !isReady}
-                  className={cn(
-                    'h-8 w-8 p-0 border border-gray-800 rounded-base',
-                    playingTrackId === track.id && isPlaying
-                      ? 'bg-main/20 hover:bg-main/30'
-                      : 'bg-main hover:bg-mainAccent',
-                  )}
-                >
-                  {playingTrackId === track.id && isPlaying ? (
-                    <>
-                      <Pause className="w-4 h-4 text-black" />
-                      <span className="absolute inset-0 rounded-full animate-pulse-light bg-main/30" />
-                    </>
-                  ) : (
-                    <Play className="w-4 h-4 text-black" />
-                  )}
-                </Button>
-
-                {track.artwork ? (
-                  <Image
-                    src={track.artwork}
-                    alt={track.title}
-                    width={40}
-                    height={40}
-                    className="w-10 h-10 rounded-base object-cover"
-                  />
-                ) : (
-                  <div className="w-10 h-10 bg-mainAccent border-2 border-gray-800 rounded-base flex items-center justify-center">
-                    <Music className="w-5 h-5 text-black" />
-                  </div>
-                )}
-
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-sm truncate text-text">
-                    {track.title}
-                  </div>
-                  <div className="text-xs text-gray-600 truncate">
-                    {track.artist}
-                  </div>
-                </div>
-
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleToggleFavorite(track.id);
-                  }}
-                  className="h-8 w-8 p-0 bg-red-100 hover:bg-red-200 text-red-600 border border-gray-800 rounded-base"
-                >
-                  <Heart className="w-4 h-4 fill-current" />
-                </Button>
-              </div>
-            ))
-          )}
-        </div>
-
-        <div className="mt-4 pt-4 border-t-2 border-gray-800">
-          <Link
-            to="/$username/tracks"
-            params={{
-              username: username,
-            }}
-          >
-            <Button variant="outline" className="w-full">
-              View All Tracks
-            </Button>
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
+  const tracks = useMemo(
+    () =>
+      (convexTracks ?? []).map((track) => ({
+        ...track,
+        id: track.id || track._id,
+      })) as CrateTrack[],
+    [convexTracks],
   );
-};
 
-const QuickActionsSection = ({ username }: { username: string }) => {
-  const actions = [
-    {
-      title: 'Explore Collection',
-      description: 'Browse your Discogs collection',
-      icon: Search,
-      href: `/${username}/collection`,
-      color: 'bg-main border-2 border-gray-800',
-    },
-    {
-      title: 'Create Playlist',
-      description: 'Organize your favorite tracks',
-      icon: Plus,
-      href: `/${username}/playlists`,
-      color: 'bg-main border-2 border-gray-800',
-    },
-    {
-      title: 'Shuffle Play',
-      description: 'Start a random mix',
-      icon: Shuffle,
-      href: '#',
-      color: 'bg-main border-2 border-gray-800',
-      action: 'shuffle',
-    },
+  const favoriteTracks = getFavoriteTracksFromAllTracks(tracks);
+  const rotation = (favoriteTracks.length ? favoriteTracks : tracks).slice(
+    0,
+    6,
+  );
+  const artistCount = new Set(tracks.map((track) => track.artist)).size;
+  const genres = tracks.flatMap((track) =>
+    Array.isArray(track.genres)
+      ? track.genres
+      : typeof track.genres === 'string'
+        ? track.genres.split(',').map((genre) => genre.trim())
+        : [],
+  );
+  const leadingGenre = genres.find(Boolean);
+  const bpms = tracks
+    .map((track) => track.bpm)
+    .filter((bpm): bpm is number => typeof bpm === 'number');
+  const middleBpm = bpms.length
+    ? Math.round(bpms.reduce((sum, bpm) => sum + bpm, 0) / bpms.length)
+    : 124;
+  const suggestedPrompts = [
+    leadingGenre
+      ? `Build a warm-up set from my ${leadingGenre} records`
+      : 'Build a warm-up set from my collection',
+    `Find a smooth run around ${middleBpm} BPM`,
+    'Give me a left-field transition I would not pick myself',
   ];
 
-  const { toggleShuffle, setQueue } = usePlayerStore();
-  const convexTracks = useQuery(api.tracks.getUserTracks);
-  const allTracks = (convexTracks || []).map((track) => ({
-    ...track,
-    id: track.id || track._id,
-  })) as CrateTrack[];
-
-  const handleAction = (action: string) => {
-    if (action === 'shuffle') {
-      if (allTracks.length > 0) {
-        setQueue(allTracks, 0);
-        toggleShuffle();
-        toast.success('Shuffle mode enabled! Playing your collection.');
-      } else {
-        toast.error('No tracks available to shuffle');
-      }
-    }
-  };
-
-  return (
-    <Card variant="elevated">
-      <CardHeader className="border-b-2 border-gray-800 bg-bg">
-        <CardTitle className="flex items-center space-x-2">
-          <TrendingUp className="w-5 h-5" />
-          <span>Quick Actions</span>
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="p-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {actions.map((action) => (
-            <div key={action.title}>
-              {action.href === '#' ? (
-                <Button
-                  variant="ghost"
-                  onClick={() => handleAction(action.action!)}
-                  className="h-auto p-4 text-left justify-start bg-white hover:bg-mainAccent/10 border-2 border-gray-800 rounded-base shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all text-text w-full active:bg-mainAccent/20 active:scale-[0.98]"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div
-                      className={cn(
-                        'p-2 rounded-base text-black flex items-center justify-center',
-                        action.color,
-                      )}
-                    >
-                      <action.icon className="w-5 h-5" />
-                    </div>
-                    <div>
-                      <div className="font-medium text-sm">{action.title}</div>
-                      <div className="text-xs text-gray-600">
-                        {action.description}
-                      </div>
-                    </div>
-                  </div>
-                </Button>
-              ) : (
-                <Link to={action.href}>
-                  <Button
-                    variant="ghost"
-                    className="h-auto p-4 text-left justify-start bg-white hover:bg-mainAccent/10 border-2 border-gray-800 rounded-base shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all text-text w-full active:bg-mainAccent/20 active:scale-[0.98]"
-                  >
-                    <div className="flex items-center space-x-3">
-                      <div
-                        className={cn(
-                          'p-2 rounded-base text-black flex items-center justify-center',
-                          action.color,
-                        )}
-                      >
-                        <action.icon className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <div className="font-medium text-sm">
-                          {action.title}
-                        </div>
-                        <div className="text-xs text-gray-600">
-                          {action.description}
-                        </div>
-                      </div>
-                    </div>
-                  </Button>
-                </Link>
-              )}
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
-  );
-};
-
-const WelcomeSection = ({ username }: { username: string }) => {
-  const currentHour = new Date().getHours();
-  const getGreeting = () => {
-    if (currentHour < 12) return 'Good morning';
-    if (currentHour < 17) return 'Good afternoon';
-    return 'Good evening';
-  };
-
-  return (
-    <div className="mb-8">
-      <h1 className="text-3xl font-semibold text-text mb-2">
-        {getGreeting()}, {username}!
-      </h1>
-      <p className="text-gray-600">
-        Ready to explore your music collection? Here&apos;s what&apos;s
-        happening with your tracks.
-      </p>
-    </div>
-  );
-};
-
-const DashboardContent = ({ username }: { username: string }) => {
-  // Use Convex queries instead of fetch
-  const convexTracks = useQuery(api.tracks.getUserTracks);
-  const convexPlaylists = useQuery(api.playlists.getUserPlaylists);
-
-  const loading = convexTracks === undefined || convexPlaylists === undefined;
-
-  if (loading) {
+  if (convexTracks === undefined || playlists === undefined) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[60vh] items-center justify-center">
         <LoadingSpinner />
       </div>
     );
   }
 
-  // Map tracks for the dashboard
-  const allTracks = (convexTracks || []).map((track) => ({
-    ...track,
-    id: track.id || track._id,
-    _convexId: track._id,
-  })) as CrateTrack[];
+  const startAsk = (value: string) => {
+    const nextPrompt = value.trim();
+    navigate({
+      to: '/analyze/chat',
+      search: nextPrompt ? { prompt: nextPrompt } : {},
+    });
+  };
+
+  const playTrack = (track: CrateTrack) => {
+    if (!track.youtube_video_id) {
+      toast.error('No playable audio is available for this track yet.');
+      return;
+    }
+    if (!isReady) {
+      toast.message('The player is still getting ready.');
+      return;
+    }
+    const index = tracks.findIndex((candidate) => candidate.id === track.id);
+    setQueue(tracks, Math.max(0, index));
+    togglePlayPause(track);
+  };
 
   return (
-    <div className="space-y-8">
-      <WelcomeSection username={username} />
+    <div className="mx-auto w-full max-w-[88rem] px-4 py-6 sm:px-6 sm:py-8 lg:px-10 lg:py-10">
+      <section className="relative overflow-hidden rounded-[1.75rem] border border-border/70 bg-card px-5 py-7 shadow-soft sm:px-8 sm:py-10 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] lg:items-center lg:gap-10 lg:px-12 lg:py-12">
+        <div className="relative z-10 max-w-2xl">
+          <div className="mb-5 flex items-center gap-2 text-xs font-semibold text-primary">
+            <Sparkles className="h-3.5 w-3.5" />
+            <span>Grounded in {tracks.length.toLocaleString()} tracks</span>
+          </div>
+          <h2 className="max-w-xl text-[2.25rem] font-semibold leading-[1.03] tracking-[-0.055em] text-foreground sm:text-5xl lg:text-[3.5rem]">
+            What should we pull from the crate?
+          </h2>
+          <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
+            Welcome back, {displayName || username}. Describe the room, the
+            energy, or the transition. Crate will work from music you actually
+            own.
+          </p>
 
-      <DashboardStats tracks={allTracks} />
+          <form
+            className="mt-7 flex items-center gap-2 rounded-[1rem] border border-border bg-popover p-2 shadow-soft focus-within:border-primary"
+            onSubmit={(event) => {
+              event.preventDefault();
+              startAsk(prompt);
+            }}
+          >
+            <input
+              value={prompt}
+              onChange={(event) => setPrompt(event.target.value)}
+              placeholder="Try “late-night house, 118–124 BPM”"
+              className="h-11 min-w-0 flex-1 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+              aria-label="Ask your crate"
+            />
+            <Button type="submit" size="icon" aria-label="Open Ask Crate">
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <FavoritesSection allTracks={allTracks} username={username} />
-        <QuickActionsSection username={username} />
-      </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {suggestedPrompts.map((suggestion) => (
+              <button
+                key={suggestion}
+                type="button"
+                onClick={() => startAsk(suggestion)}
+                className="rounded-full border border-border/80 bg-background/65 px-3 py-1.5 text-left text-[0.7rem] font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:bg-accent hover:text-accent-foreground"
+              >
+                {suggestion}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-10 lg:mt-0">
+          <CollectionArtwork tracks={tracks} />
+        </div>
+      </section>
+
+      <section className="mt-6 grid gap-3 sm:grid-cols-3">
+        {[
+          {
+            label: 'Playable tracks',
+            value: tracks.length,
+            icon: LibraryBig,
+          },
+          { label: 'Artists', value: artistCount, icon: Music2 },
+          {
+            label: 'Saved playlists',
+            value: playlists.length,
+            icon: ListMusic,
+          },
+        ].map((stat) => {
+          const Icon = stat.icon;
+          return (
+            <div
+              key={stat.label}
+              className="flex items-center gap-3 rounded-[1rem] border border-border/65 bg-card/65 px-4 py-3.5"
+            >
+              <Icon
+                className="h-4 w-4 text-muted-foreground"
+                strokeWidth={1.7}
+              />
+              <span className="text-lg font-semibold tabular-nums text-foreground">
+                {stat.value.toLocaleString()}
+              </span>
+              <span className="text-xs text-muted-foreground">
+                {stat.label}
+              </span>
+            </div>
+          );
+        })}
+      </section>
+
+      <section className="mt-10">
+        <div className="flex items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow">
+              {favoriteTracks.length ? 'Saved for later' : 'From your shelves'}
+            </p>
+            <h2 className="mt-2 text-2xl font-semibold tracking-[-0.035em] text-foreground">
+              {favoriteTracks.length
+                ? 'Back in rotation'
+                : 'Start somewhere good'}
+            </h2>
+          </div>
+          <Link
+            to="/$username/tracks"
+            params={{ username }}
+            className="hidden items-center gap-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground sm:flex"
+          >
+            Open library <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        </div>
+
+        {rotation.length > 0 ? (
+          <div className="mt-5 grid grid-cols-2 gap-x-3 gap-y-7 sm:grid-cols-3 sm:gap-x-4 lg:grid-cols-6">
+            {rotation.map((track) => (
+              <TrackCard
+                key={track.id}
+                track={track}
+                isPlaying={playingTrackId === track.id && isPlaying}
+                onPlay={() => playTrack(track)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-5 flex flex-col items-start rounded-[1.25rem] border border-dashed border-border bg-card/50 px-6 py-8 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex items-start gap-4">
+              <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+                <Disc3 className="h-5 w-5" />
+              </span>
+              <div>
+                <h3 className="text-sm font-semibold text-foreground">
+                  Your collection is getting ready
+                </h3>
+                <p className="mt-1 max-w-lg text-xs leading-5 text-muted-foreground">
+                  New Discogs releases will appear here as they finish syncing.
+                  You can explore the catalog in the meantime.
+                </p>
+              </div>
+            </div>
+            <Link
+              to="/$username/collection"
+              params={{ username }}
+              className="mt-4 inline-flex items-center gap-1.5 text-xs font-semibold text-primary sm:mt-0"
+            >
+              Browse Discogs <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+          </div>
+        )}
+      </section>
+
+      <section className="mt-12 grid gap-4 pb-6 lg:grid-cols-2">
+        <Link
+          to="/$username/tracks"
+          params={{ username }}
+          className="group flex items-center justify-between rounded-[1.25rem] border border-border/70 bg-card p-5 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-soft"
+        >
+          <div className="flex items-center gap-4">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
+              <LibraryBig className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Your library
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Filter tracks by artist, genre, and BPM.
+              </p>
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+        </Link>
+        <Link
+          to="/$username/playlists"
+          params={{ username }}
+          className="group flex items-center justify-between rounded-[1.25rem] border border-border/70 bg-card p-5 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-soft"
+        >
+          <div className="flex items-center gap-4">
+            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-foreground">
+              <Heart className="h-5 w-5" />
+            </span>
+            <div>
+              <p className="text-sm font-semibold text-foreground">
+                Your playlists
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Turn good finds into a set you can return to.
+              </p>
+            </div>
+          </div>
+          <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
+        </Link>
+      </section>
     </div>
   );
-};
+}
 
-function UserProfilePage() {
+function UserOverviewPage() {
   const { username } = Route.useParams();
-  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const user = useQuery(api.users.getCurrentUser);
 
   useEffect(() => {
-    if (!user) {
-      navigate({ to: `/`, replace: true });
-    }
-  }, [user]);
+    if (user === null) navigate({ to: '/', replace: true });
+  }, [navigate, user]);
 
-  if (!isAuthenticated) {
+  if (user === undefined || user === null) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
+      <div className="flex min-h-[60vh] items-center justify-center">
         <LoadingSpinner />
       </div>
     );
   }
 
-  return (
-    <main className="container mx-auto px-4 py-8">
-      <Suspense fallback={<LoadingSpinner />}>
-        <DashboardContent username={username} />
-      </Suspense>
-    </main>
-  );
+  return <OverviewContent username={username} />;
 }

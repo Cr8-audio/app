@@ -2,9 +2,9 @@ import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useEffect, useRef, useState } from 'react';
 import { useAction, useConvexAuth } from 'convex/react';
 import { useAuthActions } from '@convex-dev/auth/react';
+import { AlertCircle, ArrowLeft } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/lib/components/ui/button';
-import { LoadingSpinner } from '@/lib/components/ui/loading';
 import {
   DISCOGS_RETURN_KEY,
   DISCOGS_SIGN_IN_NONCE_KEY,
@@ -85,7 +85,7 @@ function DiscogsCallbackPage() {
         oauthVerifier: oauth_verifier,
         nonce: signInNonce,
       })
-        // /auth sends the user on to onboarding or their profile.
+        // /auth sends the user on to onboarding or the signed-in workspace.
         .then(() => navigate({ to: '/auth', replace: true }))
         .catch((err: unknown) => {
           console.error('Discogs sign-in failed:', err);
@@ -126,22 +126,79 @@ function DiscogsCallbackPage() {
 
   if (!error) {
     return (
-      <div className="min-h-[50vh] flex flex-col items-center justify-center gap-3">
-        <LoadingSpinner />
-        <p className="text-sm text-gray-600">Talking to Discogs…</p>
-      </div>
+      <main className="flex min-h-screen items-center justify-center bg-background px-5 py-10 text-foreground">
+        <section
+          className="w-full max-w-md rounded-[1.5rem] border border-border bg-card p-7 text-center shadow-xl sm:p-9"
+          aria-labelledby="callback-title"
+          aria-live="polite"
+        >
+          <div
+            className="relative mx-auto h-20 w-20 rounded-full bg-foreground shadow-lg motion-safe:animate-[spin_3s_linear_infinite] motion-reduce:animate-none"
+            aria-hidden="true"
+          >
+            <div className="absolute inset-[14%] rounded-full border border-background/10" />
+            <div className="absolute inset-[28%] rounded-full border border-background/10" />
+            <div className="absolute inset-[36%] rounded-full bg-primary" />
+            <div className="absolute inset-[47%] rounded-full bg-card" />
+          </div>
+
+          <p className="mt-7 text-xs font-semibold uppercase tracking-[0.18em] text-primary">
+            Secure handoff
+          </p>
+          <h1
+            id="callback-title"
+            className="mt-2 text-2xl font-medium tracking-[-0.035em]"
+          >
+            Bringing you back to Crate
+          </h1>
+          <p className="mx-auto mt-3 max-w-sm text-sm leading-6 text-muted-foreground">
+            We’re securing your connection and preparing your collection. Keep
+            this tab open for just a moment.
+          </p>
+
+          <div className="mt-7 h-1 overflow-hidden rounded-full bg-muted">
+            <div className="h-full w-2/3 animate-pulse rounded-full bg-primary motion-reduce:animate-none" />
+          </div>
+        </section>
+      </main>
     );
   }
 
   return (
-    <div className="min-h-[50vh] flex flex-col items-center justify-center gap-4">
-      <p className="text-gray-800">{error}</p>
-      <Button
-        variant="outline"
-        onClick={() => navigate({ to: takeReturnPath() ?? '/', replace: true })}
+    <main className="flex min-h-screen items-center justify-center bg-background px-5 py-10 text-foreground">
+      <section
+        className="w-full max-w-md rounded-[1.5rem] border border-border bg-card p-7 text-center shadow-xl sm:p-9"
+        aria-labelledby="callback-error-title"
       >
-        Go back
-      </Button>
-    </div>
+        <div className="mx-auto grid h-12 w-12 place-items-center rounded-xl bg-destructive/10 text-destructive">
+          <AlertCircle className="h-5 w-5" aria-hidden="true" />
+        </div>
+        <p className="mt-6 text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+          Connection paused
+        </p>
+        <h1
+          id="callback-error-title"
+          className="mt-2 text-2xl font-medium tracking-[-0.035em]"
+        >
+          We couldn’t finish the handoff
+        </h1>
+        <p
+          role="alert"
+          className="mt-3 text-sm leading-6 text-muted-foreground"
+        >
+          {error}
+        </p>
+        <Button
+          variant="outline"
+          className="mt-7 h-11 w-full rounded-xl bg-background"
+          onClick={() =>
+            navigate({ to: takeReturnPath() ?? '/', replace: true })
+          }
+        >
+          <ArrowLeft className="h-4 w-4" aria-hidden="true" />
+          Back to Crate
+        </Button>
+      </section>
+    </main>
   );
 }

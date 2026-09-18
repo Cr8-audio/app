@@ -93,8 +93,8 @@ const FormLabel = React.forwardRef<
     <Label
       ref={ref}
       className={cn(
-        'font-mono text-medium-title',
-        error && 'text-red-500',
+        'font-mono text-2xl',
+        error && 'text-destructive',
         className,
       )}
       htmlFor={formItemId}
@@ -121,7 +121,7 @@ const FormControl = React.forwardRef<
           : `${formDescriptionId} ${formMessageId}`
       }
       aria-invalid={!!error}
-      className="font-mono text-small-title"
+      className="font-mono text-xs"
       {...props}
     />
   );
@@ -138,10 +138,7 @@ const FormDescription = React.forwardRef<
     <p
       ref={ref}
       id={formDescriptionId}
-      className={cn(
-        'text-small-subtitle font-mono text-text dark:text-darkText',
-        className,
-      )}
+      className={cn('text-[10px] font-mono text-foreground ', className)}
       {...props}
     />
   );
@@ -163,7 +160,7 @@ const FormMessage = React.forwardRef<
     <p
       ref={ref}
       id={formMessageId}
-      className={cn('text-small-subtitle font-mono text-red-500', className)}
+      className={cn('text-[10px] font-mono text-destructive', className)}
       {...props}
     >
       {body}

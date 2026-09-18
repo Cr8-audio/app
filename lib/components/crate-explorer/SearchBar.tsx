@@ -1,27 +1,23 @@
 import { SearchBarProps } from '@/lib/types';
 import { Input } from '@/lib/components/ui/input';
-import { Button } from '@/lib/components/ui/button';
 import { Search } from 'lucide-react';
 import { LoadingSpinner } from '@/lib/components/ui/loading';
 
 const SearchBar = ({ query, isLoading, onQueryChange }: SearchBarProps) => {
   return (
-    <div className="flex gap-3 mb-6">
+    <div className="relative mb-7 max-w-2xl">
+      <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
       <Input
         type="text"
-        placeholder="Search vinyl records..."
+        aria-label="Search Discogs releases"
+        placeholder="Search by artist, album, label…"
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
-        className="flex-1"
+        className="h-12 w-full rounded-xl border-border/70 bg-card pl-11 pr-12 shadow-none"
       />
-      <Button type="button" disabled={isLoading} variant="default">
-        {isLoading ? (
-          <LoadingSpinner className="w-4 h-4" />
-        ) : (
-          <Search className="w-4 h-4" />
-        )}
-        <span className="ml-2">Search</span>
-      </Button>
+      {isLoading && (
+        <LoadingSpinner className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2" />
+      )}
     </div>
   );
 };

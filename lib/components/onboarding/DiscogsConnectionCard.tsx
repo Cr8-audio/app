@@ -1,16 +1,9 @@
 import { useEffect } from 'react';
-import { Button } from '@/lib/components/ui/button';
-import { Card } from '@/lib/components/ui/card';
-import {
-  Music,
-  CheckCircle,
-  XCircle,
-  Loader2,
-  AlertCircle,
-  RefreshCw,
-} from 'lucide-react';
+import { AlertCircle, Check, Disc3, Loader2, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
+import { Button } from '@/lib/components/ui/button';
 import { useDiscogsConnection } from '@/lib/hooks/useDiscogsConnection';
+import { cn } from '@/lib/utils/tailwind';
 
 interface DiscogsConnectionCardProps {
   onConnectionChange?: (connected: boolean) => void;
@@ -20,10 +13,11 @@ interface DiscogsConnectionCardProps {
 function formatSyncSummary(
   releaseCount: number | null,
   lastSyncedAt: number | null,
-): string | null {
+) {
   if (lastSyncedAt === null) return null;
-  const when = new Date(lastSyncedAt).toLocaleString();
-  return `${releaseCount ?? 0} releases · synced ${when}`;
+  return `${releaseCount ?? 0} releases · Synced ${new Date(
+    lastSyncedAt,
+  ).toLocaleString()}`;
 }
 
 export function DiscogsConnectionCard({
@@ -72,61 +66,69 @@ export function DiscogsConnectionCard({
     discogs.releaseCount,
     discogs.lastSyncedAt,
   );
+  const isConnected = state === 'connected';
+  const needsReconnection = state === 'needs_reconnection';
 
   return (
-    <Card className="p-6">
-      <div className="flex items-start justify-between">
-        <div className="flex items-start space-x-4">
-          <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center">
-            <Music className="w-6 h-6 text-gray-600" />
+    <div className="overflow-hidden rounded-2xl border border-border/70 bg-card">
+      <div className="flex flex-col gap-6 p-5 sm:p-6 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 gap-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-foreground text-background">
+            <Disc3 className="h-6 w-6" />
           </div>
-          <div className="flex-1">
-            <div className="flex items-center space-x-2 mb-1">
-              <h3 className="text-lg font-semibold">Discogs</h3>
-              {state === 'loading' ? (
-                <div className="flex items-center space-x-1 text-gray-400 text-sm">
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Checking...</span>
-                </div>
-              ) : state === 'connected' ? (
-                <div className="flex items-center space-x-1 text-green-600 text-sm">
-                  <CheckCircle className="w-4 h-4" />
-                  <span>Connected</span>
-                </div>
-              ) : state === 'needs_reconnection' ? (
-                <div className="flex items-center space-x-1 text-amber-600 text-sm">
-                  <AlertCircle className="w-4 h-4" />
-                  <span>Needs Reconnection</span>
-                </div>
-              ) : (
-                <div className="flex items-center space-x-1 text-gray-400 text-sm">
-                  <XCircle className="w-4 h-4" />
-                  <span>Not connected</span>
-                </div>
-              )}
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="text-base font-semibold text-foreground">
+                Discogs
+              </h3>
+              <span
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium',
+                  isConnected
+                    ? 'bg-primary/10 text-primary'
+                    : needsReconnection
+                      ? 'bg-destructive/10 text-destructive'
+                      : 'bg-muted text-muted-foreground',
+                )}
+              >
+                {state === 'loading' ? (
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                ) : isConnected ? (
+                  <Check className="h-3 w-3" />
+                ) : needsReconnection ? (
+                  <AlertCircle className="h-3 w-3" />
+                ) : (
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                )}
+                {state === 'loading'
+                  ? 'Checking'
+                  : isConnected
+                    ? 'Connected'
+                    : needsReconnection
+                      ? 'Reconnect needed'
+                      : 'Not connected'}
+              </span>
             </div>
+
             {variant === 'default' && (
-              <p className="text-sm text-gray-600 mb-3">
-                Sync your vinyl and physical music collection from Discogs.
-                Browse releases, view details, and add tracks to your Crate
-                library.
+              <p className="mt-2 max-w-xl text-sm leading-6 text-muted-foreground">
+                Sync your records and physical music collection, browse release
+                details, and bring tracks into your Crate library.
               </p>
             )}
-            {state === 'needs_reconnection' && (
-              <p className="text-xs text-amber-600 mb-2">
-                Reconnect Discogs so Crate can keep syncing your collection.
-              </p>
-            )}
+
             {discogs.username && (
-              <div className="text-xs text-gray-500 space-y-0.5">
-                <p>Username: @{discogs.username}</p>
+              <div className="mt-4 space-y-1 text-xs text-muted-foreground">
+                <p className="font-medium text-foreground">
+                  @{discogs.username}
+                </p>
                 {isSyncing ? (
-                  <p className="flex items-center">
-                    <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                    Syncing your collection...
+                  <p className="flex items-center gap-1.5">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Syncing your collection…
                   </p>
                 ) : discogs.syncStatus === 'error' ? (
-                  <p className="text-red-600">
+                  <p className="text-destructive">
                     Last sync failed: {discogs.syncError}
                   </p>
                 ) : (
@@ -134,95 +136,82 @@ export function DiscogsConnectionCard({
                 )}
               </div>
             )}
+
+            {needsReconnection && (
+              <p className="mt-3 text-xs leading-5 text-destructive">
+                Reconnect Discogs so Crate can keep your collection up to date.
+              </p>
+            )}
           </div>
         </div>
-        <div className="ml-4">
-          {state === 'connected' ? (
-            <div className="space-y-2">
+
+        <div className="flex shrink-0 flex-col gap-2 sm:flex-row lg:flex-col">
+          {isConnected ? (
+            <>
               <Button
                 variant="outline"
-                size="sm"
-                className="w-full"
+                className="min-h-10 rounded-full"
                 onClick={handleSync}
                 disabled={isSyncing}
               >
                 {isSyncing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Syncing...
-                  </>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Sync now
-                  </>
+                  <RefreshCw className="mr-2 h-4 w-4" />
                 )}
+                {isSyncing ? 'Syncing…' : 'Sync now'}
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
-                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="min-h-10 rounded-full text-muted-foreground hover:text-destructive"
                 onClick={handleDisconnect}
                 disabled={discogs.isDisconnecting}
               >
-                {discogs.isDisconnecting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Disconnecting...
-                  </>
-                ) : (
-                  'Disconnect'
-                )}
+                {discogs.isDisconnecting ? 'Disconnecting…' : 'Disconnect'}
               </Button>
-            </div>
-          ) : state === 'needs_reconnection' ? (
-            <div className="space-y-2">
+            </>
+          ) : needsReconnection ? (
+            <>
               <Button
+                className="min-h-10 rounded-full"
                 onClick={handleConnect}
                 disabled={discogs.isConnecting}
-                className="bg-amber-500 hover:bg-amber-600 text-white border-2 border-gray-800 shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all"
               >
                 {discogs.isConnecting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Reconnecting...
-                  </>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2" />
-                    Reconnect
-                  </>
+                  <RefreshCw className="mr-2 h-4 w-4" />
                 )}
+                {discogs.isConnecting ? 'Reconnecting…' : 'Reconnect'}
               </Button>
               <Button
                 variant="ghost"
-                size="sm"
-                className="w-full text-red-600 hover:text-red-700 hover:bg-red-50"
+                className="min-h-10 rounded-full text-muted-foreground hover:text-destructive"
                 onClick={handleDisconnect}
                 disabled={discogs.isDisconnecting}
               >
-                {discogs.isDisconnecting ? 'Disconnecting...' : 'Disconnect'}
+                {discogs.isDisconnecting ? 'Disconnecting…' : 'Disconnect'}
               </Button>
-            </div>
+            </>
           ) : (
             <Button
+              className="min-h-10 rounded-full"
               onClick={handleConnect}
               disabled={discogs.isConnecting || state === 'loading'}
-              className="bg-main hover:bg-mainAccent border-2 border-gray-800 shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all"
             >
-              {discogs.isConnecting ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Connecting...
-                </>
-              ) : (
-                'Connect Discogs'
+              {discogs.isConnecting && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
+              {discogs.isConnecting ? 'Connecting…' : 'Connect Discogs'}
             </Button>
           )}
         </div>
       </div>
-    </Card>
+
+      <div className="border-t border-border/60 bg-muted/25 px-5 py-3 text-xs text-muted-foreground sm:px-6">
+        Your Discogs access token is encrypted and stored server-side.
+      </div>
+    </div>
   );
 }
 

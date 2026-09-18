@@ -137,7 +137,7 @@ export default function EnhancedAiLayout({ children }: EnhancedAiLayoutProps) {
           <Card
             className={cn(
               'fixed right-0 transition-all duration-300 ease-in-out z-50',
-              'border-l-2 border-black shadow-light bg-bg',
+              'border-l border-border bg-background',
               {
                 // Sidebar positioning - account for persistent player
                 'top-16 bottom-20 w-full sm:w-[450px] xl:w-[500px]':
@@ -166,7 +166,7 @@ export default function EnhancedAiLayout({ children }: EnhancedAiLayoutProps) {
           <Card
             className={cn(
               'fixed bottom-20 left-0 right-0 transition-all duration-300 ease-in-out z-50',
-              'border-t-2 border-black shadow-light bg-bg',
+              'border-t border-border bg-background',
               {
                 'h-[400px]': isChatOpen,
                 'translate-y-0': isChatOpen,
@@ -189,10 +189,10 @@ export default function EnhancedAiLayout({ children }: EnhancedAiLayoutProps) {
         <div className="fixed bottom-28 right-6 z-50 flex flex-col items-end space-y-3">
           {/* Quick Info Badge - Only show when closed and has tracks */}
           {!isChatOpen && tracks.length > 0 && (
-            <div className="bg-bg border-2 border-black rounded-base px-3 py-2 shadow-light animate-in fade-in-50 slide-in-from-right-2">
+            <div className="bg-background border border-border rounded-base px-3 py-2 animate-in fade-in-50 slide-in-from-right-2">
               <div className="flex items-center space-x-2">
-                <Bot className="w-4 h-4 text-black" />
-                <span className="text-sm font-medium text-text">
+                <Bot className="w-4 h-4 text-foreground" />
+                <span className="text-sm font-medium text-foreground">
                   {tracks.length} tracks ready
                 </span>
               </div>
@@ -203,9 +203,9 @@ export default function EnhancedAiLayout({ children }: EnhancedAiLayoutProps) {
           <Button
             onClick={toggleChat}
             className={cn(
-              'h-14 w-14 rounded-base shadow-light border-2 border-black transition-all duration-200',
-              'bg-main hover:bg-mainAccent text-black font-medium',
-              'hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none',
+              'h-14 w-14 rounded-base border border-border transition-all duration-200',
+              'bg-primary hover:bg-primary/90 text-primary-foreground font-medium',
+              'hover:shadow-none',
               'animate-in fade-in-50 slide-in-from-right-2',
               isChatOpen && 'rotate-180',
             )}
@@ -221,10 +221,10 @@ export default function EnhancedAiLayout({ children }: EnhancedAiLayoutProps) {
         {/* Keyboard Shortcut Hint - Separate positioned element */}
         {!isChatOpen && (
           <div className="fixed bottom-28 right-24 z-40 hidden lg:block">
-            <div className="bg-bg border-2 border-black rounded-base px-3 py-2 shadow-light opacity-80 hover:opacity-100 transition-opacity animate-in fade-in-50 slide-in-from-right-2 delay-300">
-              <div className="flex items-center space-x-2 text-xs text-text whitespace-nowrap">
+            <div className="bg-background border border-border rounded-base px-3 py-2 opacity-80 hover:opacity-100 transition-opacity animate-in fade-in-50 slide-in-from-right-2 delay-300">
+              <div className="flex items-center space-x-2 text-xs text-foreground whitespace-nowrap">
                 <span>Press</span>
-                <kbd className="px-1.5 py-0.5 bg-white border border-black rounded-base text-xs font-mono">
+                <kbd className="px-1.5 py-0.5 bg-card border border-border rounded-base text-xs font-mono">
                   ⌘/
                 </kbd>
                 <span>to open chat</span>

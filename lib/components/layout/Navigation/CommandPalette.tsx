@@ -1,23 +1,20 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
-import { cn } from '@/lib/utils/tailwind';
 import {
-  Search,
-  Music,
-  ListMusic,
-  Plus,
-  Settings,
-  Command,
-  ArrowRight,
-  Clock,
+  ArrowUpRight,
+  Disc3,
   Home,
-  Zap,
+  LibraryBig,
+  ListMusic,
+  MessageCircle,
+  Search,
+  Settings,
   X,
 } from 'lucide-react';
+import { useAuth } from '@/lib/hooks/useAuth';
+import { cn } from '@/lib/utils/tailwind';
 
 interface CommandPaletteProps {
   isOpen: boolean;
@@ -27,491 +24,284 @@ interface CommandPaletteProps {
 interface CommandItem {
   id: string;
   title: string;
-  description?: string;
-  icon: React.ComponentType<{ className?: string }>;
-  action: () => void;
+  description: string;
   keywords: string[];
-  category: 'navigation' | 'actions' | 'search' | 'recent';
-  href?: string;
-  badge?: string;
+  icon: React.ComponentType<{ className?: string }>;
+  href: string;
 }
 
 export default function CommandPalette({
   isOpen,
   onClose,
 }: CommandPaletteProps) {
+  const { username } = useAuth();
+  const navigate = useNavigate();
+  const inputRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useRef<HTMLElement>(null);
   const [query, setQuery] = useState('');
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [recentCommands, setRecentCommands] = useState<string[]>([]);
-  const [isAnimating, setIsAnimating] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const navigate = useNavigate();
-  const user = useQuery(api.users.getCurrentUser);
 
-  // Load recent commands from localStorage
-  useEffect(() => {
-    const recent = localStorage.getItem('crate-recent-commands');
-    if (recent) {
-      try {
-        setRecentCommands(JSON.parse(recent));
-      } catch (error) {
-        console.error('Error loading recent commands:', error);
-      }
-    }
-  }, []);
-
-  // Handle animations
-  useEffect(() => {
-    if (isOpen) {
-      setIsAnimating(true);
-      // Focus input after animation starts
-      setTimeout(() => {
-        inputRef.current?.focus();
-      }, 100);
-    } else {
-      setIsAnimating(false);
-    }
-  }, [isOpen]);
-
-  const scrollToSelected = (index: number) => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const items = container.querySelectorAll('[data-command-item]');
-    const selectedItem = items[index];
-    if (selectedItem) {
-      selectedItem.scrollIntoView({
-        behavior: 'smooth',
-        block: 'nearest',
-      });
-    }
-  };
-
-  const saveRecentCommand = (commandId: string) => {
-    const updated = [
-      commandId,
-      ...recentCommands.filter((id) => id !== commandId),
-    ].slice(0, 5);
-    setRecentCommands(updated);
-    localStorage.setItem('crate-recent-commands', JSON.stringify(updated));
-  };
-
-  const executeCommand = (command: CommandItem) => {
-    saveRecentCommand(command.id);
-    command.action();
-    onClose();
-    setQuery('');
-    setSelectedIndex(0);
-  };
-
-  const generateCommands = (): CommandItem[] => {
-    if (!user?.username) return [];
-
-    const commands: CommandItem[] = [
-      // Navigation
+  const commands = useMemo<CommandItem[]>(() => {
+    if (!username) return [];
+    return [
       {
-        id: 'nav-dashboard',
-        title: 'Dashboard',
-        description: 'Go to your personal dashboard',
-        icon: Home,
-        action: () => navigate({ to: `/${user.username}` }),
-        keywords: ['dashboard', 'home', 'overview', 'profile'],
-        category: 'navigation',
-        href: `/${user.username}`,
+        id: 'ask',
+        title: 'Ask Crate',
+        description: 'Find a vibe, BPM lane, or next track',
+        keywords: ['assistant', 'chat', 'mix', 'recommend'],
+        icon: MessageCircle,
+        href: '/analyze/chat',
       },
       {
-        id: 'nav-tracks',
-        title: 'Tracks',
-        description: 'Browse your complete track collection',
-        icon: Music,
-        action: () => navigate({ to: `/${user.username}/tracks` }),
-        keywords: ['tracks', 'music', 'collection', 'songs'],
-        category: 'navigation',
-        href: `/${user.username}/tracks`,
+        id: 'library',
+        title: 'Your tracks',
+        description: 'Browse the playable tracks in your crate',
+        keywords: ['library', 'songs', 'music', 'crate'],
+        icon: LibraryBig,
+        href: `/${username}/tracks`,
       },
       {
-        id: 'nav-playlists',
+        id: 'discogs',
+        title: 'Discogs releases',
+        description: 'Browse your synced releases or search Discogs',
+        keywords: ['records', 'collection', 'vinyl', 'search'],
+        icon: Disc3,
+        href: `/${username}/collection`,
+      },
+      {
+        id: 'playlists',
         title: 'Playlists',
-        description: 'Create and manage your playlists',
+        description: 'Open the sets you are shaping',
+        keywords: ['sets', 'mixes', 'saved'],
         icon: ListMusic,
-        action: () => navigate({ to: `/${user.username}/playlists` }),
-        keywords: ['playlists', 'lists', 'music', 'collections'],
-        category: 'navigation',
-        href: `/${user.username}/playlists`,
+        href: `/${username}/playlists`,
       },
       {
-        id: 'nav-collection',
-        title: 'Collection',
-        description: 'Explore your synced Discogs collection',
-        icon: Search,
-        action: () => navigate({ to: `/${user.username}/collection` }),
-        keywords: ['collection', 'discogs', 'explore', 'vinyl', 'records'],
-        category: 'navigation',
-        href: `/${user.username}/collection`,
+        id: 'overview',
+        title: 'Overview',
+        description: 'Return to your collection overview',
+        keywords: ['home', 'dashboard'],
+        icon: Home,
+        href: `/${username}`,
       },
       {
-        id: 'nav-settings',
-        title: 'Settings',
-        description: 'Manage your account and preferences',
+        id: 'connections',
+        title: 'Connections',
+        description: 'Manage Discogs and collection sync',
+        keywords: ['settings', 'account', 'sync'],
         icon: Settings,
-        action: () =>
-          navigate({ to: `/${user.username}/settings/connections` }),
-        keywords: ['settings', 'preferences', 'config', 'account'],
-        category: 'navigation',
-        href: `/${user.username}/settings/connections`,
-      },
-
-      // Quick Actions
-      {
-        id: 'action-new-playlist',
-        title: 'Create Playlist',
-        description: 'Start building a new playlist',
-        icon: Plus,
-        action: () => navigate({ to: `/${user.username}/playlists/new` }),
-        keywords: ['create', 'new', 'playlist', 'make'],
-        category: 'actions',
-        badge: 'Quick',
-      },
-      {
-        id: 'action-add-track',
-        title: 'Add Track',
-        description: 'Add new music to your collection',
-        icon: Music,
-        action: () => navigate({ to: `/${user.username}/tracks/add` }),
-        keywords: ['add', 'track', 'music', 'upload'],
-        category: 'actions',
+        href: `/${username}/settings/connections`,
       },
     ];
+  }, [username]);
 
-    return commands;
-  };
+  const filteredCommands = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return commands;
+    const terms = needle.split(/\s+/);
+    return commands.filter((command) => {
+      const haystack = [command.title, command.description, ...command.keywords]
+        .join(' ')
+        .toLowerCase();
+      return terms.every((term) => haystack.includes(term));
+    });
+  }, [commands, query]);
 
-  const commands = generateCommands();
-
-  const filteredCommands = commands.filter((command) => {
-    if (!query) return true;
-
-    const searchTerms = query.toLowerCase().split(' ');
-    return searchTerms.every(
-      (term) =>
-        command.title.toLowerCase().includes(term) ||
-        command.description?.toLowerCase().includes(term) ||
-        command.keywords.some((keyword) =>
-          keyword.toLowerCase().includes(term),
-        ),
-    );
-  });
-
-  // Recent commands in correct recency order (only when not searching)
-  const recentCommandItems = !query
-    ? recentCommands
-        .map((id) => commands.find((cmd) => cmd.id === id))
-        .filter((cmd): cmd is CommandItem => Boolean(cmd))
-    : [];
-
-  const shouldShowRecentSection = !query && recentCommandItems.length > 0;
-
-  const nonRecentCommands = shouldShowRecentSection
-    ? filteredCommands.filter((cmd) => !recentCommands.includes(cmd.id))
-    : filteredCommands;
-
-  // This is the single source of truth for keyboard navigation + selection.
-  // It matches the DOM order of `[data-command-item]` elements.
-  const displayCommands = shouldShowRecentSection
-    ? [...recentCommandItems, ...nonRecentCommands]
-    : filteredCommands;
-
-  // Maintain selected index when filtering
-  useEffect(() => {
-    if (selectedIndex >= displayCommands.length) {
-      setSelectedIndex(Math.max(0, displayCommands.length - 1));
-    }
-  }, [displayCommands.length, selectedIndex]);
-
-  // Group commands by category
-  const groupedCommands = nonRecentCommands.reduce(
-    (acc, command) => {
-      if (!acc[command.category]) {
-        acc[command.category] = [];
-      }
-      acc[command.category].push(command);
-      return acc;
+  const execute = useCallback(
+    (command: CommandItem) => {
+      navigate({ to: command.href });
+      setQuery('');
+      setSelectedIndex(0);
+      onClose();
     },
-    {} as Record<string, CommandItem[]>,
-  );
-  const displayIndexById = new Map(
-    displayCommands.map((cmd, i) => [cmd.id, i]),
+    [navigate, onClose],
   );
 
-  // Maintain selected index when filtering
   useEffect(() => {
-    if (selectedIndex >= displayCommands.length) {
-      setSelectedIndex(Math.max(0, displayCommands.length - 1));
-    }
-  }, [displayCommands.length, selectedIndex]);
+    if (!isOpen) return;
+    setSelectedIndex(0);
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    const frame = requestAnimationFrame(() => inputRef.current?.focus());
+    return () => {
+      cancelAnimationFrame(frame);
+      document.body.style.overflow = previousOverflow;
+      previouslyFocused?.focus();
+    };
+  }, [isOpen]);
 
-  // Handle keyboard navigation
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (!isOpen) return;
+    if (!isOpen) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      } else if (event.key === 'Tab') {
+        const focusable = Array.from(
+          dialogRef.current?.querySelectorAll<HTMLElement>(
+            'input, button:not([disabled]):not([tabindex="-1"]), [href], [tabindex]:not([tabindex="-1"])',
+          ) ?? [],
+        );
+        if (focusable.length === 0) return;
 
-      switch (e.key) {
-        case 'ArrowDown':
-          e.preventDefault();
-          setSelectedIndex((prev) => {
-            const newIndex = prev < displayCommands.length - 1 ? prev + 1 : 0;
-            scrollToSelected(newIndex);
-            return newIndex;
-          });
-          break;
-        case 'ArrowUp':
-          e.preventDefault();
-          setSelectedIndex((prev) => {
-            const newIndex =
-              prev > 0 ? prev - 1 : Math.max(0, displayCommands.length - 1);
-            scrollToSelected(newIndex);
-            return newIndex;
-          });
-          break;
-        case 'Enter':
-          e.preventDefault();
-          if (displayCommands[selectedIndex]) {
-            executeCommand(displayCommands[selectedIndex]);
-          }
-          break;
-        case 'Escape':
-          e.preventDefault();
-          onClose();
-          break;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (event.shiftKey && document.activeElement === first) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && document.activeElement === last) {
+          event.preventDefault();
+          first.focus();
+        }
+      } else if (event.key === 'ArrowDown') {
+        event.preventDefault();
+        setSelectedIndex((current) =>
+          filteredCommands.length ? (current + 1) % filteredCommands.length : 0,
+        );
+      } else if (event.key === 'ArrowUp') {
+        event.preventDefault();
+        setSelectedIndex((current) =>
+          filteredCommands.length
+            ? (current - 1 + filteredCommands.length) % filteredCommands.length
+            : 0,
+        );
+      } else if (event.key === 'Enter' && filteredCommands[selectedIndex]) {
+        event.preventDefault();
+        execute(filteredCommands[selectedIndex]);
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isOpen, selectedIndex, query, onClose, displayCommands, executeCommand]);
+  }, [execute, filteredCommands, isOpen, onClose, selectedIndex]);
+
+  useEffect(() => {
+    if (selectedIndex >= filteredCommands.length) setSelectedIndex(0);
+  }, [filteredCommands.length, selectedIndex]);
 
   if (!isOpen) return null;
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        className={cn(
-          'fixed inset-0 bg-black/40 z-50 transition-opacity duration-200',
-          isAnimating ? 'opacity-100' : 'opacity-0',
-        )}
-        onClick={onClose}
-      />
-
-      {/* Command Palette */}
-      <div className="fixed inset-0 z-50 flex items-start justify-center pt-[10vh] px-4">
-        <div
-          className={cn(
-            'bg-white rounded-base shadow-light border-2 border-gray-800 w-full max-w-xl overflow-hidden transition-all duration-200 ease-out',
-            isAnimating
-              ? 'opacity-100 scale-100 translate-y-0'
-              : 'opacity-0 scale-95 translate-y-2',
-          )}
-        >
-          {/* Header */}
-          <div className="flex items-center px-4 py-3 border-b-2 border-gray-800">
-            <div className="flex items-center flex-1">
-              <div className="flex items-center justify-center w-8 h-8 bg-main rounded-base mr-3">
-                <Command className="w-4 h-4 text-black" />
-              </div>
-              <input
-                ref={inputRef}
-                type="text"
-                placeholder="Type a command or search..."
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                className="flex-1 text-sm bg-transparent border-none outline-none placeholder-gray-500"
-              />
-            </div>
-            <button
-              onClick={onClose}
-              className="flex items-center justify-center w-8 h-8 rounded-base border-2 border-transparent hover:border-gray-800 hover:bg-gray-100 transition-colors"
-            >
-              <X className="w-4 h-4 text-gray-400" />
-            </button>
-          </div>
-
-          {/* Results */}
-          <div ref={containerRef} className="max-h-80 overflow-y-auto">
-            {shouldShowRecentSection && (
-              <div className="p-3">
-                <div className="flex items-center px-2 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                  <Clock className="w-3 h-3 mr-2" />
-                  Recent
-                </div>
-                <div className="space-y-0.5">
-                  {recentCommandItems.map((command) => (
-                    <CommandButton
-                      key={command.id}
-                      command={command}
-                      isSelected={
-                        displayIndexById.get(command.id) === selectedIndex
-                      }
-                      onClick={() => executeCommand(command)}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {Object.entries(groupedCommands).map(
-              ([category, categoryCommands]) => (
-                <div key={category} className="p-3">
-                  <div className="flex items-center px-2 py-2 text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    {category === 'navigation' && (
-                      <Home className="w-3 h-3 mr-2" />
-                    )}
-                    {category === 'actions' && <Zap className="w-3 h-3 mr-2" />}
-                    {category === 'search' && (
-                      <Search className="w-3 h-3 mr-2" />
-                    )}
-                    {category}
-                  </div>
-                  <div className="space-y-0.5">
-                    {categoryCommands.map((command) => {
-                      return (
-                        <CommandButton
-                          key={command.id}
-                          command={command}
-                          isSelected={
-                            displayIndexById.get(command.id) === selectedIndex
-                          }
-                          onClick={() => executeCommand(command)}
-                        />
-                      );
-                    })}
-                  </div>
-                </div>
-              ),
-            )}
-
-            {displayCommands.length === 0 && (
-              <div className="p-8 text-center">
-                <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Search className="w-6 h-6 text-gray-400" />
-                </div>
-                <h3 className="text-sm font-medium text-gray-900 mb-1">
-                  No commands found
-                </h3>
-                <p className="text-xs text-gray-500">
-                  Try adjusting your search or browse available commands
-                </p>
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="px-4 py-3 bg-bg border-t-2 border-gray-800">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4 text-xs text-gray-500">
-                <div className="flex items-center">
-                  <kbd className="px-1.5 py-0.5 bg-white rounded-base border-2 border-gray-800 text-xs font-mono mr-1">
-                    ↵
-                  </kbd>
-                  <span>to select</span>
-                </div>
-                <div className="flex items-center">
-                  <kbd className="px-1.5 py-0.5 bg-white rounded-base border-2 border-gray-800 text-xs font-mono mr-1">
-                    ↑↓
-                  </kbd>
-                  <span>to navigate</span>
-                </div>
-              </div>
-              <div className="flex items-center text-xs text-gray-500">
-                <kbd className="px-1.5 py-0.5 bg-white rounded-base border-2 border-gray-800 text-xs font-mono mr-1">
-                  esc
-                </kbd>
-                <span>to close</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
-
-interface CommandButtonProps {
-  command: CommandItem;
-  isSelected: boolean;
-  onClick: () => void;
-}
-
-function CommandButton({ command, isSelected, onClick }: CommandButtonProps) {
-  const Icon = command.icon;
-
-  return (
-    <button
-      data-command-item
-      onClick={onClick}
-      className={cn(
-        'w-full flex items-center p-2 rounded-base text-left transition-all duration-150 group',
-        isSelected ? 'bg-main text-black' : 'hover:bg-gray-100',
-      )}
+    <div
+      className="fixed inset-0 z-[100] flex items-start justify-center bg-foreground/25 px-4 pt-[10vh] backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
     >
-      <div
-        className={cn(
-          'flex items-center justify-center w-8 h-8 rounded-base mr-3 transition-colors',
-          isSelected ? 'bg-black/10' : 'bg-gray-100 group-hover:bg-gray-200',
-        )}
+      <section
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Jump to a page"
+        className="w-full max-w-xl overflow-hidden rounded-[1.35rem] border border-border/80 bg-popover shadow-float animate-in fade-in-0 zoom-in-95 duration-150"
       >
-        <Icon
-          className={cn(
-            'w-4 h-4 transition-colors',
-            isSelected ? 'text-black' : 'text-gray-600',
-          )}
-        />
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center">
-          <div
-            className={cn(
-              'text-sm font-medium truncate transition-colors',
-              isSelected ? 'text-black' : 'text-gray-900',
-            )}
+        <div className="flex items-center gap-3 border-b border-border/70 px-4 py-3.5">
+          <Search className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+          <input
+            ref={inputRef}
+            role="combobox"
+            aria-label="Search destinations"
+            aria-autocomplete="list"
+            aria-expanded="true"
+            aria-controls="command-results"
+            aria-activedescendant={
+              filteredCommands[selectedIndex]
+                ? `command-${filteredCommands[selectedIndex].id}`
+                : undefined
+            }
+            value={query}
+            onChange={(event) => {
+              setQuery(event.target.value);
+              setSelectedIndex(0);
+            }}
+            placeholder="Where do you want to go?"
+            className="h-8 min-w-0 flex-1 bg-transparent text-sm text-foreground outline-none placeholder:text-muted-foreground"
+          />
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            aria-label="Close command menu"
           >
-            {command.title}
-          </div>
-          {command.badge && (
-            <span
-              className={cn(
-                'ml-2 px-1.5 py-0.5 text-xs font-medium rounded-full',
-                isSelected ? 'bg-black/10 text-black' : 'bg-main/20 text-black',
-              )}
-            >
-              {command.badge}
-            </span>
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        <div
+          id="command-results"
+          role="listbox"
+          aria-label="Destinations"
+          className="max-h-[24rem] overflow-y-auto p-2"
+        >
+          {filteredCommands.length > 0 ? (
+            filteredCommands.map((command, index) => {
+              const Icon = command.icon;
+              const selected = index === selectedIndex;
+              return (
+                <button
+                  key={command.id}
+                  id={`command-${command.id}`}
+                  type="button"
+                  role="option"
+                  aria-selected={selected}
+                  tabIndex={-1}
+                  onClick={() => execute(command)}
+                  onMouseEnter={() => setSelectedIndex(index)}
+                  className={cn(
+                    'flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition-colors',
+                    selected ? 'bg-accent' : 'hover:bg-muted/70',
+                  )}
+                >
+                  <span
+                    className={cn(
+                      'flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-[0.7rem]',
+                      selected
+                        ? 'bg-primary text-primary-foreground'
+                        : 'bg-muted text-muted-foreground',
+                    )}
+                  >
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-semibold text-foreground">
+                      {command.title}
+                    </span>
+                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">
+                      {command.description}
+                    </span>
+                  </span>
+                  <ArrowUpRight
+                    className={cn(
+                      'h-4 w-4 flex-shrink-0 transition-opacity',
+                      selected
+                        ? 'text-accent-foreground opacity-100'
+                        : 'text-muted-foreground opacity-0',
+                    )}
+                  />
+                </button>
+              );
+            })
+          ) : (
+            <div className="px-5 py-12 text-center">
+              <p className="text-sm font-semibold text-foreground">
+                Nothing found
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Try “tracks”, “Discogs”, or “connections”.
+              </p>
+            </div>
           )}
         </div>
-        {command.description && (
-          <div
-            className={cn(
-              'text-xs truncate transition-colors',
-              isSelected ? 'text-black/70' : 'text-gray-500',
-            )}
-          >
-            {command.description}
-          </div>
-        )}
-      </div>
 
-      {command.href && (
-        <ArrowRight
-          className={cn(
-            'w-4 h-4 ml-2 transition-all duration-150',
-            isSelected
-              ? 'text-black translate-x-0'
-              : 'text-gray-400 group-hover:translate-x-0.5',
-          )}
-        />
-      )}
-    </button>
+        <footer className="flex items-center justify-between border-t border-border/70 bg-muted/35 px-4 py-2.5 text-[0.65rem] text-muted-foreground">
+          <span>Quick navigation</span>
+          <span className="flex items-center gap-3">
+            <span>↑↓ move</span>
+            <span>↵ open</span>
+            <span>esc close</span>
+          </span>
+        </footer>
+      </section>
+    </div>
   );
 }

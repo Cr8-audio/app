@@ -6,31 +6,31 @@ import * as React from 'react';
 import { cn } from '@/lib/utils/tailwind';
 
 const buttonVariants = cva(
-  'inline-flex items-center text-text justify-center whitespace-nowrap rounded-base text-sm font-base ring-offset-white transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50',
+  'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[0.7rem] text-sm font-semibold transition-[background-color,color,box-shadow,transform] duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-45 [&_svg]:shrink-0',
   {
     variants: {
       variant: {
         default:
-          'bg-main border-2 border-border dark:border-darkBorder shadow-light dark:shadow-dark hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none dark:hover:shadow-none active:bg-mainAccent active:scale-95 active:translate-x-boxShadowX active:translate-y-boxShadowY active:shadow-none',
-        noShadow:
-          'bg-main border-2 border-border dark:border-darkBorder active:bg-mainAccent active:scale-95',
-        link: 'underline-offset-4 text-text dark:text-darkText hover:underline active:text-mainAccent2',
-        neutral:
-          'bg-white dark:bg-darkBg dark:text-darkText border-2 border-border dark:border-darkBorder shadow-light dark:shadow-dark hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none dark:hover:shadow-none active:bg-main active:scale-95 active:translate-x-boxShadowX active:translate-y-boxShadowY active:shadow-none',
-        reverse:
-          'bg-main border-2 border-border dark:border-darkBorder hover:translate-x-reverseBoxShadowX hover:translate-y-reverseBoxShadowY hover:shadow-light dark:hover:shadow-dark active:bg-mainAccent active:scale-95 active:translate-x-0 active:translate-y-0 active:shadow-none',
-        chat: 'bg-main border-2 border-border dark:border-darkBorder hover:translate-x-reverseBoxShadowX hover:translate-y-reverseBoxShadowY hover:shadow-light dark:hover:shadow-dark active:bg-mainAccent active:scale-95 active:translate-x-0 active:translate-y-0 active:shadow-none',
+          'bg-primary text-primary-foreground shadow-[0_10px_24px_-16px_hsl(236_72%_42%)] hover:bg-primary/92 active:scale-[0.98]',
+        secondary:
+          'bg-secondary text-secondary-foreground hover:bg-secondary/92 active:scale-[0.98]',
         outline:
-          'bg-main border-2 border-border dark:border-darkBorder hover:translate-x-reverseBoxShadowX hover:translate-y-reverseBoxShadowY hover:shadow-light dark:hover:shadow-dark active:bg-mainAccent active:scale-95 active:translate-x-0 active:translate-y-0 active:shadow-none',
+          'border border-border bg-card text-foreground hover:border-foreground/20 hover:bg-muted active:scale-[0.98]',
         ghost:
-          'bg-transparent border-2 border-border dark:border-darkBorder hover:translate-x-reverseBoxShadowX hover:translate-y-reverseBoxShadowY hover:shadow-light dark:hover:shadow-dark active:bg-main active:scale-95 active:translate-x-0 active:translate-y-0 active:shadow-none',
+          'bg-transparent text-muted-foreground hover:bg-muted hover:text-foreground active:scale-[0.98]',
+        link: 'text-primary underline-offset-4 hover:underline',
         destructive:
-          'bg-red-500 text-white hover:bg-red-600 active:bg-red-700 active:scale-95',
+          'bg-destructive text-destructive-foreground hover:bg-destructive/90',
+        // Older names, kept so existing callers render in the new system.
+        noShadow: 'bg-primary text-primary-foreground hover:bg-primary/92',
+        neutral: 'bg-secondary text-secondary-foreground hover:bg-secondary/92',
+        reverse: 'bg-secondary text-secondary-foreground hover:bg-secondary/92',
+        chat: 'bg-secondary text-secondary-foreground hover:bg-secondary/92',
       },
       size: {
-        default: 'h-10 px-4 py-2',
-        sm: 'h-9 px-3',
-        lg: 'h-11 px-8',
+        default: 'h-10 px-4',
+        sm: 'h-9 px-3.5 text-xs',
+        lg: 'h-12 px-6',
         icon: 'h-10 w-10',
       },
     },

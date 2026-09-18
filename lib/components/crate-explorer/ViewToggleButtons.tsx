@@ -1,5 +1,5 @@
-import { Button } from '@/lib/components/ui/button';
 import { Search, Disc } from 'lucide-react';
+import { cn } from '@/lib/utils/tailwind';
 
 interface ViewToggleButtonsProps {
   view: 'search' | 'collection';
@@ -12,27 +12,47 @@ const ViewToggleButtons = ({
   onViewChange,
   collectionCount,
 }: ViewToggleButtonsProps) => {
-  const buttonClass = (buttonView: 'search' | 'collection') => `
-    px-4 py-2 rounded transition-colors flex items-center gap-2
-    ${view === buttonView ? 'bg-main text-black' : 'bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600'}
-  `;
-
   return (
-    <div className="flex gap-4">
-      <Button
-        onClick={() => onViewChange('search')}
-        className={buttonClass('search')}
-      >
-        <Search size={18} />
-        Search
-      </Button>
-      <Button
+    <div
+      className="inline-flex w-full rounded-xl border border-border/70 bg-card p-1 sm:w-auto"
+      role="tablist"
+      aria-label="Discogs views"
+    >
+      <button
+        type="button"
+        role="tab"
+        aria-selected={view === 'collection'}
         onClick={() => onViewChange('collection')}
-        className={buttonClass('collection')}
+        className={cn(
+          'flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 text-sm font-medium transition-colors sm:flex-none',
+          view === 'collection'
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground',
+        )}
       >
-        <Disc size={18} />
-        Collection {collectionCount ? `(${collectionCount})` : ''}
-      </Button>
+        <Disc className="h-4 w-4" />
+        Your collection
+        {collectionCount !== undefined && (
+          <span className="rounded-full bg-muted px-2 py-0.5 text-xs tabular-nums text-muted-foreground">
+            {collectionCount}
+          </span>
+        )}
+      </button>
+      <button
+        type="button"
+        role="tab"
+        aria-selected={view === 'search'}
+        onClick={() => onViewChange('search')}
+        className={cn(
+          'flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg px-3.5 text-sm font-medium transition-colors sm:flex-none',
+          view === 'search'
+            ? 'bg-background text-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground',
+        )}
+      >
+        <Search className="h-4 w-4" />
+        Search releases
+      </button>
     </div>
   );
 };

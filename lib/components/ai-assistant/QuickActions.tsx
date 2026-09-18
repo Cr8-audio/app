@@ -113,10 +113,10 @@ const QUICK_ACTIONS: QuickAction[] = [
 ];
 
 const CATEGORY_COLORS = {
-  tempo: 'bg-blue-500/10 text-blue-700 border-blue-200',
-  energy: 'bg-red-500/10 text-red-700 border-red-200',
-  genre: 'bg-green-500/10 text-green-700 border-green-200',
-  mixing: 'bg-purple-500/10 text-purple-700 border-purple-200',
+  tempo: 'bg-primary/10 text-primary border-border',
+  energy: 'bg-destructive/10 text-destructive border-destructive/40',
+  genre: 'bg-ok/10 text-ok border-ok/40',
+  mixing: 'bg-primary/10 text-primary border-border',
 };
 
 export default function QuickActions({
@@ -201,14 +201,16 @@ export default function QuickActions({
             {tracks.length > 0 && (
               <>
                 <div>
-                  BPM range:{' '}
-                  {Math.min(...tracks.filter((t) => t.bpm).map((t) => t.bpm!))}{' '}
-                  -{' '}
-                  {Math.max(...tracks.filter((t) => t.bpm).map((t) => t.bpm!))}{' '}
+                  BPM range:{''}
+                  {Math.min(...tracks.filter((t) => t.bpm).map((t) => t.bpm!))}
+                  {''}-{''}
+                  {Math.max(...tracks.filter((t) => t.bpm).map((t) => t.bpm!))}
+                  {''}
                   BPM
                 </div>
                 <div>
-                  Genres: {new Set(tracks.flatMap((t) => t.genres || [])).size}{' '}
+                  Genres: {new Set(tracks.flatMap((t) => t.genres || [])).size}
+                  {''}
                   unique
                 </div>
               </>

@@ -1,155 +1,188 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700&family=Public+Sans:wght@400;700&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;700&display=swap');
 @import '@fontsource-variable/inter';
 @import 'tailwindcss';
-@config "../tailwind.config.ts";
+@plugin 'tailwindcss-animate';
 
 @import './crate-chat-home.css';
 
+/*
+ * Crate should feel like a record room: warm paper, precise ink, one cobalt
+ * signal colour, and album artwork doing most of the expressive work.
+ */
 @theme {
-  --font-sans: 'Inter Variable', 'Public Sans', 'Montserrat', sans-serif;
-  --font-heading: 'Montserrat', 'Public Sans', sans-serif;
-  --font-mono: 'IBM Plex Mono', monospace;
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, monospace;
 
-  --radius-base: 0.5rem;
+  --color-background: hsl(42 24% 96%);
+  --color-foreground: hsl(228 14% 13%);
+  --color-card: hsl(42 30% 99%);
+  --color-card-foreground: hsl(228 14% 13%);
+  --color-popover: hsl(0 0% 100%);
+  --color-popover-foreground: hsl(228 14% 13%);
+  --color-muted: hsl(40 17% 92%);
+  --color-muted-foreground: hsl(222 8% 43%);
+  --color-secondary: hsl(228 13% 17%);
+  --color-secondary-foreground: hsl(42 30% 99%);
+  --color-accent: hsl(232 60% 95%);
+  --color-accent-foreground: hsl(236 62% 35%);
+
+  --color-primary: hsl(236 72% 58%);
+  --color-primary-foreground: hsl(0 0% 100%);
+  --color-brand: hsl(236 72% 58%);
+  --color-brand-foreground: hsl(0 0% 100%);
+  --color-brand-soft: hsl(234 71% 94%);
+
+  --color-destructive: hsl(4 70% 51%);
+  --color-destructive-foreground: hsl(0 0% 100%);
+  --color-ok: hsl(153 49% 37%);
+  --color-source: hsl(18 71% 52%);
+
+  --color-border: hsl(220 14% 87%);
+  --color-input: hsl(220 14% 87%);
+  --color-ring: hsl(236 72% 58%);
+
+  /* Compatibility aliases while the chat UI is folded into this system. */
+  --color-crate-void: var(--color-background);
+  --color-crate-ink: var(--color-foreground);
+  --color-crate-ink-muted: var(--color-muted-foreground);
+  --color-crate-panel: var(--color-card);
+  --color-crate-panel-raised: var(--color-popover);
+  --color-crate-rule: var(--color-border);
+  --color-crate-accent: var(--color-brand);
+  --color-crate-accent-soft: var(--color-brand-soft);
+  --color-crate-source: var(--color-source);
+  --color-crate-ok: var(--color-ok);
+
+  --radius-base: 0.625rem;
+  --radius-card: 1.125rem;
+  --radius-chip: 999px;
+  --radius-composer: 1.25rem;
+
+  --shadow-soft: 0 18px 55px -38px hsl(228 20% 20% / 0.38);
+  --shadow-float: 0 24px 70px -40px hsl(228 20% 20% / 0.48);
+
+  --animate-marquee: marquee 8s linear infinite;
+  --animate-rise: rise 280ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0%);
+    }
+    to {
+      transform: translateX(-100%);
+    }
+  }
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
-@layer base {
-  :root {
-    --color-background: hsl(0 0% 100%);
-    --color-foreground: hsl(240 10% 3.9%);
-
-    --color-card: hsl(0 0% 100%);
-    --color-card-foreground: hsl(240 10% 3.9%);
-
-    --color-popover: hsl(0 0% 100%);
-    --color-popover-foreground: hsl(240 10% 3.9%);
-
-    --color-primary: hsl(240 5.9% 10%);
-    --color-primary-foreground: hsl(0 0% 98%);
-
-    --color-secondary: hsl(240 4.8% 95.9%);
-    --color-secondary-foreground: hsl(240 5.9% 10%);
-
-    --color-muted: hsl(240 4.8% 95.9%);
-    --color-muted-foreground: hsl(240 3.8% 46.1%);
-
-    --color-accent: hsl(240 4.8% 95.9%);
-    --color-accent-foreground: hsl(240 5.9% 10%);
-
-    --color-destructive: hsl(0 84.2% 60.2%);
-    --color-destructive-foreground: hsl(0 0% 98%);
-
-    --color-border: hsl(240 5.9% 90%);
-    --color-input: hsl(240 5.9% 90%);
-    --color-ring: hsl(240 10% 3.9%);
-  }
-
-  .dark {
-    --color-background: hsl(240 10% 3.9%);
-    --color-foreground: hsl(0 0% 98%);
-
-    --color-card: hsl(240 10% 3.9%);
-    --color-card-foreground: hsl(0 0% 98%);
-
-    --color-popover: hsl(240 10% 3.9%);
-    --color-popover-foreground: hsl(0 0% 98%);
-
-    --color-primary: hsl(0 0% 98%);
-    --color-primary-foreground: hsl(240 5.9% 10%);
-
-    --color-secondary: hsl(240 3.7% 15.9%);
-    --color-secondary-foreground: hsl(0 0% 98%);
-
-    --color-muted: hsl(240 3.7% 15.9%);
-    --color-muted-foreground: hsl(240 5% 64.9%);
-
-    --color-accent: hsl(240 3.7% 15.9%);
-    --color-accent-foreground: hsl(0 0% 98%);
-
-    --color-destructive: hsl(0 62.8% 30.6%);
-    --color-destructive-foreground: hsl(0 0% 98%);
-
-    --color-border: hsl(240 3.7% 15.9%);
-    --color-input: hsl(240 3.7% 15.9%);
-    --color-ring: hsl(240 4.9% 83.9%);
-  }
+:root {
+  color-scheme: light;
+  --crate-void: var(--color-background);
+  --crate-ink: var(--color-foreground);
+  --crate-ink-muted: var(--color-muted-foreground);
+  --crate-panel: var(--color-card);
+  --crate-panel-raised: var(--color-popover);
+  --crate-rule: var(--color-border);
+  --crate-accent: var(--color-brand);
+  --crate-accent-soft: var(--color-brand-soft);
+  --crate-source: var(--color-source);
+  --crate-ok: var(--color-ok);
 }
 
 @layer base {
   * {
     @apply border-border;
   }
+
+  html {
+    background: var(--color-background);
+  }
+
   body {
-    @apply bg-background text-foreground font-sans;
+    @apply bg-background text-foreground font-sans antialiased;
+    min-width: 320px;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  }
+
+  ::selection {
+    background: var(--color-brand-soft);
+    color: var(--color-foreground);
+  }
+
+  button,
+  [role='button'],
+  a {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 3px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(220 10% 72%);
+    border: 3px solid var(--color-background);
+    border-radius: 999px;
   }
 }
 
 @layer components {
-  /* Enhanced click feedback for interactive elements */
-  .interactive-element {
-    @apply transition-all duration-150 ease-out;
+  .surface {
+    @apply rounded-card border border-border/80 bg-card shadow-soft;
   }
 
-  .interactive-element:active {
-    @apply scale-95;
+  .eyebrow {
+    @apply text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-muted-foreground;
   }
 
-  /* Play button enhancements */
-  .play-button {
-    @apply transition-all duration-150 ease-out;
-  }
-
-  .play-button:active {
-    @apply scale-90 bg-accent;
-  }
-
-  /* Icon button enhancements */
-  .icon-button {
-    @apply transition-all duration-150 ease-out;
-  }
-
-  .icon-button:active {
-    @apply scale-90 bg-accent;
-  }
-
-  /* Track row enhancements */
-  .track-row {
-    @apply transition-all duration-150 ease-out;
-  }
-
-  .track-row:active {
-    @apply bg-accent/10 scale-[0.99];
-  }
-
-  /* Remove default button tap highlight on mobile */
-  button,
-  [role='button'] {
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  /* Custom tap highlight using our yellow color */
-  button:active,
-  [role='button']:active {
-    background-color: rgba(255, 200, 0, 0.2);
-  }
-
-  /* Custom Range Input Styling */
   input[type='range'] {
     @apply appearance-none bg-transparent;
   }
 
+  input[type='range']::-webkit-slider-runnable-track {
+    @apply h-1 rounded-full bg-border;
+  }
+
+  input[type='range']::-moz-range-track {
+    @apply h-1 rounded-full bg-border;
+  }
+
   input[type='range']::-webkit-slider-thumb {
-    @apply appearance-none w-3 h-3 rounded-full bg-black border-2 border-primary cursor-pointer transition-transform hover:scale-125;
-    margin-top: -4px; /* Align center with the track if needed */
+    @apply appearance-none h-3 w-3 cursor-pointer rounded-full bg-foreground transition-transform hover:scale-125;
+    margin-top: -4px;
   }
 
   input[type='range']::-moz-range-thumb {
-    @apply w-3 h-3 rounded-full bg-black border-2 border-primary cursor-pointer transition-transform hover:scale-125 border-none;
+    @apply h-3 w-3 cursor-pointer rounded-full border-0 bg-foreground transition-transform hover:scale-125;
   }
 
-  /* Remove default focus ring */
   input[type='range']:focus {
     outline: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }

@@ -1,6 +1,6 @@
 'use client';
 
-import { Play, ExternalLink, Disc3 } from 'lucide-react';
+import { Play, Plus, Disc3 } from 'lucide-react';
 import { cn } from '@/lib/utils/tailwind';
 
 export interface ReleaseDigCardData {
@@ -21,11 +21,6 @@ interface ReleaseDigCardProps {
   className?: string;
 }
 
-/**
- * Presentational release dig card stub — #140 readiness.
- * Sleeve, title, artist, year, Discogs source chip, play, open-focus.
- * Mono for BPM / catalog / ids.
- */
 export default function ReleaseDigCard({
   release,
   onPlay,
@@ -46,13 +41,13 @@ export default function ReleaseDigCard({
   return (
     <article
       className={cn(
-        'crate-dig-card w-full rounded-[var(--radius-card)] border border-[var(--crate-rule)] bg-[var(--crate-panel-raised)] p-[12px_14px]',
+        'crate-dig-card w-full rounded-[1.15rem] border border-border/70 bg-card p-3 shadow-soft sm:p-4',
         'animate-[crate-dig-enter_220ms_ease-out]',
         className,
       )}
     >
-      <div className="flex items-center gap-3">
-        <div className="relative h-10 w-10 flex-shrink-0 overflow-hidden rounded-md bg-[var(--crate-panel)] border border-[var(--crate-rule)]">
+      <div className="flex items-center gap-3.5 sm:gap-4">
+        <div className="relative h-14 w-14 flex-shrink-0 overflow-hidden rounded-[0.8rem] bg-muted sm:h-16 sm:w-16">
           {sleeveUrl ? (
             <img
               src={sleeveUrl}
@@ -60,21 +55,19 @@ export default function ReleaseDigCard({
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full items-center justify-center text-[var(--crate-ink-muted)]">
+            <div className="flex h-full w-full items-center justify-center text-muted-foreground">
               <Disc3 className="h-5 w-5" aria-hidden />
             </div>
           )}
         </div>
 
         <div className="min-w-0 flex-1">
-          <h3 className="truncate text-sm font-medium text-[var(--crate-ink)]">
+          <h3 className="truncate text-sm font-semibold text-foreground">
             {title}
           </h3>
-          <p className="truncate text-xs text-[var(--crate-ink-muted)]">
+          <p className="mt-0.5 truncate text-xs text-muted-foreground">
             {artist}
-            {year != null && year !== '' ? (
-              <span className="text-[var(--crate-ink-muted)]"> · {year}</span>
-            ) : null}
+            {year != null && year !== '' ? <span> · {year}</span> : null}
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             {discogsUrl || discogsId != null ? (
@@ -84,8 +77,7 @@ export default function ReleaseDigCard({
                 }
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 rounded-[var(--radius-chip)] px-2 py-0.5 text-[10px] font-medium text-[var(--crate-ink)]"
-                style={{ backgroundColor: 'var(--crate-source)' }}
+                className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[0.62rem] font-medium text-muted-foreground transition-colors hover:text-foreground"
                 onClick={(e) => e.stopPropagation()}
               >
                 Discogs
@@ -96,36 +88,33 @@ export default function ReleaseDigCard({
                 ) : null}
               </a>
             ) : (
-              <span
-                className="inline-flex items-center rounded-[var(--radius-chip)] px-2 py-0.5 text-[10px] font-medium text-[var(--crate-ink)]"
-                style={{ backgroundColor: 'var(--crate-source)' }}
-              >
+              <span className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[0.62rem] font-medium text-muted-foreground">
                 Discogs
               </span>
             )}
             {bpm != null && bpm !== '' ? (
-              <span className="font-mono text-[10px] text-[var(--crate-ink-muted)]">
+              <span className="font-mono text-[0.62rem] text-muted-foreground">
                 {bpm} BPM
               </span>
             ) : null}
             {catalogNumber ? (
-              <span className="font-mono text-[10px] text-[var(--crate-ink-muted)]">
+              <span className="font-mono text-[0.62rem] text-muted-foreground">
                 {catalogNumber}
               </span>
             ) : null}
           </div>
         </div>
 
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex flex-shrink-0 items-center gap-1.5">
           <button
             type="button"
             onClick={onPlay}
             aria-label={`Play ${title}`}
             className={cn(
-              'crate-play-affordance flex h-8 w-8 items-center justify-center rounded-full',
-              'bg-[var(--crate-accent)] text-[var(--crate-void)]',
+              'flex h-9 w-9 items-center justify-center rounded-full',
+              'bg-foreground text-background',
               'transition-transform duration-150 ease-out active:scale-[0.96]',
-              'hover:brightness-110',
+              'hover:scale-105',
             )}
           >
             <Play className="h-3.5 w-3.5 fill-current" aria-hidden />
@@ -133,16 +122,16 @@ export default function ReleaseDigCard({
           <button
             type="button"
             onClick={onOpenFocus}
-            aria-label={`Open focus for ${title}`}
+            aria-label={`Add ${title} to a playlist`}
             className={cn(
-              'flex h-8 items-center gap-1 rounded-[var(--radius-chip)] border border-[var(--crate-rule)]',
-              'bg-[var(--crate-panel)] px-2.5 text-[10px] font-medium text-[var(--crate-ink-muted)]',
+              'flex h-9 items-center gap-1 rounded-[0.7rem] border border-border',
+              'bg-card px-2.5 text-[0.68rem] font-semibold text-muted-foreground',
               'transition-colors duration-150 ease-out',
-              'hover:bg-[var(--crate-accent-soft)] hover:text-[var(--crate-ink)]',
+              'hover:bg-accent hover:text-accent-foreground',
             )}
           >
-            <ExternalLink className="h-3 w-3" aria-hidden />
-            Focus
+            <Plus className="h-3 w-3" aria-hidden />
+            <span className="hidden sm:inline">Save</span>
           </button>
         </div>
       </div>

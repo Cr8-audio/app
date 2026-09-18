@@ -10,7 +10,7 @@ import ViewToggleButtons from './ViewToggleButtons';
 import SearchView from './SearchView';
 import CollectionView from './CollectionView';
 
-const CrateExplorer = ({}: CrateExplorerProps) => {
+const CrateExplorer = (_props: CrateExplorerProps) => {
   const {
     query,
     setQuery,
@@ -26,8 +26,8 @@ const CrateExplorer = ({}: CrateExplorerProps) => {
     error: collectionError,
     needsConnection: collectionNeedsConnection,
   } = useDiscogsCollection();
-  const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
-  const [view, setView] = useState<'search' | 'collection'>('search');
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [view, setView] = useState<'search' | 'collection'>('collection');
 
   // Initialize player when component mounts
   const { initializePlayer } = usePlayerStore();
@@ -35,9 +35,10 @@ const CrateExplorer = ({}: CrateExplorerProps) => {
   useEffect(() => {
     initializePlayer();
   }, [initializePlayer]);
+
   return (
-    <div className="w-full max-w-6xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-6">
+    <div className="w-full py-8 sm:py-10">
+      <div className="mb-7 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <ViewToggleButtons
           view={view}
           onViewChange={setView}
@@ -46,7 +47,15 @@ const CrateExplorer = ({}: CrateExplorerProps) => {
         <ViewToggle viewMode={viewMode} onViewModeChange={setViewMode} />
       </div>
 
-      {view === 'search' ? (
+      {view === 'collection' ? (
+        <CollectionView
+          isLoading={collectionLoading}
+          error={collectionError}
+          collection={collection}
+          viewMode={viewMode}
+          needsConnection={collectionNeedsConnection}
+        />
+      ) : (
         <SearchView
           query={query}
           isLoading={searchLoading}
@@ -55,14 +64,6 @@ const CrateExplorer = ({}: CrateExplorerProps) => {
           onQueryChange={setQuery}
           viewMode={viewMode}
           needsConnection={searchNeedsConnection}
-        />
-      ) : (
-        <CollectionView
-          isLoading={collectionLoading}
-          error={collectionError}
-          collection={collection}
-          viewMode={viewMode}
-          needsConnection={collectionNeedsConnection}
         />
       )}
     </div>

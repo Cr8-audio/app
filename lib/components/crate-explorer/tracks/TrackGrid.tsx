@@ -1,10 +1,7 @@
 import { DiscogsSearchResult } from '@/lib/types';
 import TrackDisplay from './TrackDisplay';
 import { usePlayerStore } from '@/lib/stores';
-import {
-  convertSearchResultToTrack,
-  createTemporaryTrackForPlayback,
-} from '@/lib/utils/track-conversion';
+import { createTemporaryTrackForPlayback } from '@/lib/utils/track-conversion';
 import { toast } from 'sonner';
 import { useState } from 'react';
 
@@ -14,7 +11,7 @@ interface TrackGridProps {
 }
 
 const TrackGrid = ({ viewMode, items }: TrackGridProps) => {
-  const { playingTrackId, isPlaying, togglePlayPause, isReady, setQueue } =
+  const { playingTrackId, togglePlayPause, isReady, setQueue } =
     usePlayerStore();
   const [loadingTrackId, setLoadingTrackId] = useState<string | null>(null);
 
@@ -23,10 +20,10 @@ const TrackGrid = ({ viewMode, items }: TrackGridProps) => {
   ): Promise<string | null> => {
     try {
       // Extract artist and title from the Discogs result
-      const titleParts = result.title.split(' - ');
+      const titleParts = result.title.split('- ');
       const artist = titleParts.length > 1 ? titleParts[0] : '';
       const title =
-        titleParts.length > 1 ? titleParts.slice(1).join(' - ') : result.title;
+        titleParts.length > 1 ? titleParts.slice(1).join('- ') : result.title;
 
       const searchQuery = `${artist} ${title}`.trim();
 
@@ -105,8 +102,8 @@ const TrackGrid = ({ viewMode, items }: TrackGridProps) => {
     <div
       className={
         viewMode === 'list'
-          ? 'space-y-2'
-          : 'grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'
+          ? 'space-y-3'
+          : 'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5'
       }
     >
       {items.map((item) => {

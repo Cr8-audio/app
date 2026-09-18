@@ -93,7 +93,7 @@ ${colorConfig
     const color =
       itemConfig.theme?.[theme as keyof typeof itemConfig.theme] ||
       itemConfig.color;
-    return color ? `  --color-${key}: ${color};` : null;
+    return color ? `--color-${key}: ${color};` : null;
   })
   .join('\n')}
 }
@@ -184,7 +184,7 @@ const ChartTooltipContent = React.forwardRef<
       <div
         ref={ref}
         className={cn(
-          'grid min-w-[8rem] items-start gap-1.5 rounded-base border-2 border-gray-800 bg-white px-2.5 py-1.5 text-xs shadow-light',
+          'grid min-w-[8rem] items-start gap-1.5 rounded-base border border-border bg-card px-2.5 py-1.5 text-xs ',
           className,
         )}
       >

@@ -1,6 +1,7 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { query, mutation, internalMutation } from './_generated/server';
+import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import { getUsernameValidationError } from './lib/username';
 
 /**
  * Get the current authenticated user with all profile fields
@@ -35,22 +36,15 @@ export const getUserByUsername = query({
 export const checkUsernameAvailable = query({
   args: { username: v.string() },
   handler: async (ctx, { username }) => {
-    // Validate username format
-    if (username.length < 3 || username.length > 30) {
-      return { available: false, error: 'Username must be 3-30 characters' };
-    }
-
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      return {
-        available: false,
-        error:
-          'Username can only contain letters, numbers, underscores, and hyphens',
-      };
+    const normalizedUsername = username.toLowerCase();
+    const validationError = getUsernameValidationError(normalizedUsername);
+    if (validationError) {
+      return { available: false, error: validationError };
     }
 
     const existing = await ctx.db
       .query('users')
-      .withIndex('by_username', (q) => q.eq('username', username))
+      .withIndex('by_username', (q) => q.eq('username', normalizedUsername))
       .first();
 
     return {
@@ -74,35 +68,30 @@ export const setUsername = mutation({
       throw new Error('Not authenticated');
     }
 
-    // Validate username format
-    if (username.length < 3 || username.length > 30) {
-      throw new Error('Username must be 3-30 characters');
-    }
-
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      throw new Error(
-        'Username can only contain letters, numbers, underscores, and hyphens',
-      );
-    }
+    const normalizedUsername = username.toLowerCase();
+    const validationError = getUsernameValidationError(normalizedUsername);
+    if (validationError) throw new Error(validationError);
 
     // Check if username is already taken
     const existing = await ctx.db
       .query('users')
-      .withIndex('by_username', (q) => q.eq('username', username))
+      .withIndex('by_username', (q) => q.eq('username', normalizedUsername))
       .first();
 
     if (existing && existing._id !== userId) {
       throw new Error('Username is already taken');
     }
 
-    // Update user with username - move to connections step (not complete yet)
+    // Picking a username is the whole onboarding: Discogs sign-in already
+    // connected the collection.
     await ctx.db.patch(userId, {
-      username: username.toLowerCase(),
+      username: normalizedUsername,
       displayName: displayName || username,
-      onboardingStep: 'connections',
+      onboardingStep: 'complete',
+      onboardingComplete: true,
     });
 
-    return { success: true, username: username.toLowerCase() };
+    return { success: true, username: normalizedUsername };
   },
 });
 

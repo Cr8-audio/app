@@ -1,144 +1,195 @@
+import type { MouseEvent } from 'react';
 import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from '@/lib/components/ui/card';
-import { Play, Pause, Trash2, Globe, Lock } from 'lucide-react';
-import { cn } from '@/lib/utils/tailwind';
-import { Image } from '@unpic/react';
-import { usePlayerStore } from '@/lib/stores';
+  ChevronRight,
+  Globe,
+  ListMusic,
+  Lock,
+  Pause,
+  Play,
+  Trash2,
+} from 'lucide-react';
+import type { Id } from '@/convex/_generated/dataModel';
 import { usePlaylists } from '@/lib/hooks/usePlaylists';
-import { Button } from '@/lib/components/ui/button';
-import { toast } from 'sonner';
+import { usePlayerStore } from '@/lib/stores';
+import type { CrateTrack } from '@/lib/types';
+import { cn } from '@/lib/utils/tailwind';
+
+type PlaylistCardTrack = CrateTrack & { _id?: string };
+
+interface PlaylistCardData {
+  _id?: Id<'playlists'>;
+  id?: string;
+  title: string;
+  is_public?: boolean | null;
+  is_favorites?: boolean | null;
+  tracks?: PlaylistCardTrack[];
+}
 
 interface PlaylistCardProps {
-  playlist: any; // Accept Convex playlist format
+  playlist: PlaylistCardData;
   handleClick: () => void;
   onExpand: () => void;
+  isExpanded?: boolean;
+}
+
+function normalizeArtwork(value?: string | null) {
+  if (!value) return null;
+  return decodeURIComponent(value.replace(/^"(.*)"$/, '$1'));
 }
 
 export const PlaylistCard = ({
   playlist,
   handleClick,
   onExpand,
+  isExpanded = false,
 }: PlaylistCardProps) => {
-  const { deletePlaylist, updatePlaylist } = usePlaylists();
-  const { playingTrackId, isPlaying, togglePlayPause } = usePlayerStore();
+  const { deletePlaylist } = usePlaylists();
+  const { playingTrackId, isPlaying, togglePlayPause, setQueue } =
+    usePlayerStore();
 
-  const playlistId = playlist._id || playlist.id;
-
-  const isPlayingThisPlaylist = playlist.tracks?.some(
-    (track: any) => track.id === playingTrackId || track._id === playingTrackId,
+  const tracks = playlist.tracks ?? [];
+  const artworks = tracks
+    .map((track) => normalizeArtwork(track.artwork))
+    .filter(Boolean)
+    .slice(0, 4) as string[];
+  const isPlayingThisPlaylist = tracks.some(
+    (track) => track.id === playingTrackId || track._id === playingTrackId,
   );
 
-  const handlePlayPause = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (playlist.tracks?.length > 0) {
-      togglePlayPause(playlist.tracks[0]);
-      onExpand(); // Always expand when playing
+  const handlePlayPause = (event: MouseEvent) => {
+    event.stopPropagation();
+    if (tracks.length > 0) {
+      const activeIndex = tracks.findIndex(
+        (track) => track.id === playingTrackId || track._id === playingTrackId,
+      );
+      const startIndex = activeIndex >= 0 ? activeIndex : 0;
+      const targetTrack = tracks[startIndex];
+      setQueue(tracks, startIndex);
+      togglePlayPause(targetTrack);
+      onExpand();
     }
   };
 
-  const handleDelete = async (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const handleDelete = async (event: MouseEvent) => {
+    event.stopPropagation();
+    if (!playlist._id) return;
+
+    const confirmed = window.confirm(
+      `Delete “${playlist.title}”? This cannot be undone.`,
+    );
+    if (!confirmed) return;
+
     try {
-      await deletePlaylist(playlistId);
-      // Toast is handled by the hook
+      await deletePlaylist(playlist._id);
     } catch (error) {
-      // Error toast is handled by the hook
       console.error('Failed to delete playlist:', error);
     }
   };
 
   return (
-    <Card
+    <article
       className={cn(
-        'group relative overflow-hidden transition-all hover:shadow-light cursor-pointer border-none',
-        isPlayingThisPlaylist && 'ring-2 ring-mainAccent',
+        'group overflow-hidden rounded-2xl border bg-card transition-colors',
+        isExpanded
+          ? 'border-primary/50'
+          : 'border-border/70 hover:border-border',
       )}
       onClick={handleClick}
     >
-      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-
-      <div className="absolute right-4 top-4 flex gap-2">
-        <button
-          className={cn(
-            'p-3 rounded-full bg-mainAccent text-text',
-            isPlayingThisPlaylist
-              ? 'opacity-100'
-              : 'opacity-0 group-hover:opacity-100',
-            'transition-all hover:scale-105',
-          )}
-          onClick={handlePlayPause}
-        >
-          {isPlayingThisPlaylist && isPlaying ? (
-            <Pause size={24} />
-          ) : (
-            <Play size={24} />
-          )}
-        </button>
-
-        {!playlist.is_favorites && (
-          <Button
-            variant="destructive"
-            size="icon"
-            className="opacity-0 group-hover:opacity-100 transition-opacity"
-            onClick={handleDelete}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-
-      <CardHeader className="h-48 bg-gray-100">
-        {playlist.tracks?.length > 0 && playlist.tracks[0].artwork ? (
-          <Image
-            src={decodeURIComponent(
-              playlist.tracks[0].artwork.replace(/^"(.*)"$/, '$1'),
-            )}
-            alt={playlist.tracks[0].artist ?? ''}
-            className="w-full h-full object-cover"
-            width={400}
-            height={400}
+      <div className="relative aspect-square overflow-hidden bg-muted">
+        {artworks.length === 0 ? (
+          <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-muted to-background">
+            <ListMusic className="h-12 w-12 text-muted-foreground/60" />
+          </div>
+        ) : artworks.length === 1 ? (
+          <img
+            src={artworks[0]}
+            alt=""
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
           />
         ) : (
-          <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-            <Play size={48} className="text-gray-400" />
+          <div className="grid h-full w-full grid-cols-2 grid-rows-2 gap-px bg-border">
+            {Array.from({ length: 4 }).map((_, index) =>
+              artworks[index] ? (
+                <img
+                  key={artworks[index]}
+                  src={artworks[index]}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <div key={index} className="bg-muted" />
+              ),
+            )}
           </div>
         )}
-      </CardHeader>
 
-      <CardContent className="p-4 bg-bg space-y-3">
-        <CardTitle className="text-lg font-heading font-medium text-text mb-1">
-          {playlist?.title}
-        </CardTitle>
-        <p className="text-small-subtitle text-text/70">
-          {playlist?.tracks?.length} tracks
-        </p>
-
-        <div className="flex items-center justify-between pt-3 border-t border-border/50">
-          <div className="flex items-center gap-2">
-            <label
-              htmlFor={`public-${playlistId}`}
-              className="text-xs font-medium cursor-pointer flex items-center gap-1.5"
-              onClick={(e) => e.stopPropagation()}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-black/10" />
+        <div className="absolute right-3 top-3 flex items-center gap-2">
+          {!playlist.is_favorites && (
+            <button
+              type="button"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-white/90 text-black backdrop-blur-sm transition-colors hover:bg-white"
+              onClick={handleDelete}
+              aria-label={`Delete ${playlist.title}`}
             >
-              {playlist.is_public ? (
-                <>
-                  <Globe className="h-3 w-3" />
-                  Public
-                </>
-              ) : (
-                <>
-                  <Lock className="h-3 w-3" />
-                  Private
-                </>
-              )}
-            </label>
-          </div>
+              <Trash2 className="h-4 w-4" />
+            </button>
+          )}
         </div>
-      </CardContent>
-    </Card>
+        <button
+          type="button"
+          className="absolute bottom-3 right-3 flex h-12 w-12 items-center justify-center rounded-full bg-white text-black shadow-sm transition-transform hover:scale-105 disabled:cursor-not-allowed disabled:opacity-50"
+          onClick={handlePlayPause}
+          disabled={tracks.length === 0}
+          aria-label={
+            isPlayingThisPlaylist && isPlaying
+              ? 'Pause playlist'
+              : 'Play playlist'
+          }
+        >
+          {isPlayingThisPlaylist && isPlaying ? (
+            <Pause className="h-5 w-5" />
+          ) : (
+            <Play className="ml-0.5 h-5 w-5" />
+          )}
+        </button>
+      </div>
+
+      <button
+        type="button"
+        className="w-full p-4 text-left"
+        onClick={(event) => {
+          event.stopPropagation();
+          handleClick();
+        }}
+        aria-expanded={isExpanded}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="truncate text-base font-semibold text-foreground">
+              {playlist.title}
+            </h2>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {tracks.length} {tracks.length === 1 ? 'track' : 'tracks'}
+            </p>
+          </div>
+          <ChevronRight
+            className={cn(
+              'mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform',
+              isExpanded && 'rotate-90 text-primary',
+            )}
+          />
+        </div>
+        <div className="mt-4 flex items-center gap-1.5 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+          {playlist.is_public ? (
+            <Globe className="h-3.5 w-3.5" />
+          ) : (
+            <Lock className="h-3.5 w-3.5" />
+          )}
+          {playlist.is_public ? 'Public' : 'Private'}
+        </div>
+      </button>
+    </article>
   );
 };

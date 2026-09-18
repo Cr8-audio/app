@@ -199,7 +199,6 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       playingTrackId,
       isPlaying,
       queue,
-      currentIndex,
       startTimeTracking,
       stopTimeTracking,
     } = get();
@@ -258,7 +257,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   removeFromQueue: (trackId) => {
-    const { queue, currentIndex } = get();
+    const { queue, currentIndex, playingTrackId } = get();
+    if (trackId === playingTrackId) return;
+
     const newQueue = queue.filter((track) => track.id !== trackId);
     const indices = Array.from({ length: newQueue.length }, (_, i) => i);
 
@@ -275,12 +276,18 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   clearQueue: () => {
+    const { player, stopTimeTracking } = get();
+    player?.stopVideo();
+    stopTimeTracking();
     set({
       queue: [],
       currentIndex: 0,
       shuffledIndices: [],
       currentTrack: null,
       playingTrackId: null,
+      isPlaying: false,
+      currentTime: 0,
+      duration: 0,
     });
   },
 

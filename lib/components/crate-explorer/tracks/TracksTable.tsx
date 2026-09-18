@@ -1,37 +1,45 @@
 'use client';
 
-import { useEffect, useMemo, useState, useRef } from 'react';
-import { CrateTrack } from '@/lib/types';
-import { usePlayerStore } from '@/lib/stores';
-import { useFavorites } from '@/lib/hooks/useFavorites';
-import { usePlaylists } from '@/lib/hooks/usePlaylists';
-import { SearchInput } from './SearchInput';
-import { Button } from '@/lib/components/ui/button';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Link, useParams } from '@tanstack/react-router';
+import { Image } from '@unpic/react';
 import {
+  ArrowRight,
   ArrowUpDown,
-  Play,
-  Pause,
   ChevronLeft,
   ChevronRight,
-  PlusCircle,
-  ListPlus,
-  Plus,
   Heart,
+  ListPlus,
+  Pause,
+  Play,
+  Plus,
+  PlusCircle,
+  Rows3,
 } from 'lucide-react';
-import { Image } from '@unpic/react';
-import { cn } from '@/lib/utils/tailwind';
 import {
   createColumnHelper,
+  FilterFn,
   flexRender,
   getCoreRowModel,
-  useReactTable,
-  getSortedRowModel,
-  SortingState,
   getFilteredRowModel,
-  FilterFn,
   getPaginationRowModel,
+  getSortedRowModel,
   PaginationState,
+  SortingState,
+  useReactTable,
 } from '@tanstack/react-table';
+import { useQuery } from 'convex/react';
+import { toast } from 'sonner';
+import { api } from '@/convex/_generated/api';
+import { Button } from '@/lib/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/lib/components/ui/dialog';
+import { Input } from '@/lib/components/ui/input';
 import {
   Select,
   SelectContent,
@@ -39,19 +47,28 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/lib/components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '@/lib/components/ui/dialog';
-import { Input } from '@/lib/components/ui/input';
-import { toast } from 'sonner';
-import { useQuery } from 'convex/react';
-import { api } from '@/convex/_generated/api';
+import { useFavorites } from '@/lib/hooks/useFavorites';
+import { usePlaylists } from '@/lib/hooks/usePlaylists';
+import { usePlayerStore } from '@/lib/stores';
+import { CrateTrack } from '@/lib/types';
+import { cn } from '@/lib/utils/tailwind';
+import { SearchInput } from './SearchInput';
+
+const columnHelper = createColumnHelper<CrateTrack>();
+
+function formatArtists(artist: string, extraArtists: string | null) {
+  return extraArtists ? `${artist}, ${extraArtists}` : artist;
+}
+
+function formatGenres(genres: string | null, styles: string | null) {
+  const values = [genres, styles]
+    .filter(Boolean)
+    .map((value) => value?.split(',').join(', '));
+  return values.join(' · ') || '—';
+}
 
 export default function TracksTable() {
+  const { username } = useParams({ strict: false });
   const convexTracks = useQuery(api.tracks.getUserTracks);
   const allTracks = useMemo(() => {
     if (!convexTracks) return [];
@@ -60,8 +77,6 @@ export default function TracksTable() {
       id: track.id || track._id,
     })) as CrateTrack[];
   }, [convexTracks]);
-
-  const suggestedTrackIds = new Set<string>();
 
   const {
     playlists: convexPlaylists,
@@ -77,59 +92,47 @@ export default function TracksTable() {
     initializePlayer,
     addToQueue,
   } = usePlayerStore();
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { isFavorite: checkIsFavorite, toggleFavorite } = useFavorites();
+
   const [searchQuery, setSearchQuery] = useState('');
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 10,
   });
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const [rowHover, setRowHover] = useState<string | null>(null);
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [selectedTrack, setSelectedTrack] = useState<CrateTrack | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isSavingPlaylist, setIsSavingPlaylist] = useState(false);
   const [showPlaylistOptions, setShowPlaylistOptions] = useState<string | null>(
     null,
   );
-  const [playbackProgress, setPlaybackProgress] = useState<
-    Record<string, number>
-  >({});
   const [isTogglingFavorite, setIsTogglingFavorite] = useState<string | null>(
     null,
   );
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Use Convex favorites hook
-  const { isFavorite: checkIsFavorite, toggleFavorite: convexToggleFavorite } =
-    useFavorites();
-
-  // Initialize player when component mounts
   useEffect(() => {
     initializePlayer();
   }, [initializePlayer]);
 
-  const handlePlayToggle = async (track: CrateTrack) => {
+  const handlePlayToggle = (track: CrateTrack) => {
     if (!track.youtube_video_id) {
       toast.error('No audio available for this track');
       return;
     }
 
     if (!isReady) {
-      toast.error('Player is still loading...');
+      toast.error('Player is still loading…');
       return;
     }
 
     try {
-      // Set up the queue with all tracks if not already set or if queue is empty
       const { queue, setQueue } = usePlayerStore.getState();
       if (queue.length === 0) {
-        const trackIndex = allTracks.findIndex((t) => t.id === track.id);
+        const trackIndex = allTracks.findIndex((item) => item.id === track.id);
         setQueue(allTracks, trackIndex);
-        toast.success(`Added ${allTracks.length} tracks to queue`);
       }
-
       togglePlayPause(track);
     } catch (error) {
       console.error('Error playing track:', error);
@@ -139,20 +142,17 @@ export default function TracksTable() {
 
   const handleAddToQueue = (track: CrateTrack) => {
     addToQueue(track);
-    toast.success(`Added "${track.title}" to queue`);
+    toast.success(`Added “${track.title}” to queue`);
   };
 
   const handleToggleFavorite = async (track: CrateTrack) => {
     setIsTogglingFavorite(track.id);
     try {
-      const isFavorite = checkIsFavorite(track.id);
-      await convexToggleFavorite(track.id);
-
-      if (isFavorite) {
-        toast.success('Removed from favorites');
-      } else {
-        toast.success('Added to favorites');
-      }
+      const wasFavorite = checkIsFavorite(track.id);
+      await toggleFavorite(track.id);
+      toast.success(
+        wasFavorite ? 'Removed from favorites' : 'Added to favorites',
+      );
     } catch (error) {
       console.error('Error toggling favorite:', error);
       toast.error('Failed to update favorites');
@@ -161,201 +161,137 @@ export default function TracksTable() {
     }
   };
 
-  const handleAddToPlaylist = async (playlistId: any, trackId: any) => {
+  const openPlaylistOptions = (track: CrateTrack) => {
+    setSelectedTrack(track);
+    setShowPlaylistOptions(track.id);
+  };
+
+  const handleAddToPlaylist = async (playlistId: string, track: CrateTrack) => {
     try {
+      const trackId = (track as CrateTrack & { _id?: string })._id ?? track.id;
       await addTrackToPlaylist(playlistId, trackId);
-      // Toast is handled by the hook
+      setShowPlaylistOptions(null);
     } catch (error) {
-      // Error toast is handled by the hook
       console.error('Failed to add to playlist:', error);
     }
   };
 
   const handleCreateNewPlaylist = async () => {
-    if (!newPlaylistName.trim() || isLoading || !selectedTrack) return;
+    if (!newPlaylistName.trim() || isSavingPlaylist || !selectedTrack) return;
 
-    setIsLoading(true);
+    setIsSavingPlaylist(true);
     try {
-      const playlistId = await createPlaylist(newPlaylistName);
-
-      if (playlistId && selectedTrack) {
-        // Use the track's _id (Convex) or id (old format)
-        const trackIdToUse = (selectedTrack as any)._id ?? selectedTrack.id;
-        await addTrackToPlaylist(playlistId, trackIdToUse);
+      const playlistId = await createPlaylist(newPlaylistName.trim());
+      if (playlistId) {
+        const trackId =
+          (selectedTrack as CrateTrack & { _id?: string })._id ??
+          selectedTrack.id;
+        await addTrackToPlaylist(playlistId, trackId);
       }
-
       setNewPlaylistName('');
       setIsCreatingPlaylist(false);
-      // Toast is handled by the hook
+      setSelectedTrack(null);
     } catch (error) {
       console.error('Failed to create playlist:', error);
     } finally {
-      setIsLoading(false);
-      setSelectedTrack(null);
+      setIsSavingPlaylist(false);
     }
   };
-
-  useEffect(() => {
-    if (allTracks.length > 0) {
-      setLoading(false);
-    }
-  }, [allTracks]);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        searchInputRef.current?.focus();
-      }
-    };
-
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, []);
-
-  const formatArtists = (artist: string, extraArtists: string | null) => {
-    if (!extraArtists) return artist;
-    return `${artist}, ${extraArtists}`;
-  };
-
-  const formatList = (list: string | null) => {
-    if (!list) return '-';
-    return list.split(',').join(', ');
-  };
-
-  const columnHelper = createColumnHelper<CrateTrack>();
 
   const columns = useMemo(
     () => [
-      // Favorites column
       columnHelper.display({
         id: 'favorite',
         header: '',
         cell: ({ row }) => {
           const track = row.original;
           const isFavorite = checkIsFavorite(track.id);
-          const isToggling = isTogglingFavorite === track.id;
-
           return (
             <Button
-              variant="noShadow"
+              variant="ghost"
               size="icon"
-              className="h-8 w-8"
+              className="h-9 w-9 rounded-full"
               onClick={() => handleToggleFavorite(track)}
-              disabled={isToggling}
+              disabled={isTogglingFavorite === track.id}
+              aria-label={
+                isFavorite ? 'Remove from favorites' : 'Add to favorites'
+              }
             >
               <Heart
                 className={cn(
                   'h-4 w-4 transition-colors',
                   isFavorite
-                    ? 'fill-red-500 text-red-500'
-                    : 'text-gray-400 hover:text-red-500',
+                    ? 'fill-primary text-primary'
+                    : 'text-muted-foreground',
                 )}
               />
             </Button>
           );
         },
       }),
-      // Combined Play/Position column with contextual actions
-      columnHelper.display({
-        id: 'playActions',
-        header: 'Track',
+      columnHelper.accessor((row) => row.title, {
+        id: 'title',
+        header: ({ column }) => (
+          <button
+            type="button"
+            className="flex items-center gap-1.5 transition-colors hover:text-foreground"
+            onClick={() => column.toggleSorting()}
+          >
+            Track
+            <ArrowUpDown className="h-3.5 w-3.5" />
+          </button>
+        ),
         cell: ({ row }) => {
           const track = row.original;
-          const isHovering = rowHover === track.id;
-
+          const isCurrent = playingTrackId === track.id;
           return (
-            <div className="flex items-center gap-3">
-              <div className="relative">
-                <Button
-                  variant="noShadow"
-                  size="icon"
-                  className={cn(
-                    'h-8 w-8 relative z-10',
-                    playingTrackId === track.id && 'bg-main/20',
-                  )}
-                  onClick={() => handlePlayToggle(track)}
-                  disabled={!track.youtube_video_id || !isReady}
-                >
-                  {playingTrackId === track.id && isPlaying ? (
-                    <>
-                      <Pause className="h-4 w-4" />
-                      <span className="absolute inset-0 rounded-full animate-pulse-light bg-main/30" />
-                    </>
-                  ) : (
-                    <Play className="h-4 w-4" />
-                  )}
-                </Button>
-                {playingTrackId === track.id && (
-                  <div className="absolute -bottom-1 left-0 right-0 h-1 bg-gray-200 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-main transition-all duration-300 ease-linear"
-                      style={{ width: `${playbackProgress[track.id] || 0}%` }}
-                    />
-                  </div>
+            <div className="flex min-w-[17rem] items-center gap-3">
+              <button
+                type="button"
+                onClick={() => handlePlayToggle(track)}
+                disabled={!track.youtube_video_id || !isReady}
+                className={cn(
+                  'flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors',
+                  isCurrent
+                    ? 'bg-primary text-primary-foreground'
+                    : 'bg-muted text-foreground hover:bg-primary hover:text-primary-foreground',
+                  'disabled:cursor-not-allowed disabled:opacity-40',
                 )}
-                {track.position && (
-                  <span className="absolute -top-2 -right-2 text-xs px-1 bg-gray-100 rounded-full text-gray-500">
-                    {track.position}
-                  </span>
+                aria-label={
+                  isCurrent && isPlaying ? 'Pause track' : 'Play track'
+                }
+              >
+                {isCurrent && isPlaying ? (
+                  <Pause className="h-4 w-4" />
+                ) : (
+                  <Play className="ml-0.5 h-4 w-4" />
                 )}
-              </div>
-
-              {track.artwork ? (
-                <div className="h-10 w-10 flex-shrink-0">
+              </button>
+              <div className="h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-muted">
+                {track.artwork ? (
                   <Image
                     src={track.artwork}
-                    alt={track.title}
-                    width={40}
-                    height={40}
-                    className="h-10 w-10 rounded-sm object-cover"
+                    alt=""
+                    width={44}
+                    height={44}
+                    className="h-full w-full object-cover"
                   />
-                </div>
-              ) : (
-                <div className="h-10 w-10 flex-shrink-0 bg-gray-100 rounded-sm" />
-              )}
-
-              <div className="text-sm font-medium text-gray-900 max-w-[16rem] relative overflow-hidden">
-                <div
-                  className={cn(
-                    'whitespace-nowrap',
-                    isHovering && track.title.length > 30 && 'hover-marquee',
-                  )}
-                >
-                  {track.title}
-                </div>
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <Rows3 className="h-4 w-4 text-muted-foreground" />
+                  </div>
+                )}
               </div>
-
-              {/* Add to playlist action that appears on hover */}
-              {isHovering && (
-                <div className="flex items-center ml-2 animate-fadeIn space-x-1">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleAddToQueue(track);
-                    }}
-                    title="Add to queue"
-                  >
-                    <ListPlus className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setSelectedTrack(track);
-                      setShowPlaylistOptions(track.id);
-                    }}
-                    title="Add to playlist"
-                  >
-                    <PlusCircle className="h-4 w-4" />
-                  </Button>
-                </div>
-              )}
+              <div className="min-w-0">
+                <p className="max-w-[18rem] truncate text-sm font-medium text-foreground">
+                  {track.title}
+                </p>
+                {track.position && (
+                  <p className="mt-0.5 text-xs text-muted-foreground">
+                    Track {track.position}
+                  </p>
+                )}
+              </div>
             </div>
           );
         },
@@ -363,106 +299,94 @@ export default function TracksTable() {
       columnHelper.accessor((row) => row.artist, {
         id: 'artist',
         header: ({ column }) => (
-          <div
-            className="flex items-center cursor-pointer"
+          <button
+            type="button"
+            className="flex items-center gap-1.5 transition-colors hover:text-foreground"
             onClick={() => column.toggleSorting()}
           >
-            <span>Artist</span>
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </div>
+            Artist
+            <ArrowUpDown className="h-3.5 w-3.5" />
+          </button>
         ),
-        cell: ({ row }) => {
-          const track = row.original;
-          const isHovering = rowHover === track.id;
-          const artist = formatArtists(track.artist, track.extra_artists);
-          return (
-            <div className="text-sm text-gray-500 max-w-[18rem] overflow-hidden">
-              <div
-                className={cn(
-                  'whitespace-nowrap',
-                  isHovering && artist.length > 15 && 'marquee-text',
-                )}
-              >
-                <ArtistPreview artist={track.artist}>{artist}</ArtistPreview>
-              </div>
-            </div>
-          );
-        },
+        cell: ({ row }) => (
+          <p
+            className="max-w-[14rem] truncate text-sm text-muted-foreground"
+            title={formatArtists(
+              row.original.artist,
+              row.original.extra_artists,
+            )}
+          >
+            {formatArtists(row.original.artist, row.original.extra_artists)}
+          </p>
+        ),
       }),
       columnHelper.accessor((row) => row.genres, {
-        id: 'genre_style',
-        header: ({ column }) => (
-          <div
-            className="flex items-center cursor-pointer"
-            onClick={() => column.toggleSorting()}
-          >
-            <span>Genre/Style</span>
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </div>
+        id: 'genre',
+        header: 'Genre / style',
+        cell: ({ row }) => (
+          <p className="max-w-[15rem] truncate text-sm text-muted-foreground">
+            {formatGenres(row.original.genres, row.original.styles)}
+          </p>
         ),
-        cell: ({ row }) => {
-          const track = row.original;
-          const isHovering = rowHover === track.id;
-          const genreStyle = [
-            track.genres && formatList(track.genres),
-            track.styles && formatList(track.styles),
-          ]
-            .filter(Boolean)
-            .join(' / ');
-
-          return (
-            <div className="text-sm text-gray-500 max-w-[18rem] relative overflow-hidden">
-              <div
-                className={cn(
-                  'whitespace-nowrap',
-                  isHovering && genreStyle.length > 20 && 'hover-marquee',
-                )}
-              >
-                {genreStyle}
-              </div>
-            </div>
-          );
-        },
       }),
       columnHelper.accessor((row) => row.duration, {
         id: 'duration',
-        header: ({ column }) => (
-          <div
-            className="flex items-center cursor-pointer"
-            onClick={() => column.toggleSorting()}
-          >
-            <span>Duration</span>
-            <ArrowUpDown className="ml-2 h-4 w-4" />
-          </div>
-        ),
+        header: 'Time',
         cell: ({ getValue }) => (
-          <div className="text-sm text-gray-500">{getValue() || '-'}</div>
+          <span className="text-sm tabular-nums text-muted-foreground">
+            {getValue() || '—'}
+          </span>
         ),
       }),
+      columnHelper.display({
+        id: 'actions',
+        header: () => <span className="sr-only">Actions</span>,
+        cell: ({ row }) => {
+          const track = row.original;
+          return (
+            <div className="flex items-center justify-end gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                onClick={() => handleAddToQueue(track)}
+                title="Add to queue"
+                aria-label={`Add ${track.title} to queue`}
+              >
+                <ListPlus className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-9 w-9 rounded-full"
+                onClick={() => openPlaylistOptions(track)}
+                title="Add to playlist"
+                aria-label={`Add ${track.title} to playlist`}
+              >
+                <PlusCircle className="h-4 w-4" />
+              </Button>
+            </div>
+          );
+        },
+      }),
     ],
+    // The player and favorites state intentionally rebuild interactive cells.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [playingTrackId, isReady, isPlaying, rowHover, isTogglingFavorite],
+    [playingTrackId, isPlaying, isReady, isTogglingFavorite, allTracks],
   );
 
-  const globalFilter: FilterFn<CrateTrack> = (row, columnId, value) => {
-    const searchLower = value.toLowerCase();
+  const globalFilter: FilterFn<CrateTrack> = (row, _columnId, value) => {
+    const search = String(value).toLowerCase();
     const track = row.original;
-    return (
-      track.title.toLowerCase().includes(searchLower) ||
-      track.artist.toLowerCase().includes(searchLower) ||
-      (track.genres?.toLowerCase() || '').includes(searchLower) ||
-      (track.styles?.toLowerCase() || '').includes(searchLower)
-    );
+    return [track.title, track.artist, track.genres, track.styles]
+      .filter(Boolean)
+      .some((field) => field?.toLowerCase().includes(search));
   };
 
   const table = useReactTable({
     data: allTracks,
     columns,
-    state: {
-      sorting,
-      globalFilter: searchQuery,
-      pagination,
-    },
+    state: { sorting, globalFilter: searchQuery, pagination },
     globalFilterFn: globalFilter,
     onSortingChange: setSorting,
     onGlobalFilterChange: setSearchQuery,
@@ -471,245 +395,377 @@ export default function TracksTable() {
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     getPaginationRowModel: getPaginationRowModel(),
-    manualPagination: false,
-    debugTable: process.env.NODE_ENV === 'development',
   });
 
-  useEffect(() => {
-    if (!playingTrackId) return;
-
-    // Start at 0 progress when a new track starts playing
-    if (!playbackProgress[playingTrackId]) {
-      setPlaybackProgress((prev) => ({ ...prev, [playingTrackId]: 0 }));
-    }
-
-    // Simulate progress updates (in a real app, this would come from the actual audio player)
-    const interval = setInterval(() => {
-      setPlaybackProgress((prev) => {
-        const currentProgress = prev[playingTrackId] || 0;
-        if (currentProgress >= 100) {
-          clearInterval(interval);
-          return prev;
-        }
-        return { ...prev, [playingTrackId]: currentProgress + 1 };
-      });
-    }, 1000); // Update every second
-
-    return () => clearInterval(interval);
-  }, [playingTrackId]);
-
-  if (loading && allTracks.length === 0) {
+  if (convexTracks === undefined) {
     return (
-      <div className="space-y-4 ml-8">
-        <div className="flex justify-between items-center mb-4">
-          <div className="w-40 h-9 bg-gray-200 animate-pulse rounded-md"></div>
-          <div className="w-64 h-9 bg-gray-200 animate-pulse rounded-md"></div>
+      <div className="space-y-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="h-5 w-28 animate-pulse rounded bg-muted" />
+          <div className="h-11 w-full max-w-md animate-pulse rounded-xl bg-muted" />
         </div>
-
-        <div className="relative overflow-x-auto rounded-md border">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                {Array.from({ length: 6 }).map((_, i) => (
-                  <th key={i} className="px-4 py-3">
-                    <div className="h-4 bg-gray-200 rounded w-20 animate-pulse"></div>
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {Array.from({ length: 8 }).map((_, rowIndex) => (
-                <tr key={rowIndex} className="border-b border-gray-100">
-                  <td className="px-4 py-4">
-                    <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 bg-gray-200 rounded-full animate-pulse"></div>
-                      <div className="h-10 w-10 bg-gray-200 rounded-sm animate-pulse"></div>
-                      <div className="h-4 bg-gray-200 rounded w-40 animate-pulse"></div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-24 animate-pulse"></div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-36 animate-pulse"></div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-10 animate-pulse"></div>
-                  </td>
-                  <td className="px-4 py-4">
-                    <div className="h-4 bg-gray-200 rounded w-12 animate-pulse"></div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="overflow-hidden rounded-2xl border border-border/70 bg-card">
+          {Array.from({ length: 7 }).map((_, index) => (
+            <div
+              key={index}
+              className="flex h-20 items-center gap-4 border-b border-border/60 px-4 last:border-b-0"
+            >
+              <div className="h-10 w-10 animate-pulse rounded-full bg-muted" />
+              <div className="h-11 w-11 animate-pulse rounded-lg bg-muted" />
+              <div className="h-4 w-1/3 animate-pulse rounded bg-muted" />
+            </div>
+          ))}
         </div>
       </div>
     );
   }
 
-  if (error) {
-    return <div className="text-red-500">{error}</div>;
-  }
-
-  // Add a custom CSS block at the end of the component
-  const marqueeStyles = `
-    @keyframes limited-marquee {
-      0% { transform: translateX(0); }
-      20% { transform: translateX(0); }
-      80% { transform: translateX(calc(-100% + 100%)); }
-      100% { transform: translateX(0); }
-    }
-    
-    .hover-marquee {
-      animation: limited-marquee 3s ease-in-out;
-      animation-iteration-count: 1;
-      display: inline-block;
-      position: relative;
-      max-width: 100%;
-    }
-
-    @keyframes marquee-animation {
-      0% { transform: translateX(0); }
-      10% { transform: translateX(0); }
-      90% { transform: translateX(max(-100%, -300px)); }
-      100% { transform: translateX(0); }
-    }
-    
-    .marquee-text {
-      animation: marquee-animation 3s ease-in-out;
-      display: inline-block;
-      white-space: nowrap;
-    }
-    
-    /* Ensure containers don't grow with content */
-    [class*="max-w-"] {
-      overflow: hidden;
-    }
-    
-    /* Pulse animation for currently playing track */
-    @keyframes pulse-light {
-      0%, 100% { opacity: 0.4; }
-      50% { opacity: 0.7; }
-    }
-    
-    .animate-pulse-light {
-      animation: pulse-light 2s ease-in-out infinite;
-    }
-  `;
+  const visibleRows = table.getRowModel().rows;
+  const filteredCount = table.getFilteredRowModel().rows.length;
 
   return (
-    <div className="space-y-4 ml-8">
-      <style>{marqueeStyles}</style>
-      <div className="flex justify-between items-center mb-4">
-        <div></div>
-        <SearchInput
-          ref={searchInputRef}
-          value={searchQuery}
-          onChange={setSearchQuery}
-        />
+    <div className="space-y-5">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-sm font-medium text-foreground">
+            {allTracks.length} {allTracks.length === 1 ? 'track' : 'tracks'}
+          </p>
+          <p className="mt-1 text-xs text-muted-foreground">
+            Search, play, and organize without leaving your library.
+          </p>
+        </div>
+        <div className="w-full sm:max-w-md">
+          <SearchInput
+            ref={searchInputRef}
+            value={searchQuery}
+            onChange={setSearchQuery}
+          />
+        </div>
       </div>
 
-      <div className="relative overflow-x-auto rounded-md border">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
-                {headerGroup.headers.map((header) => (
-                  <th
-                    key={header.id}
-                    scope="col"
-                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                  >
-                    {header.isPlaceholder
-                      ? null
-                      : flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                  </th>
-                ))}
-              </tr>
-            ))}
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
-            {table.getRowModel().rows.map((row) => {
+      {visibleRows.length === 0 ? (
+        <div className="rounded-3xl border border-dashed border-border bg-card/50 px-6 py-16 text-center">
+          <Rows3 className="mx-auto h-7 w-7 text-muted-foreground" />
+          <h2 className="mt-5 text-lg font-semibold text-foreground">
+            {searchQuery
+              ? 'No tracks match that search'
+              : 'No tracks saved yet'}
+          </h2>
+          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
+            {searchQuery
+              ? 'Try another artist, title, genre, or style.'
+              : 'Explore your Discogs collection to find the music you want close at hand.'}
+          </p>
+          {searchQuery ? (
+            <Button
+              variant="outline"
+              className="mt-6 rounded-full"
+              onClick={() => setSearchQuery('')}
+            >
+              Clear search
+            </Button>
+          ) : (
+            <Link
+              to="/$username/collection"
+              params={{ username: username ?? '' }}
+              className="mt-6 inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
+            >
+              Explore Discogs
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          )}
+        </div>
+      ) : (
+        <>
+          <div className="space-y-3 md:hidden">
+            {visibleRows.map((row) => {
               const track = row.original;
-              const isSuggested = suggestedTrackIds.has(track.id);
-              const isFirstSuggested =
-                isSuggested &&
-                (row.index === 0 ||
-                  !suggestedTrackIds.has(
-                    table.getRowModel().rows[row.index - 1]?.original.id,
-                  ));
-              const isLastSuggested =
-                isSuggested &&
-                (row.index === table.getRowModel().rows.length - 1 ||
-                  !suggestedTrackIds.has(
-                    table.getRowModel().rows[row.index + 1]?.original.id,
-                  ));
-
+              const isCurrent = playingTrackId === track.id;
+              const isFavorite = checkIsFavorite(track.id);
               return (
-                <tr
+                <article
                   key={track.id}
                   className={cn(
-                    'hover:bg-accent/5 group relative transition-all duration-300',
-                    isSuggested && [
-                      'bg-gradient-to-r from-main/[0.03] to-main/[0.07]',
-                      'border-l-[3px] border-main/40',
-                      'shadow-[inset_0_0_40px_rgba(0,0,0,0.02)]',
-                    ],
-                    playingTrackId === track.id && [
-                      'bg-main/[0.03]',
-                      'border-l-[3px] border-main/60',
-                      'shadow-[inset_0_0_30px_rgba(0,0,0,0.01)]',
-                    ],
+                    'rounded-2xl border bg-card p-3',
+                    isCurrent ? 'border-primary/40' : 'border-border/70',
                   )}
-                  onMouseEnter={() => setRowHover(track.id)}
-                  onMouseLeave={() => setRowHover(null)}
                 >
-                  {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-4 whitespace-nowrap">
-                      {flexRender(
-                        cell.column.columnDef.cell,
-                        cell.getContext(),
+                  <div className="flex items-center gap-3">
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-muted">
+                      {track.artwork ? (
+                        <Image
+                          src={track.artwork}
+                          alt=""
+                          width={64}
+                          height={64}
+                          className="h-full w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-full w-full items-center justify-center">
+                          <Rows3 className="h-5 w-5 text-muted-foreground" />
+                        </div>
                       )}
-                    </td>
-                  ))}
-
-                  {isFirstSuggested && (
-                    <div className="absolute -top-px left-0 right-0 h-px bg-main/10" />
-                  )}
-                  {isLastSuggested && (
-                    <div className="absolute -bottom-px left-0 right-0 h-px bg-main/10" />
-                  )}
-                </tr>
+                      <button
+                        type="button"
+                        onClick={() => handlePlayToggle(track)}
+                        disabled={!track.youtube_video_id || !isReady}
+                        className="absolute inset-0 flex items-center justify-center bg-black/40 text-white disabled:opacity-40"
+                        aria-label={
+                          isCurrent && isPlaying ? 'Pause track' : 'Play track'
+                        }
+                      >
+                        {isCurrent && isPlaying ? (
+                          <Pause className="h-5 w-5" />
+                        ) : (
+                          <Play className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h3 className="truncate text-sm font-semibold text-foreground">
+                        {track.title}
+                      </h3>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {formatArtists(track.artist, track.extra_artists)}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-muted-foreground">
+                        {formatGenres(track.genres, track.styles)}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-10 w-10 shrink-0 rounded-full"
+                      onClick={() => handleToggleFavorite(track)}
+                      disabled={isTogglingFavorite === track.id}
+                      aria-label={
+                        isFavorite
+                          ? 'Remove from favorites'
+                          : 'Add to favorites'
+                      }
+                    >
+                      <Heart
+                        className={cn(
+                          'h-4 w-4',
+                          isFavorite
+                            ? 'fill-primary text-primary'
+                            : 'text-muted-foreground',
+                        )}
+                      />
+                    </Button>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between border-t border-border/60 pt-2">
+                    <span className="text-xs tabular-nums text-muted-foreground">
+                      {track.duration || '—'}
+                    </span>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-10 rounded-lg px-3"
+                        onClick={() => handleAddToQueue(track)}
+                      >
+                        <ListPlus className="mr-2 h-4 w-4" />
+                        Queue
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-10 rounded-lg px-3"
+                        onClick={() => openPlaylistOptions(track)}
+                      >
+                        <PlusCircle className="mr-2 h-4 w-4" />
+                        Playlist
+                      </Button>
+                    </div>
+                  </div>
+                </article>
               );
             })}
-          </tbody>
-        </table>
-      </div>
+          </div>
 
-      {/* Create New Playlist Dialog */}
+          <div className="hidden overflow-x-auto rounded-2xl border border-border/70 bg-card md:block">
+            <table className="min-w-full">
+              <thead className="border-b border-border/70 bg-muted/40">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <tr key={headerGroup.id}>
+                    {headerGroup.headers.map((header) => (
+                      <th
+                        key={header.id}
+                        scope="col"
+                        className={cn(
+                          'px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground',
+                          header.column.id === 'favorite' && 'w-14',
+                          header.column.id === 'duration' && 'w-20',
+                          header.column.id === 'actions' && 'w-24 text-right',
+                        )}
+                      >
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                      </th>
+                    ))}
+                  </tr>
+                ))}
+              </thead>
+              <tbody className="divide-y divide-border/60">
+                {visibleRows.map((row) => (
+                  <tr
+                    key={row.id}
+                    className={cn(
+                      'transition-colors hover:bg-muted/35',
+                      playingTrackId === row.original.id &&
+                        'bg-primary/[0.035]',
+                    )}
+                  >
+                    {row.getVisibleCells().map((cell) => (
+                      <td
+                        key={cell.id}
+                        className={cn(
+                          'px-4 py-3',
+                          cell.column.id === 'actions' && 'text-right',
+                        )}
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext(),
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
+
+      {filteredCount > 0 && (
+        <div className="flex flex-col gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs text-muted-foreground">
+            Showing {visibleRows.length} of {filteredCount}{' '}
+            {filteredCount === 1 ? 'track' : 'tracks'}
+          </p>
+          <div className="flex items-center justify-between gap-3 sm:justify-end">
+            <Select
+              value={String(table.getState().pagination.pageSize)}
+              onValueChange={(value) => table.setPageSize(Number(value))}
+            >
+              <SelectTrigger className="h-9 w-[118px] rounded-lg text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 20, 30, 50].map((pageSize) => (
+                  <SelectItem key={pageSize} value={String(pageSize)}>
+                    {pageSize} per page
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <span className="text-xs tabular-nums text-muted-foreground">
+              {table.getState().pagination.pageIndex + 1} /{' '}
+              {Math.max(table.getPageCount(), 1)}
+            </span>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-lg"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                aria-label="Previous page"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-9 w-9 rounded-lg"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                aria-label="Next page"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <Dialog
+        open={showPlaylistOptions !== null}
+        onOpenChange={(open) => {
+          if (!open) setShowPlaylistOptions(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Add to playlist</DialogTitle>
+          </DialogHeader>
+          <div className="grid gap-2 py-3">
+            {convexPlaylists.length > 0 ? (
+              convexPlaylists.map((playlist) => {
+                const playlistId = playlist._id || playlist.id;
+                return (
+                  <Button
+                    key={playlistId}
+                    variant="outline"
+                    className="min-h-11 justify-start rounded-xl"
+                    onClick={() => {
+                      if (selectedTrack) {
+                        handleAddToPlaylist(playlistId, selectedTrack);
+                      }
+                    }}
+                  >
+                    <ListPlus className="mr-2 h-4 w-4" />
+                    {playlist.title || playlist.name}
+                  </Button>
+                );
+              })
+            ) : (
+              <p className="py-4 text-center text-sm text-muted-foreground">
+                {playlistsLoading ? 'Loading playlists…' : 'No playlists yet'}
+              </p>
+            )}
+            <Button
+              variant="ghost"
+              className="min-h-11 justify-start rounded-xl"
+              onClick={() => {
+                setIsCreatingPlaylist(true);
+                setShowPlaylistOptions(null);
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              Create a new playlist
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={isCreatingPlaylist} onOpenChange={setIsCreatingPlaylist}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Playlist</DialogTitle>
+            <DialogTitle>Create a playlist</DialogTitle>
           </DialogHeader>
           <div className="py-4">
             <Input
               placeholder="Playlist name"
               value={newPlaylistName}
-              onChange={(e) => setNewPlaylistName(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && newPlaylistName.trim() && !isLoading)
+              onChange={(event) => setNewPlaylistName(event.target.value)}
+              onKeyDown={(event) => {
+                if (
+                  event.key === 'Enter' &&
+                  newPlaylistName.trim() &&
+                  !isSavingPlaylist
+                ) {
                   handleCreateNewPlaylist();
-                if (e.key === 'Escape') setIsCreatingPlaylist(false);
+                }
+                if (event.key === 'Escape') setIsCreatingPlaylist(false);
               }}
-              disabled={isLoading}
+              disabled={isSavingPlaylist}
               autoFocus
             />
           </div>
@@ -717,192 +773,19 @@ export default function TracksTable() {
             <Button
               variant="outline"
               onClick={() => setIsCreatingPlaylist(false)}
-              disabled={isLoading}
+              disabled={isSavingPlaylist}
             >
               Cancel
             </Button>
             <Button
               onClick={handleCreateNewPlaylist}
-              disabled={!newPlaylistName.trim() || isLoading}
+              disabled={!newPlaylistName.trim() || isSavingPlaylist}
             >
-              {isLoading ? 'Creating...' : 'Create'}
+              {isSavingPlaylist ? 'Creating…' : 'Create playlist'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Playlist Options Dialog */}
-      <Dialog
-        open={showPlaylistOptions !== null}
-        onOpenChange={(open) => !open && setShowPlaylistOptions(null)}
-      >
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add to Playlist</DialogTitle>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            {convexPlaylists && convexPlaylists.length > 0 ? (
-              <div className="grid gap-2">
-                {convexPlaylists.map((playlist: any) => (
-                  <Button
-                    key={playlist._id || playlist.id}
-                    variant="outline"
-                    className="w-full justify-start"
-                    onClick={() => {
-                      if (selectedTrack && showPlaylistOptions) {
-                        const trackIdToUse =
-                          (selectedTrack as any)._id ?? selectedTrack.id;
-                        handleAddToPlaylist(
-                          playlist._id || playlist.id,
-                          trackIdToUse,
-                        );
-                        setShowPlaylistOptions(null);
-                      }
-                    }}
-                  >
-                    <ListPlus className="mr-2 h-4 w-4" />
-                    {playlist.title || playlist.name}
-                  </Button>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-2 text-muted-foreground">
-                {playlistsLoading ? 'Loading playlists...' : 'No playlists yet'}
-              </div>
-            )}
-            <Button
-              variant="outline"
-              className="w-full justify-start"
-              onClick={() => {
-                setIsCreatingPlaylist(true);
-                setShowPlaylistOptions(null);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Create New Playlist
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Pagination Controls - Fixed position at the bottom */}
-      <div className="flex items-center justify-between sticky bottom-4 bg-white border rounded-md p-2 shadow-sm">
-        <div className="flex items-center gap-2">
-          <p className="text-sm text-gray-500">
-            Page{' '}
-            <strong>
-              {table.getState().pagination.pageIndex + 1} of{' '}
-              {table.getPageCount()}
-            </strong>
-          </p>
-          <p className="text-sm text-gray-500 hidden md:block">
-            | Displaying {table.getRowModel().rows.length} of{' '}
-            {table.getFilteredRowModel().rows.length} tracks
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1">
-            <span className="text-sm text-gray-500 hidden sm:inline">
-              Rows per page:
-            </span>
-            <Select
-              value={String(table.getState().pagination.pageSize)}
-              onValueChange={(value) => {
-                table.setPageSize(Number(value));
-              }}
-            >
-              <SelectTrigger className="h-8 w-[70px]">
-                <SelectValue
-                  placeholder={table.getState().pagination.pageSize}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {[5, 10, 20, 30, 50].map((pageSize) => (
-                  <SelectItem key={pageSize} value={String(pageSize)}>
-                    {pageSize}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.setPageIndex(0)}
-              disabled={!table.getCanPreviousPage()}
-              className="hidden sm:flex h-8 w-8 p-0 lg:flex"
-            >
-              <span className="sr-only">Go to first page</span>
-              <ChevronLeft className="h-4 w-4" />
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-              className="h-8 w-8 p-0"
-            >
-              <span className="sr-only">Go to previous page</span>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-              className="h-8 w-8 p-0"
-            >
-              <span className="sr-only">Go to next page</span>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              disabled={!table.getCanNextPage()}
-              className="hidden sm:flex h-8 w-8 p-0 lg:flex"
-            >
-              <span className="sr-only">Go to last page</span>
-              <ChevronRight className="h-4 w-4" />
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Artist Preview Component - Simple approach with CSS-only tooltip
-function ArtistPreview({
-  artist,
-  children,
-}: {
-  artist: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="relative group inline-block">
-      <span className="cursor-pointer hover:text-primary hover:underline underline-offset-2">
-        {children}
-      </span>
-      <div className="absolute left-0 top-full mt-2 w-64 rounded-md bg-background/95 p-3 shadow-lg ring-1 ring-border z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300">
-        <div className="flex flex-col space-y-2">
-          <h4 className="text-sm font-semibold">{artist}</h4>
-          <div className="flex items-center">
-            <span className="bg-primary/10 text-primary text-xs rounded-full px-2 py-0.5 mr-2">
-              Artist
-            </span>
-            <span className="text-xs text-muted-foreground">
-              View all tracks
-            </span>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

@@ -92,9 +92,11 @@ export const TrackRow = ({
               <Play className="w-4 h-4" />
             )}
           </Button>
-          <span className="ml-2 text-sm text-gray-500">{track.position}</span>
+          <span className="ml-2 text-sm text-muted-foreground">
+            {track.position}
+          </span>
           <div className="invisible group-hover:visible ml-2">
-            <MoreHorizontal className="w-4 h-4 text-gray-400" />
+            <MoreHorizontal className="w-4 h-4 text-muted-foreground/70" />
           </div>
         </div>
       </td>
@@ -111,11 +113,11 @@ export const TrackRow = ({
               />
             </div>
           ) : (
-            <div className="h-10 w-10 flex-shrink-0 mr-4 bg-gray-100 rounded-sm" />
+            <div className="h-10 w-10 flex-shrink-0 mr-4 bg-muted rounded-sm" />
           )}
           <div
             className={cn(
-              'text-sm font-medium text-gray-900 max-w-[24rem] overflow-hidden',
+              'text-sm font-medium text-foreground max-w-[24rem] overflow-hidden',
               isHovering && 'animate-marquee',
             )}
           >
@@ -125,22 +127,22 @@ export const TrackRow = ({
           </div>
         </div>
       </td>
-      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500 max-w-[18rem] overflow-hidden">
+      <td className="px-4 py-4 whitespace-nowrap text-sm text-muted-foreground max-w-[18rem] overflow-hidden">
         {formatArtists(track.artist, track.extra_artists).length > 15
           ? `${formatArtists(track.artist, track.extra_artists).substring(0, 15)}...`
           : formatArtists(track.artist, track.extra_artists)}
       </td>
-      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+      <td className="px-4 py-4 whitespace-nowrap text-sm text-muted-foreground">
         <div className="flex items-center">
           {track.genres && <span>{formatList(track.genres)}</span>}
           {track.genres && track.styles && <span className="mx-1">/</span>}
           {track.styles && <span>{formatList(track.styles)}</span>}
         </div>
       </td>
-      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+      <td className="px-4 py-4 whitespace-nowrap text-sm text-muted-foreground">
         {track.bpm || '-'}
       </td>
-      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+      <td className="px-4 py-4 whitespace-nowrap text-sm text-muted-foreground">
         {track.duration || '-'}
       </td>
       {isFirstSuggested && (
