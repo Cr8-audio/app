@@ -6,6 +6,7 @@ import {
   isRequestExpired,
   pickCollectionOwnerKey,
   releasesToRemove,
+  toCollectionRelease,
 } from '@/convex/lib/discogsOAuth';
 
 describe('isAllowedAppOrigin', () => {
@@ -78,5 +79,28 @@ describe('releasesToRemove', () => {
 
   it('removes nothing when everything is still in the collection', () => {
     expect(releasesToRemove(['1'], ['1', '2'])).toEqual([]);
+  });
+});
+
+describe('toCollectionRelease', () => {
+  it('keeps a synced collection item and uses the stored id', () => {
+    const item = { id: 1, date_added: 'x', basic_information: { title: 'A' } };
+    expect(toCollectionRelease('42', item)).toEqual({
+      ...item,
+      id: 42,
+      basic_information: { title: 'A' },
+    });
+  });
+
+  it('wraps a bare release object from migrated rows', () => {
+    expect(toCollectionRelease(7, { title: 'B', year: 1999 })).toEqual({
+      id: 7,
+      basic_information: { title: 'B', year: 1999 },
+    });
+  });
+
+  it('drops rows without usable data', () => {
+    expect(toCollectionRelease(1, null)).toBeNull();
+    expect(toCollectionRelease(1, { foo: 'bar' })).toBeNull();
   });
 });

@@ -29,6 +29,7 @@ import {
   isAllowedAppOrigin,
   isRequestExpired,
 } from './lib/discogsOAuth';
+import { buildSearchParams, rankSearchResults } from './lib/discogsSearch';
 
 const PROVIDER = 'discogs';
 const USER_AGENT = 'CrateApp/1.0 +https://cr8.audio';
@@ -215,6 +216,39 @@ export const disconnect = mutation({
     for (const profile of profiles) {
       await ctx.db.delete(profile._id);
     }
+  },
+});
+
+/**
+ * Search the Discogs database. Signs with the user's tokens when connected
+ * (240 req/min); otherwise falls back to the app key (60 req/min).
+ */
+export const search = action({
+  args: { query: v.string() },
+  handler: async (ctx, { query: rawQuery }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
+    const query = rawQuery.trim();
+    if (!query) {
+      return { results: [] };
+    }
+
+    const sdk = createSdk();
+    const credentials = await ctx.runQuery(internal.discogs.getCredentials, {
+      userId,
+    });
+    if (credentials) {
+      const tokenManager = sdk.auth.base.getTokenManager();
+      await tokenManager.setAccessToken(credentials.accessToken);
+      await tokenManager.setAccessTokenSecret(credentials.accessTokenSecret);
+    }
+
+    const response = await sdk.search.getSearchResults(
+      buildSearchParams(query),
+    );
+    return { results: rankSearchResults(query, response.results) };
   },
 });
 
