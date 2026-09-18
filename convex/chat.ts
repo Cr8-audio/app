@@ -167,13 +167,30 @@ export const generateResponse = internalAction({
         ? `\n\nAvailable Tracks in the user's collection:\n${JSON.stringify(tracks)}`
         : '\n\nNo tracks available in the collection.';
 
-    await djAgent.generateText(
-      ctx,
-      { threadId },
-      {
-        promptMessageId,
-        system: SYSTEM_PROMPT + tracksContext,
-      },
-    );
+    try {
+      await djAgent.generateText(
+        ctx,
+        { threadId },
+        {
+          promptMessageId,
+          system: SYSTEM_PROMPT + tracksContext,
+        },
+      );
+    } catch (error) {
+      console.error('DJ assistant generation failed', error);
+
+      // The user message is committed before this scheduled action runs. Save
+      // a visible assistant response too, otherwise a provider failure looks
+      // like an indefinitely blank conversation.
+      await saveMessage(ctx, components.agent as any, {
+        threadId,
+        agentName: 'DJ Assistant',
+        message: {
+          role: 'assistant',
+          content:
+            "I couldn't finish that dig. Your message is safe — please try it again in a moment.",
+        },
+      });
+    }
   },
 });

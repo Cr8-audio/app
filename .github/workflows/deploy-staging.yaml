@@ -51,4 +51,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: dist/server
           command: deploy --env staging
-
+          secrets: |
+            YOUTUBE_API_KEY
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}

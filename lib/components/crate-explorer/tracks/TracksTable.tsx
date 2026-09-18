@@ -86,11 +86,11 @@ export default function TracksTable() {
   } = usePlaylists();
   const {
     playingTrackId,
-    isReady,
     isPlaying,
     togglePlayPause,
     initializePlayer,
     addToQueue,
+    setQueue,
   } = usePlayerStore();
   const { isFavorite: checkIsFavorite, toggleFavorite } = useFavorites();
 
@@ -116,24 +116,22 @@ export default function TracksTable() {
     initializePlayer();
   }, [initializePlayer]);
 
-  const handlePlayToggle = (track: CrateTrack) => {
-    if (!track.youtube_video_id) {
-      toast.error('No audio available for this track');
-      return;
-    }
-
-    if (!isReady) {
-      toast.error('Player is still loading…');
-      return;
-    }
-
+  const handlePlayToggle = async (track: CrateTrack) => {
     try {
-      const { queue, setQueue } = usePlayerStore.getState();
-      if (queue.length === 0) {
-        const trackIndex = allTracks.findIndex((item) => item.id === track.id);
-        setQueue(allTracks, trackIndex);
+      const { playingTrackId: currentTrackId, queue } =
+        usePlayerStore.getState();
+      const queueIndex = queue.findIndex((item) => item.id === track.id);
+
+      // Clicking one library row should not silently put the entire collection
+      // into the queue. Explicit "add to queue" remains available beside it.
+      if (currentTrackId !== track.id && queueIndex === -1) {
+        setQueue([track], 0);
       }
-      togglePlayPause(track);
+
+      const didStart = await togglePlayPause(track);
+      if (!didStart) {
+        toast.error('No playable audio found for this track');
+      }
     } catch (error) {
       console.error('Error playing track:', error);
       toast.error('Failed to play track');
@@ -248,8 +246,7 @@ export default function TracksTable() {
             <div className="flex min-w-[17rem] items-center gap-3">
               <button
                 type="button"
-                onClick={() => handlePlayToggle(track)}
-                disabled={!track.youtube_video_id || !isReady}
+                onClick={() => void handlePlayToggle(track)}
                 className={cn(
                   'flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors',
                   isCurrent
@@ -372,7 +369,7 @@ export default function TracksTable() {
     ],
     // The player and favorites state intentionally rebuild interactive cells.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [playingTrackId, isPlaying, isReady, isTogglingFavorite, allTracks],
+    [playingTrackId, isPlaying, isTogglingFavorite],
   );
 
   const globalFilter: FilterFn<CrateTrack> = (row, _columnId, value) => {
@@ -507,8 +504,7 @@ export default function TracksTable() {
                       )}
                       <button
                         type="button"
-                        onClick={() => handlePlayToggle(track)}
-                        disabled={!track.youtube_video_id || !isReady}
+                        onClick={() => void handlePlayToggle(track)}
                         className="absolute inset-0 flex items-center justify-center bg-black/40 text-white disabled:opacity-40"
                         aria-label={
                           isCurrent && isPlaying ? 'Pause track' : 'Play track'

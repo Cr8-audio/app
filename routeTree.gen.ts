@@ -14,6 +14,8 @@ import { Route as OnboardingIndexRouteImport } from './app/onboarding/index'
 import { Route as AuthIndexRouteImport } from './app/auth/index'
 import { Route as AnalyzeIndexRouteImport } from './app/analyze.index'
 import { Route as UsernameIndexRouteImport } from './app/$username/index'
+import { Route as PPublicIdRouteImport } from './app/p/$publicId'
+import { Route as ListenUsernameRouteImport } from './app/listen/$username'
 import { Route as AnalyzeChatRouteImport } from './app/analyze.chat'
 import { Route as UsernameTracksRouteImport } from './app/$username/tracks'
 import { Route as UsernamePlaylistsRouteImport } from './app/$username/playlists'
@@ -47,6 +49,16 @@ const AnalyzeIndexRoute = AnalyzeIndexRouteImport.update({
 const UsernameIndexRoute = UsernameIndexRouteImport.update({
   id: '/$username/',
   path: '/$username/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PPublicIdRoute = PPublicIdRouteImport.update({
+  id: '/p/$publicId',
+  path: '/p/$publicId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListenUsernameRoute = ListenUsernameRouteImport.update({
+  id: '/listen/$username',
+  path: '/listen/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnalyzeChatRoute = AnalyzeChatRouteImport.update({
@@ -104,6 +116,8 @@ export interface FileRoutesByFullPath {
   '/$username/playlists': typeof UsernamePlaylistsRoute
   '/$username/tracks': typeof UsernameTracksRoute
   '/analyze/chat': typeof AnalyzeChatRoute
+  '/listen/$username': typeof ListenUsernameRoute
+  '/p/$publicId': typeof PPublicIdRoute
   '/$username': typeof UsernameIndexRoute
   '/analyze': typeof AnalyzeIndexRoute
   '/auth': typeof AuthIndexRoute
@@ -120,6 +134,8 @@ export interface FileRoutesByTo {
   '/$username/playlists': typeof UsernamePlaylistsRoute
   '/$username/tracks': typeof UsernameTracksRoute
   '/analyze/chat': typeof AnalyzeChatRoute
+  '/listen/$username': typeof ListenUsernameRoute
+  '/p/$publicId': typeof PPublicIdRoute
   '/$username': typeof UsernameIndexRoute
   '/analyze': typeof AnalyzeIndexRoute
   '/auth': typeof AuthIndexRoute
@@ -137,6 +153,8 @@ export interface FileRoutesById {
   '/$username/playlists': typeof UsernamePlaylistsRoute
   '/$username/tracks': typeof UsernameTracksRoute
   '/analyze/chat': typeof AnalyzeChatRoute
+  '/listen/$username': typeof ListenUsernameRoute
+  '/p/$publicId': typeof PPublicIdRoute
   '/$username/': typeof UsernameIndexRoute
   '/analyze/': typeof AnalyzeIndexRoute
   '/auth/': typeof AuthIndexRoute
@@ -155,6 +173,8 @@ export interface FileRouteTypes {
     | '/$username/playlists'
     | '/$username/tracks'
     | '/analyze/chat'
+    | '/listen/$username'
+    | '/p/$publicId'
     | '/$username'
     | '/analyze'
     | '/auth'
@@ -171,6 +191,8 @@ export interface FileRouteTypes {
     | '/$username/playlists'
     | '/$username/tracks'
     | '/analyze/chat'
+    | '/listen/$username'
+    | '/p/$publicId'
     | '/$username'
     | '/analyze'
     | '/auth'
@@ -187,6 +209,8 @@ export interface FileRouteTypes {
     | '/$username/playlists'
     | '/$username/tracks'
     | '/analyze/chat'
+    | '/listen/$username'
+    | '/p/$publicId'
     | '/$username/'
     | '/analyze/'
     | '/auth/'
@@ -204,6 +228,8 @@ export interface RootRouteChildren {
   UsernamePlaylistsRoute: typeof UsernamePlaylistsRoute
   UsernameTracksRoute: typeof UsernameTracksRoute
   AnalyzeChatRoute: typeof AnalyzeChatRoute
+  ListenUsernameRoute: typeof ListenUsernameRoute
+  PPublicIdRoute: typeof PPublicIdRoute
   UsernameIndexRoute: typeof UsernameIndexRoute
   AnalyzeIndexRoute: typeof AnalyzeIndexRoute
   AuthIndexRoute: typeof AuthIndexRoute
@@ -250,6 +276,20 @@ declare module '@tanstack/react-router' {
       path: '/$username'
       fullPath: '/$username'
       preLoaderRoute: typeof UsernameIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$publicId': {
+      id: '/p/$publicId'
+      path: '/p/$publicId'
+      fullPath: '/p/$publicId'
+      preLoaderRoute: typeof PPublicIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/listen/$username': {
+      id: '/listen/$username'
+      path: '/listen/$username'
+      fullPath: '/listen/$username'
+      preLoaderRoute: typeof ListenUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analyze/chat': {
@@ -324,6 +364,8 @@ const rootRouteChildren: RootRouteChildren = {
   UsernamePlaylistsRoute: UsernamePlaylistsRoute,
   UsernameTracksRoute: UsernameTracksRoute,
   AnalyzeChatRoute: AnalyzeChatRoute,
+  ListenUsernameRoute: ListenUsernameRoute,
+  PPublicIdRoute: PPublicIdRoute,
   UsernameIndexRoute: UsernameIndexRoute,
   AnalyzeIndexRoute: AnalyzeIndexRoute,
   AuthIndexRoute: AuthIndexRoute,

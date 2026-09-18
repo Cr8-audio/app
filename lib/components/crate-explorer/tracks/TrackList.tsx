@@ -6,19 +6,16 @@ interface TrackListProps {
   tracks: CrateTrack[];
   playingTrackId: string | null;
   onPlayToggle: (track: CrateTrack) => void;
-  isPlayerReady: boolean;
 }
 
 const TrackListItem = ({
   track,
   isPlaying,
   onPlayToggle,
-  isPlayerReady,
 }: {
   track: CrateTrack;
   isPlaying: boolean;
   onPlayToggle: () => void;
-  isPlayerReady: boolean;
 }) => {
   return (
     <div
@@ -31,7 +28,6 @@ const TrackListItem = ({
           size="icon"
           className="h-9 w-9 rounded-full"
           onClick={onPlayToggle}
-          disabled={!track.youtube_video_id || !isPlayerReady}
         >
           {isPlaying ? (
             <Pause className="w-4 h-4" />
@@ -61,7 +57,6 @@ export function TrackList({
   tracks,
   playingTrackId,
   onPlayToggle,
-  isPlayerReady,
 }: TrackListProps) {
   return (
     <div className="space-y-1">
@@ -78,9 +73,8 @@ export function TrackList({
         <TrackListItem
           key={track.position}
           track={track}
-          isPlaying={playingTrackId === track.position}
+          isPlaying={playingTrackId === track.id}
           onPlayToggle={() => onPlayToggle(track)}
-          isPlayerReady={isPlayerReady}
         />
       ))}
     </div>

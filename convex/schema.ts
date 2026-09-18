@@ -112,7 +112,9 @@ export default defineSchema({
     track_id: v.id('tracks'), // Points to track's _id
     position: v.number(),
     created_at: v.optional(v.string()),
-  }),
+  })
+    .index('by_playlist_position', ['playlist_id', 'position'])
+    .index('by_playlist_track', ['playlist_id', 'track_id']),
 
   track_analysis: defineTable({
     id: v.string(),

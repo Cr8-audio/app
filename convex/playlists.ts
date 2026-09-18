@@ -1,7 +1,139 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { query, mutation, type MutationCtx } from './_generated/server';
-import type { Id } from './_generated/dataModel';
+import {
+  query,
+  mutation,
+  type MutationCtx,
+  type QueryCtx,
+} from './_generated/server';
+import type { Doc, Id } from './_generated/dataModel';
 import { v } from 'convex/values';
+
+type DatabaseContext = Pick<QueryCtx, 'db'> | Pick<MutationCtx, 'db'>;
+
+/**
+ * Legacy Supabase imports stored booleans as Postgres-style strings. Keep
+ * reads compatible until every deployment has completed the boolean cleanup
+ * migration, while making false-y strings explicitly false.
+ */
+function normalizePlaylistFlag(value: boolean | string | undefined): boolean {
+  return value === true || value === 't' || value === 'true';
+}
+
+function normalizePlaylist(playlist: Doc<'playlists'>) {
+  return {
+    ...playlist,
+    is_public: normalizePlaylistFlag(playlist.is_public),
+    is_favorites: normalizePlaylistFlag(playlist.is_favorites),
+  };
+}
+
+function toPlaylistTrack(track: Doc<'tracks'>, playlistPosition: number) {
+  return {
+    ...track,
+    discogs_release_id: String(track.discogs_release_id),
+    youtube_video_id: track.youtube_video_id ?? null,
+    extra_artists: track.extra_artists ?? null,
+    genres: track.genres ?? null,
+    styles: track.styles ?? null,
+    artwork: track.artwork ?? null,
+    created_at: track.created_at ?? null,
+    playlistPosition,
+  };
+}
+
+async function isPlaylistOwner(
+  ctx: DatabaseContext,
+  userId: Id<'users'>,
+  playlist: Doc<'playlists'>,
+) {
+  const user = await ctx.db.get(userId);
+  return (
+    playlist.user_id === user?.email ||
+    playlist.user_id === userId ||
+    playlist.user_id === user?.supabaseUserId
+  );
+}
+
+async function getPlaylistTracks(
+  ctx: DatabaseContext,
+  playlistId: Id<'playlists'>,
+) {
+  const playlistTracks = await ctx.db
+    .query('playlist_tracks')
+    .withIndex('by_playlist_position', (q) => q.eq('playlist_id', playlistId))
+    .collect();
+
+  const tracks = await Promise.all(
+    playlistTracks.map(async (playlistTrack) => {
+      const track = await ctx.db.get(playlistTrack.track_id);
+      return track ? { track, playlistPosition: playlistTrack.position } : null;
+    }),
+  );
+
+  return tracks.filter(
+    (
+      item,
+    ): item is {
+      track: Doc<'tracks'>;
+      playlistPosition: number;
+    } => item !== null,
+  );
+}
+
+async function resolvePlaylistOwner(
+  ctx: Pick<QueryCtx, 'db'>,
+  ownerIdentifier: string,
+) {
+  const normalizedUserId = ctx.db.normalizeId('users', ownerIdentifier);
+  if (normalizedUserId) {
+    const owner = await ctx.db.get(normalizedUserId);
+    if (owner) return owner;
+  }
+
+  const ownerByEmail = await ctx.db
+    .query('users')
+    .withIndex('by_email', (q) => q.eq('email', ownerIdentifier))
+    .first();
+  if (ownerByEmail) return ownerByEmail;
+
+  return await ctx.db
+    .query('users')
+    .withIndex('by_supabase_id', (q) => q.eq('supabaseUserId', ownerIdentifier))
+    .first();
+}
+
+function toPublicOwner(owner: Doc<'users'>) {
+  return {
+    username: owner.username ?? null,
+    displayName: owner.displayName ?? null,
+    avatarUrl: owner.avatarUrl ?? null,
+  };
+}
+
+async function getPlaylistsForUser(
+  ctx: Pick<QueryCtx, 'db'>,
+  user: Doc<'users'>,
+) {
+  const ownerIdentifiers = [user._id, user.email, user.supabaseUserId].filter(
+    (identifier): identifier is string => Boolean(identifier),
+  );
+  const playlistGroups = await Promise.all(
+    ownerIdentifiers.map((ownerIdentifier) =>
+      ctx.db
+        .query('playlists')
+        .withIndex('by_user', (q) => q.eq('user_id', ownerIdentifier))
+        .collect(),
+    ),
+  );
+
+  return [
+    ...new Map(
+      playlistGroups
+        .flat()
+        .map((playlist) => [playlist._id, playlist] as const),
+    ).values(),
+  ];
+}
 
 /**
  * Load a playlist the current user owns. Playlists store the owner under
@@ -17,12 +149,7 @@ async function getOwnedPlaylist(
   if (!playlist) {
     throw new Error('Playlist not found');
   }
-  const user = await ctx.db.get(userId);
-  const isOwner =
-    playlist.user_id === user?.email ||
-    playlist.user_id === userId ||
-    playlist.user_id === user?.supabaseUserId;
-  if (!isOwner) {
+  if (!(await isPlaylistOwner(ctx, userId, playlist))) {
     throw new Error('Not authorized');
   }
   return playlist;
@@ -44,53 +171,22 @@ export const getUserPlaylists = query({
       return [];
     }
 
-    // Try to find playlists by different user identifiers
-    let playlists: any[] = [];
-
-    // 1. Try by supabaseUserId (linked legacy data)
-    if (user.supabaseUserId) {
-      playlists = await ctx.db
-        .query('playlists')
-        .withIndex('by_user', (q) => q.eq('user_id', user.supabaseUserId!))
-        .collect();
-    }
-
-    // 2. Try by email
-    if (playlists.length === 0 && user.email) {
-      playlists = await ctx.db
-        .query('playlists')
-        .withIndex('by_user', (q) => q.eq('user_id', user.email!))
-        .collect();
-    }
-
-    // 3. Try by Convex ID
-    if (playlists.length === 0) {
-      playlists = await ctx.db
-        .query('playlists')
-        .withIndex('by_user', (q) => q.eq('user_id', userId))
-        .collect();
-    }
+    // Native and migrated playlists can be split across the Convex user ID,
+    // email, and legacy Supabase ID. Merge all three rather than stopping at
+    // the first non-empty source, otherwise newly-created playlists disappear
+    // for users who also have legacy records.
+    const playlists = await getPlaylistsForUser(ctx, user);
 
     // Get tracks for each playlist
     const playlistsWithTracks = await Promise.all(
       playlists.map(async (playlist) => {
-        const playlistTracks = await ctx.db
-          .query('playlist_tracks')
-          .filter((q) => q.eq(q.field('playlist_id'), playlist._id))
-          .collect();
-
-        const tracks = await Promise.all(
-          playlistTracks.map(async (pt) => {
-            const track = await ctx.db.get(pt.track_id);
-            return track ? { ...track, position: pt.position } : null;
-          }),
-        );
+        const tracks = await getPlaylistTracks(ctx, playlist._id);
 
         return {
-          ...playlist,
-          tracks: tracks
-            .filter(Boolean)
-            .sort((a, b) => (a?.position || 0) - (b?.position || 0)),
+          ...normalizePlaylist(playlist),
+          tracks: tracks.map(({ track, playlistPosition }) =>
+            toPlaylistTrack(track, playlistPosition),
+          ),
         };
       }),
     );
@@ -105,30 +201,131 @@ export const getUserPlaylists = query({
 export const getPlaylist = query({
   args: { playlistId: v.id('playlists') },
   handler: async (ctx, { playlistId }) => {
-    const playlist = await ctx.db.get(playlistId);
-    if (!playlist) {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
       return null;
     }
 
-    // Get playlist tracks
-    const playlistTracks = await ctx.db
-      .query('playlist_tracks')
-      .filter((q) => q.eq(q.field('playlist_id'), playlistId))
-      .collect();
+    const playlist = await ctx.db.get(playlistId);
+    if (!playlist || !(await isPlaylistOwner(ctx, userId, playlist))) {
+      return null;
+    }
 
-    // Get the actual tracks
-    const tracks = await Promise.all(
-      playlistTracks.map(async (pt) => {
-        const track = await ctx.db.get(pt.track_id);
-        return track ? { ...track, position: pt.position } : null;
+    const tracks = await getPlaylistTracks(ctx, playlistId);
+
+    return {
+      ...normalizePlaylist(playlist),
+      tracks: tracks.map(({ track, playlistPosition }) =>
+        toPlaylistTrack(track, playlistPosition),
+      ),
+    };
+  },
+});
+
+/**
+ * Get the deliberately public projection of a published playlist. Missing and
+ * private playlists both return null so callers cannot probe private records.
+ */
+export const getPublicPlaylist = query({
+  args: { publicId: v.string() },
+  handler: async (ctx, { publicId }) => {
+    const playlist = await ctx.db
+      .query('playlists')
+      .withIndex('by_old_id', (q) => q.eq('id', publicId))
+      .first();
+
+    if (
+      !playlist ||
+      !normalizePlaylistFlag(playlist.is_public) ||
+      normalizePlaylistFlag(playlist.is_favorites)
+    ) {
+      return null;
+    }
+
+    const [owner, playlistTracks] = await Promise.all([
+      resolvePlaylistOwner(ctx, playlist.user_id),
+      getPlaylistTracks(ctx, playlist._id),
+    ]);
+
+    return {
+      publicId: playlist.id,
+      title: playlist.title,
+      description: playlist.description ?? null,
+      coverImageUrl: playlist.cover_image_url ?? null,
+      owner: owner ? toPublicOwner(owner) : null,
+      tracks: playlistTracks.map(({ track, playlistPosition }) => ({
+        id: track.id,
+        discogs_release_id: String(track.discogs_release_id),
+        youtube_video_id: track.youtube_video_id ?? null,
+        title: track.title,
+        artist: track.artist,
+        extra_artists: track.extra_artists ?? null,
+        position: track.position,
+        duration: track.duration,
+        genres: track.genres ?? null,
+        styles: track.styles ?? null,
+        artwork: track.artwork ?? null,
+        created_at: track.created_at ?? null,
+        playlistPosition,
+      })),
+    };
+  },
+});
+
+/**
+ * Resolve all published playlists for a username across the identifiers used
+ * by native and migrated records. The result is intentionally summary-only so
+ * a public profile does not expose track or account data unnecessarily.
+ */
+export const getPublicPlaylistsByUsername = query({
+  args: { username: v.string() },
+  handler: async (ctx, { username }) => {
+    const owner = await ctx.db
+      .query('users')
+      .withIndex('by_username', (q) => q.eq('username', username.toLowerCase()))
+      .first();
+    if (!owner) {
+      return null;
+    }
+
+    const ownerPlaylists = await getPlaylistsForUser(ctx, owner);
+    const publicPlaylists = ownerPlaylists
+      .filter(
+        (playlist) =>
+          normalizePlaylistFlag(playlist.is_public) &&
+          !normalizePlaylistFlag(playlist.is_favorites),
+      )
+      .sort((a, b) => {
+        const aDate = a.updated_at ?? a.created_at ?? '';
+        const bDate = b.updated_at ?? b.created_at ?? '';
+        return bDate.localeCompare(aDate) || a.title.localeCompare(b.title);
+      });
+
+    const playlists = await Promise.all(
+      publicPlaylists.map(async (playlist) => {
+        const playlistTracks = await getPlaylistTracks(ctx, playlist._id);
+        const artworkUrls = [
+          ...new Set(
+            playlistTracks
+              .map(({ track }) => track.artwork)
+              .filter((artwork): artwork is string => Boolean(artwork)),
+          ),
+        ].slice(0, 4);
+
+        return {
+          publicId: playlist.id,
+          title: playlist.title,
+          description: playlist.description ?? null,
+          coverImageUrl: playlist.cover_image_url ?? null,
+          trackCount: playlistTracks.length,
+          artworkUrls,
+        };
       }),
     );
 
     return {
-      ...playlist,
-      tracks: tracks
-        .filter(Boolean)
-        .sort((a, b) => (a?.position || 0) - (b?.position || 0)),
+      owner: toPublicOwner(owner),
+      playlists,
     };
   },
 });
@@ -139,10 +336,21 @@ export const getPlaylist = query({
 export const getPlaylistByOldId = query({
   args: { oldId: v.string() },
   handler: async (ctx, { oldId }) => {
-    return await ctx.db
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      return null;
+    }
+
+    const playlist = await ctx.db
       .query('playlists')
       .withIndex('by_old_id', (q) => q.eq('id', oldId))
       .first();
+
+    if (!playlist || !(await isPlaylistOwner(ctx, userId, playlist))) {
+      return null;
+    }
+
+    return normalizePlaylist(playlist);
   },
 });
 
@@ -176,7 +384,7 @@ export const createPlaylist = mutation({
       updated_at: new Date().toISOString(),
     });
 
-    return await ctx.db.get(playlistId);
+    return { playlistId };
   },
 });
 
@@ -250,21 +458,7 @@ export const updatePlaylist = mutation({
       throw new Error('Not authenticated');
     }
 
-    const playlist = await ctx.db.get(playlistId);
-    if (!playlist) {
-      throw new Error('Playlist not found');
-    }
-
-    // Verify ownership - check all possible user ID formats
-    const user = await ctx.db.get(userId);
-    const isOwner =
-      playlist.user_id === user?.email ||
-      playlist.user_id === userId ||
-      playlist.user_id === user?.supabaseUserId;
-
-    if (!isOwner) {
-      throw new Error('Not authorized');
-    }
+    await getOwnedPlaylist(ctx, userId, playlistId);
 
     await ctx.db.patch(playlistId, {
       ...updates,
@@ -286,26 +480,12 @@ export const deletePlaylist = mutation({
       throw new Error('Not authenticated');
     }
 
-    const playlist = await ctx.db.get(playlistId);
-    if (!playlist) {
-      throw new Error('Playlist not found');
-    }
-
-    // Verify ownership - check all possible user ID formats
-    const user = await ctx.db.get(userId);
-    const isOwner =
-      playlist.user_id === user?.email ||
-      playlist.user_id === userId ||
-      playlist.user_id === user?.supabaseUserId;
-
-    if (!isOwner) {
-      throw new Error('Not authorized');
-    }
+    await getOwnedPlaylist(ctx, userId, playlistId);
 
     // Delete playlist tracks first
     const playlistTracks = await ctx.db
       .query('playlist_tracks')
-      .filter((q) => q.eq(q.field('playlist_id'), playlistId))
+      .withIndex('by_playlist_position', (q) => q.eq('playlist_id', playlistId))
       .collect();
 
     for (const pt of playlistTracks) {
@@ -335,28 +515,27 @@ export const addTrackToPlaylist = mutation({
 
     await getOwnedPlaylist(ctx, userId, playlistId);
 
-    // Get current max position
-    const existingTracks = await ctx.db
+    const existing = await ctx.db
       .query('playlist_tracks')
-      .filter((q) => q.eq(q.field('playlist_id'), playlistId))
-      .collect();
-
-    const maxPosition = existingTracks.reduce(
-      (max, pt) => Math.max(max, pt.position),
-      -1,
-    );
-
-    // Check if track already in playlist
-    const existing = existingTracks.find((pt) => pt.track_id === trackId);
+      .withIndex('by_playlist_track', (q) =>
+        q.eq('playlist_id', playlistId).eq('track_id', trackId),
+      )
+      .first();
     if (existing) {
       return { success: true, message: 'Track already in playlist' };
     }
+
+    const lastTrack = await ctx.db
+      .query('playlist_tracks')
+      .withIndex('by_playlist_position', (q) => q.eq('playlist_id', playlistId))
+      .order('desc')
+      .first();
 
     await ctx.db.insert('playlist_tracks', {
       id: crypto.randomUUID(),
       playlist_id: playlistId,
       track_id: trackId,
-      position: maxPosition + 1,
+      position: (lastTrack?.position ?? -1) + 1,
       created_at: new Date().toISOString(),
     });
 
@@ -382,11 +561,8 @@ export const removeTrackFromPlaylist = mutation({
 
     const playlistTrack = await ctx.db
       .query('playlist_tracks')
-      .filter((q) =>
-        q.and(
-          q.eq(q.field('playlist_id'), playlistId),
-          q.eq(q.field('track_id'), trackId),
-        ),
+      .withIndex('by_playlist_track', (q) =>
+        q.eq('playlist_id', playlistId).eq('track_id', trackId),
       )
       .first();
 
@@ -395,5 +571,59 @@ export const removeTrackFromPlaylist = mutation({
     }
 
     return { success: true };
+  },
+});
+
+/**
+ * Replace the ordering of a playlist with the supplied track order. Requiring
+ * the exact current set prevents a reorder request from implicitly adding or
+ * deleting tracks.
+ */
+export const reorderPlaylistTracks = mutation({
+  args: {
+    playlistId: v.id('playlists'),
+    trackIds: v.array(v.id('tracks')),
+  },
+  handler: async (ctx, { playlistId, trackIds }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
+
+    await getOwnedPlaylist(ctx, userId, playlistId);
+
+    const playlistTracks = await ctx.db
+      .query('playlist_tracks')
+      .withIndex('by_playlist_position', (q) => q.eq('playlist_id', playlistId))
+      .collect();
+
+    const uniqueTrackIds = new Set(trackIds);
+    const playlistTrackByTrackId = new Map(
+      playlistTracks.map((playlistTrack) => [
+        playlistTrack.track_id,
+        playlistTrack,
+      ]),
+    );
+
+    if (
+      uniqueTrackIds.size !== trackIds.length ||
+      playlistTracks.length !== trackIds.length ||
+      playlistTrackByTrackId.size !== playlistTracks.length ||
+      trackIds.some((trackId) => !playlistTrackByTrackId.has(trackId))
+    ) {
+      throw new Error('Track order must contain every playlist track once');
+    }
+
+    for (const [position, trackId] of trackIds.entries()) {
+      const playlistTrack = playlistTrackByTrackId.get(trackId);
+      if (!playlistTrack || playlistTrack.position === position) continue;
+      await ctx.db.patch(playlistTrack._id, { position });
+    }
+
+    await ctx.db.patch(playlistId, {
+      updated_at: new Date().toISOString(),
+    });
+
+    return { success: true, trackCount: trackIds.length };
   },
 });
