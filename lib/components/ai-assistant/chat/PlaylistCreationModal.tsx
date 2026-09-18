@@ -16,13 +16,15 @@ import { Card, CardContent } from '@/lib/components/ui/card';
 import { Music, Plus, Check } from 'lucide-react';
 import { CrateTrack } from '@/lib/types';
 import { toast } from 'sonner';
-import { usePlaylists } from '@/lib/hooks/usePlaylists';
+import { useMutation } from 'convex/react';
+import { api } from '@/convex/_generated/api';
+import type { Id } from '@/convex/_generated/dataModel';
 
 interface PlaylistCreationModalProps {
   isOpen: boolean;
   onClose: () => void;
   suggestedTracks: CrateTrack[];
-  onPlaylistCreated?: (playlistId: string) => void;
+  onPlaylistCreated?: (playlistId: Id<'playlists'>) => void;
 }
 
 export default function PlaylistCreationModal({
@@ -38,7 +40,9 @@ export default function PlaylistCreationModal({
   );
   const [isCreating, setIsCreating] = useState(false);
 
-  const { createPlaylist, addTrackToPlaylist } = usePlaylists();
+  const createPlaylistWithTracks = useMutation(
+    api.playlists.createPlaylistWithTracks,
+  );
 
   const toggleTrackSelection = (trackId: string) => {
     const newSelection = new Set(selectedTracks);
@@ -64,25 +68,25 @@ export default function PlaylistCreationModal({
     setIsCreating(true);
 
     try {
-      // Create the playlist using Convex
-      const playlist = await createPlaylist(
-        playlistName,
-        description ||
-          `AI-generated playlist with ${selectedTracks.size} tracks`,
-      );
+      // Keep the suggestion order; tracks come from Convex, so each has an _id.
+      const trackIds = suggestedTracks
+        .filter((track) => selectedTracks.has(track.id))
+        .map((track) => (track as CrateTrack & { _id: Id<'tracks'> })._id)
+        .filter(Boolean);
 
-      if (!playlist) {
-        throw new Error('Failed to create playlist');
-      }
-
-      // Note: Adding tracks to playlist would require Convex IDs
-      // For now, we'll show success - tracks can be added later
-      // TODO: Implement track-to-playlist association with proper ID mapping
+      const { playlistId, trackCount } = await createPlaylistWithTracks({
+        title: playlistName,
+        description:
+          description || `AI-generated playlist with ${trackIds.length} tracks`,
+        trackIds,
+      });
 
       toast.success(
-        `Created playlist "${playlistName}" with ${selectedTracks.size} tracks`,
+        `Created playlist "${playlistName.trim()}" with ${trackCount} ${
+          trackCount === 1 ? 'track' : 'tracks'
+        }`,
       );
-      onPlaylistCreated?.(playlist._id);
+      onPlaylistCreated?.(playlistId);
       onClose();
 
       // Reset form
