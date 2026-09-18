@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { useAction } from 'convex/react';
+import { api } from '@/convex/_generated/api';
 import useDebounce from './useDebounce';
 import type { DiscogsSearchResult } from '@/lib/types';
 
@@ -24,7 +26,10 @@ const useDiscogsSearch = (): UseDiscogsSearchReturn => {
   const debouncedQuery = useDebounce(query, 300);
   const isQueryValid = debouncedQuery.length >= MIN_SEARCH_LENGTH;
 
+  const search = useAction(api.discogs.search);
+
   useEffect(() => {
+    let cancelled = false;
     const searchDiscogs = async () => {
       if (!isQueryValid) {
         setResults([]);
@@ -38,28 +43,12 @@ const useDiscogsSearch = (): UseDiscogsSearchReturn => {
       setNeedsConnection(false);
 
       try {
-        const response = await fetch('/api/external/discogs/search', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({ query: debouncedQuery }),
-        });
-
-        if (response.status === 401) {
-          setNeedsConnection(true);
-          setError('Please connect your Discogs account to search');
-          setResults([]);
-          return;
+        const data = await search({ query: debouncedQuery });
+        if (!cancelled) {
+          setResults(data.results as unknown as DiscogsSearchResult[]);
         }
-
-        if (!response.ok) {
-          throw new Error('Search request failed');
-        }
-
-        const data = await response.json();
-        setResults(data.results);
       } catch (err) {
+        if (cancelled) return;
         setError(
           err instanceof Error
             ? err.message
@@ -67,12 +56,15 @@ const useDiscogsSearch = (): UseDiscogsSearchReturn => {
         );
         setResults([]);
       } finally {
-        setIsLoading(false);
+        if (!cancelled) setIsLoading(false);
       }
     };
 
     searchDiscogs();
-  }, [debouncedQuery, isQueryValid]);
+    return () => {
+      cancelled = true;
+    };
+  }, [debouncedQuery, isQueryValid, search]);
 
   return {
     query,

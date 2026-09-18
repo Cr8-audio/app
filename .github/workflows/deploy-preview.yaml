@@ -33,8 +33,6 @@ jobs:
 
       - name: Build
         env:
-          VITE_DISCOGS_CONSUMER_KEY: ${{ secrets.VITE_DISCOGS_CONSUMER_KEY }}
-          VITE_DISCOGS_CONSUMER_SECRET: ${{ secrets.VITE_DISCOGS_CONSUMER_SECRET }}
           VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
         run: pnpm build
 

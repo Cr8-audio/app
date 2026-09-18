@@ -39,8 +39,6 @@ jobs:
       - name: Build
         env:
           VITE_CONVEX_URL: ${{ secrets.VITE_CONVEX_URL }}
-          VITE_DISCOGS_CONSUMER_KEY: ${{ secrets.VITE_DISCOGS_CONSUMER_KEY }}
-          VITE_DISCOGS_CONSUMER_SECRET: ${{ secrets.VITE_DISCOGS_CONSUMER_SECRET }}
         run: pnpm build
 
       - name: Clean wrangler cache
