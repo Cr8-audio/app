@@ -8,29 +8,35 @@ jobs:
   cleanup:
     name: Delete Preview Worker
     runs-on: ubuntu-latest
+    # Plain API calls instead of `wrangler delete`, which also lists KV
+    # namespaces and fails for tokens without KV access.
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTION_API_TOKEN }}
+      WORKERS_API: https://api.cloudflare.com/client/v4/accounts/2f84630cfef8a6b13712d41a0e8d9afc/workers
+      PREVIEW_HOST: pr-${{ github.event.pull_request.number }}.cr8.audio
+      PREVIEW_WORKER: crate-app-pr-${{ github.event.pull_request.number }}
 
     steps:
       # Detach pr-<number>.cr8.audio first so no DNS record outlives the Worker.
       - name: Remove Preview Domain
-        env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTION_API_TOKEN }}
-          DOMAINS_API: https://api.cloudflare.com/client/v4/accounts/2f84630cfef8a6b13712d41a0e8d9afc/workers/domains
-          PREVIEW_HOST: pr-${{ github.event.pull_request.number }}.cr8.audio
-          PREVIEW_WORKER: crate-app-pr-${{ github.event.pull_request.number }}
         run: |
-          ids=$(curl -fsS "$DOMAINS_API?hostname=$PREVIEW_HOST" \
+          ids=$(curl -fsS "$WORKERS_API/domains?hostname=$PREVIEW_HOST" \
             -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" |
             jq -r '.result[] | select(.hostname == env.PREVIEW_HOST and .service == env.PREVIEW_WORKER) | .id')
           for id in $ids; do
-            curl -fsS -X DELETE "$DOMAINS_API/$id" \
+            curl -fsS -X DELETE "$WORKERS_API/domains/$id" \
               -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" > /dev/null
             echo "Removed $PREVIEW_HOST"
           done
 
+      # PRs previewed before previews moved to this account have no Worker here.
       - name: Delete Preview Worker
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_PRODUCTION_API_TOKEN }}
-          accountId: 2f84630cfef8a6b13712d41a0e8d9afc
-          command: delete --name crate-app-pr-${{ github.event.pull_request.number }} --force
-
+        run: |
+          status=$(curl -sS -o response.json -w '%{http_code}' -X DELETE \
+            "$WORKERS_API/scripts/$PREVIEW_WORKER" \
+            -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN")
+          case "$status" in
+            200) echo "Deleted $PREVIEW_WORKER" ;;
+            404) echo "No $PREVIEW_WORKER on this account" ;;
+            *) cat response.json; exit 1 ;;
+          esac
