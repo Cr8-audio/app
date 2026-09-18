@@ -22,7 +22,6 @@ import { Route as UsernamePlaylistsRouteImport } from './app/$username/playlists
 import { Route as UsernameCollectionRouteImport } from './app/$username/collection'
 import { Route as UsernameSettingsIndexRouteImport } from './app/$username/settings/index'
 import { Route as ConnectDiscogsCallbackRouteImport } from './app/connect/discogs/callback'
-import { Route as ApiAiChatRouteImport } from './app/api/ai/chat'
 import { Route as UsernameSettingsConnectionsRouteImport } from './app/$username/settings/connections'
 import { Route as ApiExternalYoutubeSearchRouteImport } from './app/api/external/youtube/search'
 import { Route as ApiExternalYoutubeVideoIdRouteImport } from './app/api/external/youtube/$videoId'
@@ -94,11 +93,6 @@ const ConnectDiscogsCallbackRoute = ConnectDiscogsCallbackRouteImport.update({
   path: '/connect/discogs/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAiChatRoute = ApiAiChatRouteImport.update({
-  id: '/api/ai/chat',
-  path: '/api/ai/chat',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const UsernameSettingsConnectionsRoute =
   UsernameSettingsConnectionsRouteImport.update({
     id: '/$username/settings/connections',
@@ -143,7 +137,6 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/$username/settings/connections': typeof UsernameSettingsConnectionsRoute
-  '/api/ai/chat': typeof ApiAiChatRoute
   '/connect/discogs/callback': typeof ConnectDiscogsCallbackRoute
   '/$username/settings': typeof UsernameSettingsIndexRoute
   '/api/external/discogs/search': typeof ApiExternalDiscogsSearchRoute
@@ -164,7 +157,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/$username/settings/connections': typeof UsernameSettingsConnectionsRoute
-  '/api/ai/chat': typeof ApiAiChatRoute
   '/connect/discogs/callback': typeof ConnectDiscogsCallbackRoute
   '/$username/settings': typeof UsernameSettingsIndexRoute
   '/api/external/discogs/search': typeof ApiExternalDiscogsSearchRoute
@@ -186,7 +178,6 @@ export interface FileRoutesById {
   '/auth/': typeof AuthIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/$username/settings/connections': typeof UsernameSettingsConnectionsRoute
-  '/api/ai/chat': typeof ApiAiChatRoute
   '/connect/discogs/callback': typeof ConnectDiscogsCallbackRoute
   '/$username/settings/': typeof UsernameSettingsIndexRoute
   '/api/external/discogs/search': typeof ApiExternalDiscogsSearchRoute
@@ -209,7 +200,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/$username/settings/connections'
-    | '/api/ai/chat'
     | '/connect/discogs/callback'
     | '/$username/settings'
     | '/api/external/discogs/search'
@@ -230,7 +220,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/onboarding'
     | '/$username/settings/connections'
-    | '/api/ai/chat'
     | '/connect/discogs/callback'
     | '/$username/settings'
     | '/api/external/discogs/search'
@@ -251,7 +240,6 @@ export interface FileRouteTypes {
     | '/auth/'
     | '/onboarding/'
     | '/$username/settings/connections'
-    | '/api/ai/chat'
     | '/connect/discogs/callback'
     | '/$username/settings/'
     | '/api/external/discogs/search'
@@ -272,7 +260,6 @@ export interface RootRouteChildren {
   AuthIndexRoute: typeof AuthIndexRoute
   OnboardingIndexRoute: typeof OnboardingIndexRoute
   UsernameSettingsConnectionsRoute: typeof UsernameSettingsConnectionsRoute
-  ApiAiChatRoute: typeof ApiAiChatRoute
   ConnectDiscogsCallbackRoute: typeof ConnectDiscogsCallbackRoute
   UsernameSettingsIndexRoute: typeof UsernameSettingsIndexRoute
   ApiExternalDiscogsSearchRoute: typeof ApiExternalDiscogsSearchRoute
@@ -374,13 +361,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ConnectDiscogsCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/ai/chat': {
-      id: '/api/ai/chat'
-      path: '/api/ai/chat'
-      fullPath: '/api/ai/chat'
-      preLoaderRoute: typeof ApiAiChatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/$username/settings/connections': {
       id: '/$username/settings/connections'
       path: '/$username/settings/connections'
@@ -442,7 +422,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthIndexRoute: AuthIndexRoute,
   OnboardingIndexRoute: OnboardingIndexRoute,
   UsernameSettingsConnectionsRoute: UsernameSettingsConnectionsRoute,
-  ApiAiChatRoute: ApiAiChatRoute,
   ConnectDiscogsCallbackRoute: ConnectDiscogsCallbackRoute,
   UsernameSettingsIndexRoute: UsernameSettingsIndexRoute,
   ApiExternalDiscogsSearchRoute: ApiExternalDiscogsSearchRoute,
