@@ -1,4 +1,4 @@
-import { Link } from '@tanstack/react-router';
+import { Link, useParams } from '@tanstack/react-router';
 import { CollectionRelease } from '@/lib/types';
 import TrackGrid from '@/lib/components/crate-explorer/tracks/TrackGrid';
 import { Button } from '@/lib/components/ui/button';
@@ -19,6 +19,8 @@ const CollectionView = ({
   viewMode,
   needsConnection,
 }: CollectionViewProps) => {
+  const { username } = useParams({ strict: false });
+
   if (isLoading) return <div>Loading collection...</div>;
 
   if (needsConnection) {
@@ -34,7 +36,10 @@ const CollectionView = ({
           To view your collection, you need to connect your Discogs account
           first. This will sync your vinyl and physical music collection.
         </p>
-        <Link to="/$username/settings/connections" params={{ username: '_' }}>
+        <Link
+          to="/$username/settings/connections"
+          params={{ username: username ?? '' }}
+        >
           <Button className="bg-main hover:bg-mainAccent border-2 border-gray-800 shadow-light hover:translate-x-boxShadowX hover:translate-y-boxShadowY hover:shadow-none transition-all">
             <ExternalLink className="w-4 h-4 mr-2" />
             Connect Discogs
@@ -50,20 +55,26 @@ const CollectionView = ({
     <TrackGrid
       viewMode={viewMode}
       items={collection.map((release) => ({
-        id: release.basic_information.id,
-        title: `${release.basic_information.artists.map((a) => a.name).join(', ')} - ${release.basic_information.title}`,
+        id: release.id,
+        title: `${(release.basic_information.artists ?? []).map((a) => a.name).join(', ')} - ${release.basic_information.title}`,
         thumb: release.basic_information.thumb,
         cover_image: release.basic_information.cover_image,
         year: String(release.basic_information.year),
-        label: [release.basic_information.labels.map((l) => l.name).join(', ')],
+        label: [
+          (release.basic_information.labels ?? [])
+            .map((l) => l.name)
+            .join(', '),
+        ],
         genre: release.basic_information.genres,
         style: release.basic_information.styles,
         format: [
-          release.basic_information.formats.map((f) => f.name).join(', '),
+          (release.basic_information.formats ?? [])
+            .map((f) => f.name)
+            .join(', '),
         ],
         type: 'release',
-        uri: `https://www.discogs.com/release/${release.basic_information.id}`,
-        resource_url: `https://api.discogs.com/releases/${release.basic_information.id}`,
+        uri: `https://www.discogs.com/release/${release.id}`,
+        resource_url: `https://api.discogs.com/releases/${release.id}`,
         date_added: release.date_added,
       }))}
     />

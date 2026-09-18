@@ -53,3 +53,31 @@ export function releasesToRemove(
   const keep = new Set(Array.from(currentIds, String));
   return storedIds.map(String).filter((id) => !keep.has(id));
 }
+
+/**
+ * Stored release data comes in two shapes: a Discogs collection item
+ * (`{ id, basic_information }`, from sync) or a bare release object (some
+ * migrated rows). Normalize to the collection-item shape; drop anything else.
+ */
+export function toCollectionRelease(
+  discogsReleaseId: string | number,
+  data: unknown,
+): { id: number; basic_information: Record<string, unknown> } | null {
+  if (!data || typeof data !== 'object') return null;
+  const record = data as Record<string, unknown>;
+  const id = Number(discogsReleaseId);
+  if (
+    record.basic_information &&
+    typeof record.basic_information === 'object'
+  ) {
+    return {
+      ...record,
+      id,
+      basic_information: record.basic_information as Record<string, unknown>,
+    };
+  }
+  if (typeof record.title === 'string') {
+    return { id, basic_information: record };
+  }
+  return null;
+}
