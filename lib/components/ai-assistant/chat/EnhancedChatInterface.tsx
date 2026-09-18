@@ -522,9 +522,6 @@ export default function EnhancedChatInterface({
         isOpen={playlistModalOpen}
         onClose={() => setPlaylistModalOpen(false)}
         suggestedTracks={playlistTracks}
-        onPlaylistCreated={() => {
-          toast.success('Playlist created successfully!');
-        }}
       />
     </div>
   );

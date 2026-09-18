@@ -1,6 +1,32 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { query, mutation } from './_generated/server';
+import { query, mutation, type MutationCtx } from './_generated/server';
+import type { Id } from './_generated/dataModel';
 import { v } from 'convex/values';
+
+/**
+ * Load a playlist the current user owns. Playlists store the owner under
+ * whichever id was current when they were made (email, Convex id, or the
+ * migrated Supabase id).
+ */
+async function getOwnedPlaylist(
+  ctx: MutationCtx,
+  userId: Id<'users'>,
+  playlistId: Id<'playlists'>,
+) {
+  const playlist = await ctx.db.get(playlistId);
+  if (!playlist) {
+    throw new Error('Playlist not found');
+  }
+  const user = await ctx.db.get(userId);
+  const isOwner =
+    playlist.user_id === user?.email ||
+    playlist.user_id === userId ||
+    playlist.user_id === user?.supabaseUserId;
+  if (!isOwner) {
+    throw new Error('Not authorized');
+  }
+  return playlist;
+}
 
 /**
  * Get all playlists for the authenticated user
@@ -155,6 +181,60 @@ export const createPlaylist = mutation({
 });
 
 /**
+ * Create a playlist and add tracks to it in one transaction, in the order
+ * given. Used by "Create playlist" in the DJ assistant chat.
+ */
+export const createPlaylistWithTracks = mutation({
+  args: {
+    title: v.string(),
+    description: v.optional(v.string()),
+    trackIds: v.array(v.id('tracks')),
+  },
+  handler: async (ctx, { title, description, trackIds }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
+    const user = await ctx.db.get(userId);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    const trimmed = title.trim();
+    if (!trimmed) {
+      throw new Error('Playlist title is required');
+    }
+
+    const now = new Date().toISOString();
+    const playlistId = await ctx.db.insert('playlists', {
+      id: crypto.randomUUID(),
+      user_id: user.email || userId,
+      title: trimmed,
+      description: description || '',
+      is_public: false,
+      is_favorites: false,
+      created_at: now,
+      updated_at: now,
+    });
+
+    const uniqueTrackIds = [...new Set(trackIds)];
+    let added = 0;
+    for (const trackId of uniqueTrackIds) {
+      if (!(await ctx.db.get(trackId))) continue;
+      await ctx.db.insert('playlist_tracks', {
+        id: crypto.randomUUID(),
+        playlist_id: playlistId,
+        track_id: trackId,
+        position: added,
+        created_at: now,
+      });
+      added++;
+    }
+
+    return { playlistId, trackCount: added };
+  },
+});
+
+/**
  * Update a playlist
  */
 export const updatePlaylist = mutation({
@@ -253,10 +333,7 @@ export const addTrackToPlaylist = mutation({
       throw new Error('Not authenticated');
     }
 
-    const playlist = await ctx.db.get(playlistId);
-    if (!playlist) {
-      throw new Error('Playlist not found');
-    }
+    await getOwnedPlaylist(ctx, userId, playlistId);
 
     // Get current max position
     const existingTracks = await ctx.db
@@ -300,6 +377,8 @@ export const removeTrackFromPlaylist = mutation({
     if (!userId) {
       throw new Error('Not authenticated');
     }
+
+    await getOwnedPlaylist(ctx, userId, playlistId);
 
     const playlistTrack = await ctx.db
       .query('playlist_tracks')
