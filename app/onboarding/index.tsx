@@ -1,5 +1,6 @@
 import { createFileRoute, useNavigate } from '@tanstack/react-router';
 import { useState, useEffect } from 'react';
+import { suggestUsername } from '@/convex/lib/discogsOAuth';
 import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { Button } from '@/lib/components/ui/button';
@@ -44,14 +45,13 @@ function OnboardingPage() {
     }
   }, [user, navigate]);
 
-  // Suggest username from email
+  // Suggest the Discogs username (set as displayName at sign-in)
   useEffect(() => {
-    if (user?.email && !username) {
-      const suggestedUsername = (user.email as string).split('@')[0];
-      setUsername(suggestedUsername);
-      setDisplayName(suggestedUsername);
+    if (user?.displayName && !username) {
+      setUsername(suggestUsername(user.displayName) ?? '');
+      setDisplayName(user.displayName);
     }
-  }, [user?.email, username]);
+  }, [user?.displayName, username]);
 
   // Client-side validation
   useEffect(() => {

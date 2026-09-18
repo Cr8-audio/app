@@ -6,12 +6,16 @@
  * reach their collection. Tokens never leave the server: public functions
  * return status only.
  *
- * Flow: `startConnection` → user approves on discogs.com → Discogs redirects to
- * `/connect/discogs/callback` → that page calls `completeConnection` → tokens
- * are stored and `syncCollection` runs in the background.
+ * Two flows share the OAuth dance and the callback page
+ * (`/connect/discogs/callback`):
+ * - Sign in: `startSignIn` → discogs.com → the page calls Convex Auth's
+ *   `signIn('discogs', …)` (see `discogsAuth.ts`), which verifies the Discogs
+ *   identity, signs the user in and stores tokens.
+ * - Connect/reconnect while signed in: `startConnection` → discogs.com →
+ *   `completeConnection`.
+ * Either way `syncCollection` then runs in the background.
  */
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { DiscogsSDK } from '@cr8.audio/discogs-sdk';
 import { v } from 'convex/values';
 import { internal } from './_generated/api';
 import type { Id } from './_generated/dataModel';
@@ -25,31 +29,20 @@ import {
   type MutationCtx,
 } from './_generated/server';
 import {
+  MIN_SIGN_IN_NONCE_LENGTH,
   discogsCallbackUrl,
+  hashNonce,
   isAllowedAppOrigin,
   isRequestExpired,
 } from './lib/discogsOAuth';
+import {
+  createDiscogsSdk as createSdk,
+  exchangeDiscogsVerifier,
+} from './lib/discogsClient';
 import { buildSearchParams, rankSearchResults } from './lib/discogsSearch';
 
 const PROVIDER = 'discogs';
-const USER_AGENT = 'CrateApp/1.0 +https://cr8.audio';
 const PAGE_SIZE = 100;
-
-function createSdk(callbackUrl?: string) {
-  const key = process.env.DISCOGS_CONSUMER_KEY;
-  const secret = process.env.DISCOGS_CONSUMER_SECRET;
-  if (!key || !secret) {
-    throw new Error(
-      'DISCOGS_CONSUMER_KEY and DISCOGS_CONSUMER_SECRET must be set on the Convex deployment',
-    );
-  }
-  return new DiscogsSDK({
-    DiscogsConsumerKey: key,
-    DiscogsConsumerSecret: secret,
-    callbackUrl,
-    userAgent: USER_AGENT,
-  });
-}
 
 async function getDiscogsConnection(ctx: MutationCtx, userId: Id<'users'>) {
   return await ctx.db
@@ -64,7 +57,36 @@ async function getDiscogsConnection(ctx: MutationCtx, userId: Id<'users'>) {
 // Public API
 // ---------------------------------------------------------------------------
 
-/** Step 1: get a request token and the discogs.com URL to send the user to. */
+/**
+ * Sign in with Discogs, step 1 (no Crate session needed). `nonce` is a random
+ * value the browser keeps and sends back with `signIn`, so a callback link
+ * from someone else's authorization can't sign this browser into their
+ * account.
+ */
+export const startSignIn = action({
+  args: { origin: v.string(), nonce: v.string() },
+  handler: async (ctx, { origin, nonce }): Promise<{ authUrl: string }> => {
+    if (!isAllowedAppOrigin(origin)) {
+      throw new Error(`Origin not allowed: ${origin}`);
+    }
+    if (nonce.length < MIN_SIGN_IN_NONCE_LENGTH) {
+      throw new Error('Invalid sign-in nonce');
+    }
+
+    const sdk = createSdk(discogsCallbackUrl(origin));
+    const { verificationURL, requestTokens } = await sdk.auth.getRequestToken();
+
+    await ctx.runMutation(internal.discogs.savePendingRequest, {
+      nonceHash: await hashNonce(nonce),
+      requestToken: requestTokens.token,
+      requestTokenSecret: requestTokens.secret,
+    });
+
+    return { authUrl: verificationURL };
+  },
+});
+
+/** Connect step 1: get a request token and the discogs.com URL to send the user to. */
 export const startConnection = action({
   args: { origin: v.string() },
   handler: async (ctx, { origin }): Promise<{ authUrl: string }> => {
@@ -89,7 +111,7 @@ export const startConnection = action({
   },
 });
 
-/** Step 2: exchange the verifier from the callback for access tokens. */
+/** Connect step 2: exchange the verifier from the callback for access tokens. */
 export const completeConnection = action({
   args: { oauthToken: v.string(), oauthVerifier: v.string() },
   handler: async (
@@ -114,27 +136,14 @@ export const completeConnection = action({
       throw new Error('Discogs authorization expired, please try again');
     }
 
-    const sdk = createSdk();
-    const tokenManager = sdk.auth.base.getTokenManager();
-    await tokenManager.setRequestToken(pending.requestToken);
-    await tokenManager.setRequestTokenSecret(pending.requestTokenSecret);
-
-    const tokens = await sdk.auth.handleCallback({
-      oauthToken,
-      oauthVerifier,
-    });
-    const identity = await sdk.auth.getUserIdentity();
-
+    const authorization = await exchangeDiscogsVerifier(pending, oauthVerifier);
     await ctx.runMutation(internal.discogs.saveConnection, {
       userId,
       pendingId: pending._id,
-      accessToken: tokens.token,
-      accessTokenSecret: tokens.secret,
-      discogsUserId: String(identity.id),
-      username: identity.username,
+      ...authorization,
     });
 
-    return { username: identity.username };
+    return { username: authorization.username };
   },
 });
 
@@ -258,18 +267,21 @@ export const search = action({
 
 export const savePendingRequest = internalMutation({
   args: {
-    userId: v.id('users'),
+    userId: v.optional(v.id('users')),
+    nonceHash: v.optional(v.string()),
     requestToken: v.string(),
     requestTokenSecret: v.string(),
   },
   handler: async (ctx, args) => {
-    // One pending authorization per user; a new "Connect" click replaces it.
-    const stale = await ctx.db
-      .query('discogs_oauth_requests')
-      .withIndex('by_user', (q) => q.eq('userId', args.userId))
-      .collect();
-    for (const row of stale) {
-      await ctx.db.delete(row._id);
+    // One pending connect per user; a new "Connect" click replaces it.
+    if (args.userId) {
+      const stale = await ctx.db
+        .query('discogs_oauth_requests')
+        .withIndex('by_user', (q) => q.eq('userId', args.userId))
+        .collect();
+      for (const row of stale) {
+        await ctx.db.delete(row._id);
+      }
     }
     await ctx.db.insert('discogs_oauth_requests', {
       ...args,

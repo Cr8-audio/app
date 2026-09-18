@@ -55,61 +55,6 @@ export const getConnectionByProvider = query({
 });
 
 /**
- * Store or update a music service connection
- */
-export const upsertConnection = mutation({
-  args: {
-    provider: v.string(),
-    accessToken: v.string(),
-    refreshToken: v.optional(v.string()),
-    expiresAt: v.optional(v.number()),
-    providerUserId: v.string(),
-    providerUsername: v.optional(v.string()),
-    providerData: v.optional(v.any()),
-  },
-  handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error('Not authenticated');
-    }
-
-    // Check if connection already exists
-    const existing = await ctx.db
-      .query('user_music_connections')
-      .withIndex('by_user_provider', (q) =>
-        q.eq('userId', userId).eq('provider', args.provider),
-      )
-      .first();
-
-    if (existing) {
-      // Update existing connection
-      await ctx.db.patch(existing._id, {
-        accessToken: args.accessToken,
-        refreshToken: args.refreshToken,
-        expiresAt: args.expiresAt,
-        providerUserId: args.providerUserId,
-        providerUsername: args.providerUsername,
-        providerData: args.providerData,
-      });
-      return { connectionId: existing._id, isNew: false };
-    } else {
-      // Create new connection
-      const connectionId = await ctx.db.insert('user_music_connections', {
-        userId,
-        provider: args.provider,
-        accessToken: args.accessToken,
-        refreshToken: args.refreshToken,
-        expiresAt: args.expiresAt,
-        providerUserId: args.providerUserId,
-        providerUsername: args.providerUsername,
-        providerData: args.providerData,
-      });
-      return { connectionId, isNew: true };
-    }
-  },
-});
-
-/**
  * Remove a music service connection
  */
 export const removeConnection = mutation({

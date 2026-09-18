@@ -51,11 +51,15 @@ export default defineSchema({
     releaseCount: v.optional(v.number()),
   })
     .index('by_user', ['userId'])
-    .index('by_user_provider', ['userId', 'provider']),
+    .index('by_user_provider', ['userId', 'provider'])
+    .index('by_provider_user', ['provider', 'providerUserId']),
 
-  // Discogs OAuth request tokens between "Connect" and the callback.
+  // Discogs OAuth request tokens between the click and the callback.
+  // Connecting from settings sets userId; signing in sets nonceHash instead,
+  // binding the request to the browser that started it.
   discogs_oauth_requests: defineTable({
-    userId: v.id('users'),
+    userId: v.optional(v.id('users')),
+    nonceHash: v.optional(v.string()),
     requestToken: v.string(),
     requestTokenSecret: v.string(),
     createdAt: v.number(),

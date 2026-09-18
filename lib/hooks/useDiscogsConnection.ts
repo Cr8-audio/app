@@ -5,6 +5,9 @@ import { api } from '@/convex/_generated/api';
 /** Where to land after the Discogs callback; set before leaving for discogs.com. */
 export const DISCOGS_RETURN_KEY = 'crate:discogs-return-to';
 
+/** Present only while a "Continue with Discogs" sign-in is in flight. */
+export const DISCOGS_SIGN_IN_NONCE_KEY = 'crate:discogs-sign-in-nonce';
+
 export type DiscogsConnectionState =
   | 'loading'
   | 'not_connected'

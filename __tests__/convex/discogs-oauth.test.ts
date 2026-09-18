@@ -7,6 +7,8 @@ import {
   pickCollectionOwnerKey,
   releasesToRemove,
   toCollectionRelease,
+  hashNonce,
+  suggestUsername,
 } from '@/convex/lib/discogsOAuth';
 
 describe('isAllowedAppOrigin', () => {
@@ -102,5 +104,36 @@ describe('toCollectionRelease', () => {
   it('drops rows without usable data', () => {
     expect(toCollectionRelease(1, null)).toBeNull();
     expect(toCollectionRelease(1, { foo: 'bar' })).toBeNull();
+  });
+});
+
+describe('hashNonce', () => {
+  it('is a stable SHA-256 hex digest', async () => {
+    expect(await hashNonce('abc')).toBe(
+      'ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad',
+    );
+  });
+
+  it('differs for different nonces', async () => {
+    expect(await hashNonce('a')).not.toBe(await hashNonce('b'));
+  });
+});
+
+describe('suggestUsername', () => {
+  it('lowercases and keeps allowed characters', () => {
+    expect(suggestUsername('DJ_Paprika-f')).toBe('dj_paprika-f');
+  });
+
+  it('replaces other characters with hyphens', () => {
+    expect(suggestUsername('ahmed.felfel')).toBe('ahmed-felfel');
+    expect(suggestUsername('..ab..c..')).toBe('ab-c');
+  });
+
+  it('caps length at 30', () => {
+    expect(suggestUsername('a'.repeat(40))).toHaveLength(30);
+  });
+
+  it('returns null when fewer than 3 usable characters remain', () => {
+    expect(suggestUsername('a.')).toBeNull();
   });
 });

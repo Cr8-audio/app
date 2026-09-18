@@ -311,46 +311,6 @@ export const getDiscogsProfile = query({
 });
 
 /**
- * Save or update Discogs profile for the current user
- */
-export const saveDiscogsProfile = mutation({
-  args: {
-    username: v.string(),
-  },
-  handler: async (ctx, { username }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new Error('Not authenticated');
-    }
-
-    const user = await ctx.db.get(userId);
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    // Check if profile already exists
-    const existing = await ctx.db
-      .query('user_discogs_profile')
-      .withIndex('by_user', (q) => q.eq('user_id', userId))
-      .first();
-
-    if (existing) {
-      // Update existing profile
-      await ctx.db.patch(existing._id, { username });
-      return { success: true, action: 'updated' };
-    }
-
-    // Create new profile
-    await ctx.db.insert('user_discogs_profile', {
-      user_id: userId,
-      username,
-    });
-
-    return { success: true, action: 'created' };
-  },
-});
-
-/**
  * Remove Discogs profile for the current user
  */
 export const removeDiscogsProfile = mutation({

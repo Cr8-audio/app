@@ -81,3 +81,30 @@ export function toCollectionRelease(
   }
   return null;
 }
+
+/** Sign-in nonces are random per browser; anything shorter is a mistake. */
+export const MIN_SIGN_IN_NONCE_LENGTH = 32;
+
+/** SHA-256 hex of a sign-in nonce; only the hash is stored server-side. */
+export async function hashNonce(nonce: string): Promise<string> {
+  const digest = await crypto.subtle.digest(
+    'SHA-256',
+    new TextEncoder().encode(nonce),
+  );
+  return Array.from(new Uint8Array(digest), (b) =>
+    b.toString(16).padStart(2, '0'),
+  ).join('');
+}
+
+/**
+ * Turn a Discogs username into a Crate username suggestion (3-30 chars of
+ * letters, numbers, `_` and `-`), or null if nothing usable is left.
+ */
+export function suggestUsername(discogsUsername: string): string | null {
+  const cleaned = discogsUsername
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 30);
+  return cleaned.length >= 3 ? cleaned : null;
+}
