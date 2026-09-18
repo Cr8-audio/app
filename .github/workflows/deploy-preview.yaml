@@ -14,6 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PREVIEW_HOST: pr-${{ github.event.pull_request.number }}.cr8.audio
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
 
     steps:
       - name: Checkout
@@ -42,8 +43,9 @@ jobs:
       - name: Clean wrangler cache
         run: rm -rf .wrangler
 
-      - name: Deploy Preview to Cloudflare Workers
-        id: deploy
+      - name: Deploy Preview with Audio Search
+        if: env.YOUTUBE_API_KEY != ''
+        id: deploy-with-audio
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_PRODUCTION_API_TOKEN }}
@@ -51,8 +53,19 @@ jobs:
           command: deploy --config dist/server/wrangler.json --name crate-app-pr-${{ github.event.pull_request.number }} --domain ${{ env.PREVIEW_HOST }}
           secrets: |
             YOUTUBE_API_KEY
-        env:
-          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+
+      - name: Deploy Preview without Audio Search
+        if: env.YOUTUBE_API_KEY == ''
+        id: deploy-without-audio
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_PRODUCTION_API_TOKEN }}
+          accountId: 2f84630cfef8a6b13712d41a0e8d9afc
+          command: deploy --config dist/server/wrangler.json --name crate-app-pr-${{ github.event.pull_request.number }} --domain ${{ env.PREVIEW_HOST }}
+
+      - name: Warn about disabled preview audio search
+        if: env.YOUTUBE_API_KEY == ''
+        run: echo "::warning::YOUTUBE_API_KEY is not configured; the preview is live, but YouTube search returns 503 until the repository secret is added."
 
       - name: Comment PR with Preview URL
         uses: actions/github-script@v7
@@ -60,27 +73,27 @@ jobs:
           script: |
             const prNumber = context.payload.pull_request.number;
             const previewUrl = `https://${process.env.PREVIEW_HOST}`;
-            
+
             // Find existing comment
             const { data: comments } = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: prNumber,
             });
-            
+
             const botComment = comments.find(comment => 
               comment.user.type === 'Bot' && 
               comment.body.includes('🚀 Preview Deployment')
             );
-            
+
             const body = `## 🚀 Preview Deployment
-            
+
             **URL:** ${previewUrl}
             **Commit:** \`${context.payload.pull_request.head.sha.substring(0, 7)}\`
             **Updated:** ${new Date().toISOString()}
-            
+
             > This preview will be automatically deleted when the PR is closed.`;
-            
+
             if (botComment) {
               await github.rest.issues.updateComment({
                 owner: context.repo.owner,
