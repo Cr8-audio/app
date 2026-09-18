@@ -79,7 +79,6 @@
     "realtime-bpm-analyzer": "^4.0.2",
     "recharts": "^2.14.1",
     "redis": "^4.7.0",
-    "resend": "^6.5.2",
     "sonner": "^1.7.2",
     "tailwind-merge": "^2.3.0",
     "tailwindcss-animate": "^1.0.7",

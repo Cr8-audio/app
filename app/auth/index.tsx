@@ -57,7 +57,8 @@ function SignInForm() {
       <div className="w-full max-w-md p-8 bg-white rounded-lg border-2 border-gray-800 shadow-light">
         <h1 className="text-2xl font-bold mb-2">Sign In to Crate</h1>
         <p className="text-gray-600 mb-6">
-          Enter your email to receive a verification code
+          Sign in with your Discogs account. New here? This creates your Crate
+          account and syncs your collection.
         </p>
         <SignInButton />
       </div>
