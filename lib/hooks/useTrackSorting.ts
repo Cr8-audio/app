@@ -19,9 +19,9 @@ export function useTrackSorting(tracks: CrateTrack[]) {
         return sorted.sort(
           (a, b) =>
             sign *
-            (a.genres ?? '').toLowerCase().localeCompare(
-              (b.genres ?? '').toLowerCase(),
-            ),
+            (a.genres ?? '')
+              .toLowerCase()
+              .localeCompare((b.genres ?? '').toLowerCase()),
         );
       default:
         return sorted;
