@@ -68,7 +68,16 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_PRODUCTION_API_TOKEN }}
           accountId: 2f84630cfef8a6b13712d41a0e8d9afc
           command: deploy --config dist/server/wrangler.json
-          secrets: |
-            YOUTUBE_API_KEY
         env:
           YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+
+      # wrangler-action's `secrets` input does not forward `accountId` to the
+      # secret upload. Bind the key explicitly so it reaches the Worker just
+      # deployed on the cr8.audio account rather than the config's stale
+      # top-level account.
+      - name: Bind YouTube API Key
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_PRODUCTION_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: 2f84630cfef8a6b13712d41a0e8d9afc
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+        run: printf '%s' "$YOUTUBE_API_KEY" | pnpm exec wrangler secret put YOUTUBE_API_KEY --config dist/server/wrangler.json --name crate-app
