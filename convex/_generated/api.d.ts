@@ -19,6 +19,7 @@ import type * as http from "../http.js";
 import type * as lib_discogsClient from "../lib/discogsClient.js";
 import type * as lib_discogsOAuth from "../lib/discogsOAuth.js";
 import type * as lib_discogsSearch from "../lib/discogsSearch.js";
+import type * as lib_username from "../lib/username.js";
 import type * as migrations from "../migrations.js";
 import type * as musicConnections from "../musicConnections.js";
 import type * as playlists from "../playlists.js";
@@ -44,6 +45,7 @@ declare const fullApi: ApiFromModules<{
   "lib/discogsClient": typeof lib_discogsClient;
   "lib/discogsOAuth": typeof lib_discogsOAuth;
   "lib/discogsSearch": typeof lib_discogsSearch;
+  "lib/username": typeof lib_username;
   migrations: typeof migrations;
   musicConnections: typeof musicConnections;
   playlists: typeof playlists;
