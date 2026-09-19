@@ -1,13 +1,14 @@
 'use client';
 
 import { Link, Navigate, useLocation } from '@tanstack/react-router';
-import { Disc3, LibraryBig, ListMusic, MessageCircle } from 'lucide-react';
+import { LibraryBig, ListMusic, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { cn } from '@/lib/utils/tailwind';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import PersistentPlayer from '@/lib/components/ui/persistent-player';
 import { LoadingSpinner } from '@/lib/components/ui/loading';
+import CrateLogo from '@/lib/components/common/Logo';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -73,9 +74,7 @@ function BareLoadingState() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="flex flex-col items-center gap-4">
-        <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-foreground text-background">
-          <Disc3 className="h-5 w-5" />
-        </span>
+        <CrateLogo className="h-11 w-11" />
         <LoadingSpinner />
       </div>
     </div>

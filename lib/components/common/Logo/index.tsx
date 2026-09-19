@@ -1,18 +1,19 @@
-import React from 'react';
+import { cn } from '@/lib/utils/tailwind';
 
-const CrateLogo: React.FC = () => {
+interface CrateLogoProps {
+  className?: string;
+}
+
+const CrateLogo = ({ className }: CrateLogoProps) => {
   return (
-    <div className="relative w-32 h-32 flex items-center justify-center bg-black m-12">
-      <div className="perspective">
-        <div className="absolute w-full h-1/4 bg-popover bottom-0 animate-assembleBottom"></div>
-        <div className="absolute w-1/4 h-full bg-popover left-0 animate-assembleLeft"></div>
-        <div className="absolute w-1/4 h-full bg-popover right-0 animate-assembleRight"></div>
-        <div className="absolute w-full h-1/4 bg-popover top-0 animate-assembleTop"></div>
-        <div className="absolute w-full h-full bg-popover opacity-75 animate-fadeIn"></div>
-        {''}
-        {/* Optional front face */}
-      </div>
-    </div>
+    <img
+      src="/logo.svg"
+      alt=""
+      aria-hidden="true"
+      width={64}
+      height={64}
+      className={cn('block shrink-0', className)}
+    />
   );
 };
 

@@ -9,6 +9,7 @@ import {
 import { api } from '@/convex/_generated/api';
 import SignInButton from '@/lib/components/signIn';
 import { LoadingSpinner } from '@/lib/components/ui/loading';
+import CrateLogo from '@/lib/components/common/Logo';
 
 const HomeClient = () => {
   return (
@@ -128,9 +129,7 @@ function LandingPage() {
           className="group inline-flex items-center gap-3 rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
           aria-label="Crate home"
         >
-          <span className="grid h-9 w-9 place-items-center rounded-full bg-foreground transition-transform duration-300 group-hover:rotate-12">
-            <span className="h-3 w-3 rounded-full border-[3px] border-background bg-primary" />
-          </span>
+          <CrateLogo className="h-9 w-9 transition-transform duration-300 group-hover:rotate-6" />
           <span className="text-lg font-semibold tracking-[-0.04em]">
             Crate
           </span>

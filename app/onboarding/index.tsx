@@ -8,6 +8,7 @@ import { suggestUsername } from '@/convex/lib/discogsOAuth';
 import { getUsernameValidationError } from '@/convex/lib/username';
 import { Button } from '@/lib/components/ui/button';
 import { LoadingSpinner } from '@/lib/components/ui/loading';
+import CrateLogo from '@/lib/components/common/Logo';
 
 export const Route = createFileRoute('/onboarding/')({
   component: OnboardingPage,
@@ -118,9 +119,7 @@ function OnboardingPage() {
       <div className="relative mx-auto w-full max-w-6xl">
         <div className="mb-10 flex items-center justify-between">
           <div className="inline-flex items-center gap-3">
-            <span className="grid h-9 w-9 place-items-center rounded-full bg-foreground">
-              <span className="h-3 w-3 rounded-full border-[3px] border-background bg-primary" />
-            </span>
+            <CrateLogo className="h-9 w-9" />
             <span className="text-lg font-semibold tracking-[-0.04em]">
               Crate
             </span>
