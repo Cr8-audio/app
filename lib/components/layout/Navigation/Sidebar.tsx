@@ -1,6 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router';
 import {
-  Disc3,
   LibraryBig,
   ListMusic,
   MessageCircle,
@@ -13,6 +12,7 @@ import {
   AvatarFallback,
   AvatarImage,
 } from '@/lib/components/ui/avatar';
+import CrateLogo from '@/lib/components/common/Logo';
 
 export default function Sidebar() {
   const { pathname } = useLocation();
@@ -54,9 +54,7 @@ export default function Sidebar() {
         className="mb-9 flex items-center gap-3 rounded-xl px-2 py-1.5"
         aria-label="Crate overview"
       >
-        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-foreground text-background shadow-sm">
-          <Disc3 className="h-[1.15rem] w-[1.15rem]" strokeWidth={1.8} />
-        </span>
+        <CrateLogo className="h-9 w-9 shadow-sm" />
         <span className="text-[1.05rem] font-semibold tracking-[-0.025em]">
           crate
         </span>
