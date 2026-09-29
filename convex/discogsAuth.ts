@@ -16,6 +16,7 @@ import type { MutationCtx } from './_generated/server';
 import {
   exchangeDiscogsVerifier,
   fetchDiscogsAvatar,
+  fetchDiscogsVerifiedEmail,
 } from './lib/discogsClient';
 import { hashNonce, isRequestExpired } from './lib/discogsOAuth';
 
@@ -25,6 +26,8 @@ interface DiscogsProfile {
   discogsUserId: string;
   discogsUsername: string;
   avatarUrl?: string;
+  /** Confirmed by Discogs; only used to find the person's existing account. */
+  email?: string;
 }
 
 function readString(value: unknown): string | null {
@@ -59,11 +62,15 @@ export const DiscogsSignIn = ConvexCredentials({
     }
 
     const authorization = await exchangeDiscogsVerifier(pending, oauthVerifier);
-    const avatarUrl = await fetchDiscogsAvatar(authorization.username);
+    const [avatarUrl, email] = await Promise.all([
+      fetchDiscogsAvatar(authorization.username),
+      fetchDiscogsVerifiedEmail(authorization, authorization.username),
+    ]);
     const profile: DiscogsProfile = {
       discogsUserId: authorization.discogsUserId,
       discogsUsername: authorization.username,
       ...(avatarUrl ? { avatarUrl } : {}),
+      ...(email ? { email } : {}),
     };
 
     // Returns the existing account's user, or runs createOrUpdateDiscogsUser.
@@ -87,14 +94,17 @@ export const DiscogsSignIn = ConvexCredentials({
 /**
  * Find the Crate user a Discogs identity already belongs to, from records
  * only the server could have written:
- * - a Discogs connection made through OAuth (it has a token secret), or
+ * - a Discogs connection made through OAuth (it has a token secret),
  * - a Discogs profile migrated from Supabase (keyed by email or Supabase id;
- *   rows keyed by a Convex id came from a public mutation and prove nothing).
+ *   rows keyed by a Convex id came from a public mutation and prove nothing),
+ * - the one account whose verified email matches the email Discogs confirmed
+ *   (someone who first signed up with an email code), as Convex Auth links
+ *   OAuth sign-ins that report a verified email.
  * Skips users already linked to a different Discogs sign-in.
  */
 export async function findUserForDiscogsAccount(
   ctx: MutationCtx,
-  { discogsUserId, discogsUsername }: DiscogsProfile,
+  { discogsUserId, discogsUsername, email }: DiscogsProfile,
 ): Promise<Id<'users'> | null> {
   const candidates: Id<'users'>[] = [];
 
@@ -126,6 +136,17 @@ export async function findUserForDiscogsAccount(
         .withIndex('by_email', (q) => q.eq('email', profile.user_id))
         .first());
     if (legacyUser) candidates.push(legacyUser._id);
+  }
+
+  if (email) {
+    const verified = (
+      await ctx.db
+        .query('users')
+        .withIndex('by_email', (q) => q.eq('email', email))
+        .collect()
+    ).filter((user) => user.emailVerificationTime !== undefined);
+    // Two verified accounts on one email is a conflict to settle by hand.
+    if (verified.length === 1) candidates.push(verified[0]._id);
   }
 
   for (const userId of candidates) {
