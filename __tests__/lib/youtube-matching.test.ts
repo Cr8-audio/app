@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { evaluateYouTubeCandidate } from '@/lib/api-clients/youtube/matching';
+import { evaluateYouTubeCandidate } from '@/convex/lib/youtubeMatching';
 
 describe('YouTube track matching', () => {
   it('rejects the pickled-beets recipe that triggered the production bug', () => {

@@ -15,6 +15,7 @@ import { Route as AuthIndexRouteImport } from './app/auth/index'
 import { Route as UsernameIndexRouteImport } from './app/$username/index'
 import { Route as PPublicIdRouteImport } from './app/p/$publicId'
 import { Route as ListenUsernameRouteImport } from './app/listen/$username'
+import { Route as EmbedPublicIdRouteImport } from './app/embed.$publicId'
 import { Route as AnalyzeSplatRouteImport } from './app/analyze.$'
 import { Route as UsernameTracksRouteImport } from './app/$username/tracks'
 import { Route as UsernamePlaylistsRouteImport } from './app/$username/playlists'
@@ -53,6 +54,11 @@ const PPublicIdRoute = PPublicIdRouteImport.update({
 const ListenUsernameRoute = ListenUsernameRouteImport.update({
   id: '/listen/$username',
   path: '/listen/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedPublicIdRoute = EmbedPublicIdRouteImport.update({
+  id: '/embed/$publicId',
+  path: '/embed/$publicId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AnalyzeSplatRoute = AnalyzeSplatRouteImport.update({
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/$username/playlists': typeof UsernamePlaylistsRoute
   '/$username/tracks': typeof UsernameTracksRoute
   '/analyze/$': typeof AnalyzeSplatRoute
+  '/embed/$publicId': typeof EmbedPublicIdRoute
   '/listen/$username': typeof ListenUsernameRoute
   '/p/$publicId': typeof PPublicIdRoute
   '/$username': typeof UsernameIndexRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/$username/playlists': typeof UsernamePlaylistsRoute
   '/$username/tracks': typeof UsernameTracksRoute
   '/analyze/$': typeof AnalyzeSplatRoute
+  '/embed/$publicId': typeof EmbedPublicIdRoute
   '/listen/$username': typeof ListenUsernameRoute
   '/p/$publicId': typeof PPublicIdRoute
   '/$username': typeof UsernameIndexRoute
@@ -145,6 +153,7 @@ export interface FileRoutesById {
   '/$username/playlists': typeof UsernamePlaylistsRoute
   '/$username/tracks': typeof UsernameTracksRoute
   '/analyze/$': typeof AnalyzeSplatRoute
+  '/embed/$publicId': typeof EmbedPublicIdRoute
   '/listen/$username': typeof ListenUsernameRoute
   '/p/$publicId': typeof PPublicIdRoute
   '/$username/': typeof UsernameIndexRoute
@@ -164,6 +173,7 @@ export interface FileRouteTypes {
     | '/$username/playlists'
     | '/$username/tracks'
     | '/analyze/$'
+    | '/embed/$publicId'
     | '/listen/$username'
     | '/p/$publicId'
     | '/$username'
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/$username/playlists'
     | '/$username/tracks'
     | '/analyze/$'
+    | '/embed/$publicId'
     | '/listen/$username'
     | '/p/$publicId'
     | '/$username'
@@ -198,6 +209,7 @@ export interface FileRouteTypes {
     | '/$username/playlists'
     | '/$username/tracks'
     | '/analyze/$'
+    | '/embed/$publicId'
     | '/listen/$username'
     | '/p/$publicId'
     | '/$username/'
@@ -216,6 +228,7 @@ export interface RootRouteChildren {
   UsernamePlaylistsRoute: typeof UsernamePlaylistsRoute
   UsernameTracksRoute: typeof UsernameTracksRoute
   AnalyzeSplatRoute: typeof AnalyzeSplatRoute
+  EmbedPublicIdRoute: typeof EmbedPublicIdRoute
   ListenUsernameRoute: typeof ListenUsernameRoute
   PPublicIdRoute: typeof PPublicIdRoute
   UsernameIndexRoute: typeof UsernameIndexRoute
@@ -270,6 +283,13 @@ declare module '@tanstack/react-router' {
       path: '/listen/$username'
       fullPath: '/listen/$username'
       preLoaderRoute: typeof ListenUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed/$publicId': {
+      id: '/embed/$publicId'
+      path: '/embed/$publicId'
+      fullPath: '/embed/$publicId'
+      preLoaderRoute: typeof EmbedPublicIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/analyze/$': {
@@ -344,6 +364,7 @@ const rootRouteChildren: RootRouteChildren = {
   UsernamePlaylistsRoute: UsernamePlaylistsRoute,
   UsernameTracksRoute: UsernameTracksRoute,
   AnalyzeSplatRoute: AnalyzeSplatRoute,
+  EmbedPublicIdRoute: EmbedPublicIdRoute,
   ListenUsernameRoute: ListenUsernameRoute,
   PPublicIdRoute: PPublicIdRoute,
   UsernameIndexRoute: UsernameIndexRoute,
@@ -360,10 +381,11 @@ export const routeTree = rootRouteImport
   ._addFileTypes<FileRouteTypes>()
 
 import type { getRouter } from './router.tsx'
-import type { createStart } from '@tanstack/react-start'
+import type { startInstance } from './start.ts'
 declare module '@tanstack/react-start' {
   interface Register {
     ssr: true
     router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
   }
 }

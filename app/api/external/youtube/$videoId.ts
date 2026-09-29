@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { env } from 'cloudflare:workers';
-import { evaluateYouTubeCandidate } from '@/lib/api-clients/youtube/matching';
+import { evaluateYouTubeCandidate } from '@/convex/lib/youtubeMatching';
 
 export const Route = createFileRoute('/api/external/youtube/$videoId')({
   server: {
