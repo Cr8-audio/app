@@ -5,26 +5,41 @@ import {
   type MutationCtx,
   type QueryCtx,
 } from './_generated/server';
+import { internal } from './_generated/api';
 import type { Doc, Id } from './_generated/dataModel';
 import { v } from 'convex/values';
+import {
+  generateShareId,
+  isLegacyFlagSet,
+  isShared,
+  playlistVisibility,
+  trackAudioStatus,
+} from './lib/playlistSharing';
 
 type DatabaseContext = Pick<QueryCtx, 'db'> | Pick<MutationCtx, 'db'>;
 
-/**
- * Legacy Supabase imports stored booleans as Postgres-style strings. Keep
- * reads compatible until every deployment has completed the boolean cleanup
- * migration, while making false-y strings explicitly false.
- */
-function normalizePlaylistFlag(value: boolean | string | undefined): boolean {
-  return value === true || value === 't' || value === 'true';
+const vVisibility = v.union(
+  v.literal('private'),
+  v.literal('unlisted'),
+  v.literal('public'),
+);
+const vPlayMode = v.union(v.literal('in_order'), v.literal('shuffle'));
+
+/** The owner's view: legacy flags resolved into visibility and play mode. */
+function normalizePlaylist(playlist: Doc<'playlists'>) {
+  // is_public is legacy; visibility replaces it.
+  const { is_public: _legacyIsPublic, ...rest } = playlist;
+  return {
+    ...rest,
+    is_favorites: isLegacyFlagSet(playlist.is_favorites),
+    visibility: playlistVisibility(playlist),
+    play_mode: playlist.play_mode ?? 'in_order',
+  };
 }
 
-function normalizePlaylist(playlist: Doc<'playlists'>) {
-  return {
-    ...playlist,
-    is_public: normalizePlaylistFlag(playlist.is_public),
-    is_favorites: normalizePlaylistFlag(playlist.is_favorites),
-  };
+/** The ID in a playlist's public link. */
+function publicIdOf(playlist: Doc<'playlists'>) {
+  return playlist.share_id ?? playlist.id;
 }
 
 function toPlaylistTrack(track: Doc<'tracks'>, playlistPosition: number) {
@@ -37,6 +52,7 @@ function toPlaylistTrack(track: Doc<'tracks'>, playlistPosition: number) {
     styles: track.styles ?? null,
     artwork: track.artwork ?? null,
     created_at: track.created_at ?? null,
+    audio_status: trackAudioStatus(track),
     playlistPosition,
   };
 }
@@ -223,22 +239,34 @@ export const getPlaylist = query({
 });
 
 /**
- * Get the deliberately public projection of a published playlist. Missing and
+ * Find a shared (unlisted or public) playlist by the ID in its link. Links
+ * from before share IDs existed use the legacy UUID until the link is reset.
+ */
+async function findSharedPlaylist(ctx: Pick<QueryCtx, 'db'>, publicId: string) {
+  const playlist =
+    (await ctx.db
+      .query('playlists')
+      .withIndex('by_share_id', (q) => q.eq('share_id', publicId))
+      .first()) ??
+    (await ctx.db
+      .query('playlists')
+      .withIndex('by_old_id', (q) => q.eq('id', publicId))
+      .first()
+      .then((legacy) => (legacy?.share_id ? null : legacy)));
+
+  if (!playlist || !isShared(playlistVisibility(playlist))) return null;
+  return playlist;
+}
+
+/**
+ * Get the deliberately public projection of a shared playlist. Missing and
  * private playlists both return null so callers cannot probe private records.
  */
 export const getPublicPlaylist = query({
   args: { publicId: v.string() },
   handler: async (ctx, { publicId }) => {
-    const playlist = await ctx.db
-      .query('playlists')
-      .withIndex('by_old_id', (q) => q.eq('id', publicId))
-      .first();
-
-    if (
-      !playlist ||
-      !normalizePlaylistFlag(playlist.is_public) ||
-      normalizePlaylistFlag(playlist.is_favorites)
-    ) {
+    const playlist = await findSharedPlaylist(ctx, publicId);
+    if (!playlist) {
       return null;
     }
 
@@ -248,10 +276,12 @@ export const getPublicPlaylist = query({
     ]);
 
     return {
-      publicId: playlist.id,
+      publicId: publicIdOf(playlist),
       title: playlist.title,
       description: playlist.description ?? null,
       coverImageUrl: playlist.cover_image_url ?? null,
+      visibility: playlistVisibility(playlist),
+      playMode: playlist.play_mode ?? 'in_order',
       owner: owner ? toPublicOwner(owner) : null,
       tracks: playlistTracks.map(({ track, playlistPosition }) => ({
         id: track.id,
@@ -266,6 +296,7 @@ export const getPublicPlaylist = query({
         styles: track.styles ?? null,
         artwork: track.artwork ?? null,
         created_at: track.created_at ?? null,
+        audio_status: trackAudioStatus(track),
         playlistPosition,
       })),
     };
@@ -289,12 +320,9 @@ export const getPublicPlaylistsByUsername = query({
     }
 
     const ownerPlaylists = await getPlaylistsForUser(ctx, owner);
+    // Unlisted playlists work by link but stay off the profile.
     const publicPlaylists = ownerPlaylists
-      .filter(
-        (playlist) =>
-          normalizePlaylistFlag(playlist.is_public) &&
-          !normalizePlaylistFlag(playlist.is_favorites),
-      )
+      .filter((playlist) => playlistVisibility(playlist) === 'public')
       .sort((a, b) => {
         const aDate = a.updated_at ?? a.created_at ?? '';
         const bDate = b.updated_at ?? b.created_at ?? '';
@@ -313,7 +341,7 @@ export const getPublicPlaylistsByUsername = query({
         ].slice(0, 4);
 
         return {
-          publicId: playlist.id,
+          publicId: publicIdOf(playlist),
           title: playlist.title,
           description: playlist.description ?? null,
           coverImageUrl: playlist.cover_image_url ?? null,
@@ -378,7 +406,7 @@ export const createPlaylist = mutation({
       user_id: user.email || userId, // Use email for consistency with migrated data
       title,
       description: description || '',
-      is_public: false,
+      visibility: 'private',
       is_favorites: false,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
@@ -390,7 +418,7 @@ export const createPlaylist = mutation({
 
 /**
  * Create a playlist and add tracks to it in one transaction, in the order
- * given. Used by "Create playlist" in the DJ assistant chat.
+ * given.
  */
 export const createPlaylistWithTracks = mutation({
   args: {
@@ -418,7 +446,7 @@ export const createPlaylistWithTracks = mutation({
       user_id: user.email || userId,
       title: trimmed,
       description: description || '',
-      is_public: false,
+      visibility: 'private',
       is_favorites: false,
       created_at: now,
       updated_at: now,
@@ -443,14 +471,15 @@ export const createPlaylistWithTracks = mutation({
 });
 
 /**
- * Update a playlist
+ * Update a playlist's details and how it plays for listeners. Visibility has
+ * its own mutation, setPlaylistVisibility.
  */
 export const updatePlaylist = mutation({
   args: {
     playlistId: v.id('playlists'),
     title: v.optional(v.string()),
     description: v.optional(v.string()),
-    is_public: v.optional(v.boolean()),
+    play_mode: v.optional(vPlayMode),
   },
   handler: async (ctx, { playlistId, ...updates }) => {
     const userId = await getAuthUserId(ctx);
@@ -468,6 +497,101 @@ export const updatePlaylist = mutation({
     return await ctx.db.get(playlistId);
   },
 });
+
+/**
+ * Make a playlist private, unlisted or public. Sharing gives it a share ID
+ * (kept across later visibility changes, so links come back when re-shared)
+ * and starts matching audio for its tracks.
+ */
+export const setPlaylistVisibility = mutation({
+  args: {
+    playlistId: v.id('playlists'),
+    visibility: vVisibility,
+  },
+  handler: async (ctx, { playlistId, visibility }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
+
+    const playlist = await getOwnedPlaylist(ctx, userId, playlistId);
+    if (isLegacyFlagSet(playlist.is_favorites) && isShared(visibility)) {
+      throw new Error('Favorites stay private');
+    }
+
+    const shareId = isShared(visibility)
+      ? shareIdFor(playlist)
+      : playlist.share_id;
+
+    await ctx.db.patch(playlistId, {
+      visibility,
+      share_id: shareId,
+      is_public: undefined,
+      updated_at: new Date().toISOString(),
+    });
+
+    if (isShared(visibility)) {
+      await scheduleAudioMatching(ctx, playlistId);
+    }
+
+    return { visibility, shareId: shareId ?? null };
+  },
+});
+
+/** The link ID a playlist gets when it's shared. */
+function shareIdFor(playlist: Doc<'playlists'>) {
+  if (playlist.share_id) return playlist.share_id;
+  // Keep links shared before share IDs existed working.
+  return playlistVisibility(playlist) === 'private'
+    ? generateShareId()
+    : playlist.id;
+}
+
+/**
+ * Replace a playlist's share ID. Its old link and embed code stop working.
+ */
+export const resetPlaylistLink = mutation({
+  args: { playlistId: v.id('playlists') },
+  handler: async (ctx, { playlistId }) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new Error('Not authenticated');
+    }
+
+    await getOwnedPlaylist(ctx, userId, playlistId);
+    const shareId = generateShareId();
+    await ctx.db.patch(playlistId, {
+      share_id: shareId,
+      updated_at: new Date().toISOString(),
+    });
+    return { shareId };
+  },
+});
+
+/**
+ * Match audio on the server for a shared playlist's tracks, so listeners
+ * never spend YouTube quota from their browsers (see playlistAudio.ts).
+ */
+async function scheduleAudioMatching(
+  ctx: MutationCtx,
+  playlistId: Id<'playlists'>,
+  trackIds?: Id<'tracks'>[],
+) {
+  const ids =
+    trackIds ??
+    (
+      await ctx.db
+        .query('playlist_tracks')
+        .withIndex('by_playlist_position', (q) =>
+          q.eq('playlist_id', playlistId),
+        )
+        .collect()
+    ).map((playlistTrack) => playlistTrack.track_id);
+  if (ids.length === 0) return;
+  await ctx.scheduler.runAfter(0, internal.playlistAudio.matchTrackAudio, {
+    trackIds: ids,
+  });
+}
 
 /**
  * Delete a playlist
@@ -513,7 +637,7 @@ export const addTrackToPlaylist = mutation({
       throw new Error('Not authenticated');
     }
 
-    await getOwnedPlaylist(ctx, userId, playlistId);
+    const playlist = await getOwnedPlaylist(ctx, userId, playlistId);
 
     const existing = await ctx.db
       .query('playlist_tracks')
@@ -538,6 +662,10 @@ export const addTrackToPlaylist = mutation({
       position: (lastTrack?.position ?? -1) + 1,
       created_at: new Date().toISOString(),
     });
+
+    if (isShared(playlistVisibility(playlist))) {
+      await scheduleAudioMatching(ctx, playlistId, [trackId]);
+    }
 
     return { success: true };
   },

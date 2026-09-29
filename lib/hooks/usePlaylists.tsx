@@ -8,6 +8,10 @@ import { api } from '@/convex/_generated/api';
 import { useCallback, useMemo } from 'react';
 import { toast } from 'sonner';
 import { Id } from '@/convex/_generated/dataModel';
+import type {
+  PlaylistPlayMode,
+  PlaylistVisibility,
+} from '@/convex/lib/playlistSharing';
 
 export function usePlaylists() {
   // Get playlists from Convex
@@ -17,6 +21,10 @@ export function usePlaylists() {
   const createPlaylistMutation = useMutation(api.playlists.createPlaylist);
   const deletePlaylistMutation = useMutation(api.playlists.deletePlaylist);
   const updatePlaylistMutation = useMutation(api.playlists.updatePlaylist);
+  const setVisibilityMutation = useMutation(
+    api.playlists.setPlaylistVisibility,
+  );
+  const resetLinkMutation = useMutation(api.playlists.resetPlaylistLink);
   const addTrackMutation = useMutation(api.playlists.addTrackToPlaylist);
   const removeTrackMutation = useMutation(
     api.playlists.removeTrackFromPlaylist,
@@ -69,7 +77,11 @@ export function usePlaylists() {
   const updatePlaylist = useCallback(
     async (
       playlistId: Id<'playlists'> | string,
-      updates: { title?: string; description?: string; is_public?: boolean },
+      updates: {
+        title?: string;
+        description?: string;
+        play_mode?: PlaylistPlayMode;
+      },
     ) => {
       try {
         await updatePlaylistMutation({
@@ -84,6 +96,46 @@ export function usePlaylists() {
       }
     },
     [updatePlaylistMutation],
+  );
+
+  const setPlaylistVisibility = useCallback(
+    async (
+      playlistId: Id<'playlists'> | string,
+      visibility: PlaylistVisibility,
+    ) => {
+      try {
+        return await setVisibilityMutation({
+          playlistId: playlistId as Id<'playlists'>,
+          visibility,
+        });
+      } catch (error) {
+        console.error('Error changing playlist visibility:', error);
+        toast.error(
+          error instanceof Error && error.message.includes('Favorites')
+            ? 'Favorites stay private'
+            : 'Failed to change who can listen',
+        );
+        throw error;
+      }
+    },
+    [setVisibilityMutation],
+  );
+
+  const resetPlaylistLink = useCallback(
+    async (playlistId: Id<'playlists'> | string) => {
+      try {
+        const result = await resetLinkMutation({
+          playlistId: playlistId as Id<'playlists'>,
+        });
+        toast.success('New link created. The old link no longer works.');
+        return result;
+      } catch (error) {
+        console.error('Error resetting playlist link:', error);
+        toast.error('Failed to reset the link');
+        throw error;
+      }
+    },
+    [resetLinkMutation],
   );
 
   const addTrackToPlaylist = useCallback(
@@ -154,6 +206,8 @@ export function usePlaylists() {
     createPlaylist,
     deletePlaylist,
     updatePlaylist,
+    setPlaylistVisibility,
+    resetPlaylistLink,
     addTrackToPlaylist,
     removeTrackFromPlaylist,
     reorderPlaylistTracks,

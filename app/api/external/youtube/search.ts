@@ -1,9 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { env } from 'cloudflare:workers';
 import {
-  evaluateYouTubeCandidate,
-  type TrackIdentity,
-} from '@/lib/api-clients/youtube/matching';
+  buildYouTubeTrackQuery,
+  rankYouTubeCandidates,
+  type YouTubeSearchItem,
+} from '@/convex/lib/youtubeApi';
+import type { TrackIdentity } from '@/convex/lib/youtubeMatching';
 
 const MAX_QUERY_LENGTH = 180;
 const MAX_ARTIST_LENGTH = 120;
@@ -21,9 +23,7 @@ export const Route = createFileRoute('/api/external/youtube/search')({
           ? { artist: artist || 'Unknown Artist', title }
           : null;
         const query = requestedTrack
-          ? `${artist.replace(/\s+\(\d+\)(?=,|$)/g, '')} "${title}" audio`
-              .replace(/\s+/g, ' ')
-              .trim()
+          ? buildYouTubeTrackQuery({ artist, title })
           : rawQuery;
 
         if (!query) {
@@ -72,14 +72,7 @@ export const Route = createFileRoute('/api/external/youtube/search')({
 
           const response = await fetch(youtubeUrl);
           const data = (await response.json()) as {
-            items?: Array<{
-              id?: { videoId?: string };
-              snippet?: {
-                title?: string;
-                channelTitle?: string;
-                description?: string;
-              };
-            }>;
+            items?: YouTubeSearchItem[];
             error?: { message?: string };
           };
 
@@ -105,43 +98,20 @@ export const Route = createFileRoute('/api/external/youtube/search')({
             return Response.json({ error: 'No results' }, { status: 404 });
           }
 
-          const candidates = data.items
-            .map((item) => {
-              const videoId = item.id?.videoId;
-              const candidateTitle = item.snippet?.title;
-              if (!videoId || !candidateTitle) return null;
-
-              const match = requestedTrack
-                ? evaluateYouTubeCandidate(requestedTrack, {
-                    title: candidateTitle,
-                    channelTitle: item.snippet?.channelTitle,
-                    description: item.snippet?.description,
-                    // Search.list has already restricted these results to the
-                    // Music category, so retain that fact for the matcher.
-                    categoryId: '10',
-                  })
-                : { matches: true, score: 0 };
-
-              return match.matches
-                ? {
-                    videoId,
-                    title: candidateTitle,
-                    channelTitle: item.snippet?.channelTitle,
-                    score: match.score,
-                  }
-                : null;
-            })
-            .filter(
-              (
-                candidate,
-              ): candidate is {
-                videoId: string;
-                title: string;
-                channelTitle: string | undefined;
-                score: number;
-              } => candidate !== null,
-            )
-            .sort((a, b) => b.score - a.score);
+          const candidates = requestedTrack
+            ? rankYouTubeCandidates(requestedTrack, data.items)
+            : data.items.flatMap((item) =>
+                item.id?.videoId && item.snippet?.title
+                  ? [
+                      {
+                        videoId: item.id.videoId,
+                        title: item.snippet.title,
+                        channelTitle: item.snippet.channelTitle,
+                        score: 0,
+                      },
+                    ]
+                  : [],
+              );
 
           const bestMatch = candidates[0];
           if (!bestMatch) {

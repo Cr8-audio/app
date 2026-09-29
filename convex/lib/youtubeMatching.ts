@@ -1,3 +1,7 @@
+/**
+ * Pure YouTube match scoring, shared by the Worker's audio routes and Convex
+ * actions (see youtubeApi.ts), so both accept the same videos for a track.
+ */
 export interface TrackIdentity {
   artist: string;
   title: string;

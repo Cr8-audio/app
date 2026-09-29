@@ -82,16 +82,28 @@ export default defineSchema({
     cover_image_url: v.optional(v.string()),
     created_at: v.optional(v.string()),
     updated_at: v.optional(v.string()),
+    // Legacy sharing flag; `visibility` replaces it (see lib/playlistSharing).
     is_public: v.optional(v.union(v.boolean(), v.string())), // Handle "t"/"f" strings
     is_favorites: v.optional(v.union(v.boolean(), v.string())), // Handle "t"/"f" strings
+    visibility: v.optional(
+      v.union(v.literal('private'), v.literal('unlisted'), v.literal('public')),
+    ),
+    // The ID in /p/<share_id> and /embed/<share_id>. Resetting the link
+    // replaces it, so old links stop working.
+    share_id: v.optional(v.string()),
+    play_mode: v.optional(v.union(v.literal('in_order'), v.literal('shuffle'))),
   })
     .index('by_old_id', ['id'])
-    .index('by_user', ['user_id']),
+    .index('by_user', ['user_id'])
+    .index('by_share_id', ['share_id']),
 
   tracks: defineTable({
     id: v.string(),
     discogs_release_id: v.union(v.string(), v.number()), // Can be either
     youtube_video_id: v.optional(v.string()),
+    // When the server last checked youtube_video_id against this track, or
+    // searched and found nothing. Unset means nobody has verified it.
+    youtube_checked_at: v.optional(v.number()),
     title: v.string(),
     artist: v.string(),
     extra_artists: v.optional(v.string()),

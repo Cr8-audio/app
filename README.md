@@ -48,6 +48,7 @@ Then set the variables below.
 | `DISCOGS_CONSUMER_KEY`, `DISCOGS_CONSUMER_SECRET` | Convex deployment                   | Discogs sign-in, collection sync and search                               |
 | `JWT_PRIVATE_KEY`, `JWKS`, `SITE_URL`             | Convex deployment                   | Convex Auth (set by `npx @convex-dev/auth`)                               |
 | `YOUTUBE_API_KEY`                                 | Worker secret (`.dev.vars` locally) | `/api/external/youtube/*` track lookup                                    |
+| `YOUTUBE_API_KEY`                                 | Convex deployment                   | Matching audio for shared playlists (`convex/playlistAudio.ts`)           |
 | `VITE_CONVEX_URL`                                 | Build (`.env.local` locally)        | The Convex deployment the app talks to                                    |
 | `VITE_BASE_URL`                                   | Build, optional                     | Base URL for the YouTube API routes (defaults to `http://localhost:1995`) |
 
@@ -58,6 +59,18 @@ bundle.
 Discogs sign-in only redirects back to known origins: `cr8.audio`,
 `www.cr8.audio`, `localhost:1995`, `pr-<n>.cr8.audio` and the `crate-app`
 Workers on `workers.dev`. See `convex/lib/discogsOAuth.ts`.
+
+## Sharing playlists
+
+A playlist is private, unlisted (anyone with the link or embed) or public
+(also listed on `/listen/<username>`). Shared playlists live at
+`/p/<share_id>`, and `/embed/<share_id>` is a compact player for other sites.
+Only `/embed/*` may be framed by other origins (`start.ts`).
+
+When a playlist is shared, `convex/playlistAudio.ts` matches each track to a
+YouTube video on the server and saves it, so listeners never spend YouTube
+search quota from their browsers. Without `YOUTUBE_API_KEY` on Convex, shared
+tracks with a stored video still play and the rest are skipped.
 
 ## Scripts
 
@@ -95,6 +108,13 @@ CI doesn't deploy Convex. After a change in `convex/` is merged, deploy it:
 
 ```bash
 npx convex deploy
+```
+
+If the change adds a migration in `convex/migrations.ts`, run it once after
+deploying, for example:
+
+```bash
+npx convex run --prod migrations:run '{"fn": "migrations:backfillPlaylistVisibility"}'
 ```
 
 Production, staging and previews all use the Convex deployment in the

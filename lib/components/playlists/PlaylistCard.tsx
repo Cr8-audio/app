@@ -1,14 +1,8 @@
 import type { MouseEvent } from 'react';
-import {
-  ChevronRight,
-  Globe,
-  ListMusic,
-  Lock,
-  Pause,
-  Play,
-  Trash2,
-} from 'lucide-react';
+import { ChevronRight, ListMusic, Pause, Play, Trash2 } from 'lucide-react';
 import type { Id } from '@/convex/_generated/dataModel';
+import type { PlaylistVisibility } from '@/convex/lib/playlistSharing';
+import { VISIBILITY_OPTIONS } from './visibility';
 import { toast } from 'sonner';
 import { usePlaylists } from '@/lib/hooks/usePlaylists';
 import { usePlayerStore } from '@/lib/stores';
@@ -21,7 +15,7 @@ interface PlaylistCardData {
   _id?: Id<'playlists'>;
   id?: string;
   title: string;
-  is_public?: boolean | null;
+  visibility: PlaylistVisibility;
   is_favorites?: boolean | null;
   tracks?: PlaylistCardTrack[];
 }
@@ -49,6 +43,7 @@ export const PlaylistCard = ({
     usePlayerStore();
 
   const tracks = playlist.tracks ?? [];
+  const visibility = VISIBILITY_OPTIONS[playlist.visibility];
   const artworks = tracks
     .map((track) => normalizeArtwork(track.artwork))
     .filter(Boolean)
@@ -184,12 +179,8 @@ export const PlaylistCard = ({
           />
         </div>
         <div className="mt-4 flex items-center gap-1.5 border-t border-border/60 pt-3 text-xs text-muted-foreground">
-          {playlist.is_public ? (
-            <Globe className="h-3.5 w-3.5" />
-          ) : (
-            <Lock className="h-3.5 w-3.5" />
-          )}
-          {playlist.is_public ? 'Public' : 'Private'}
+          <visibility.icon className="h-3.5 w-3.5" />
+          {visibility.label}
         </div>
       </button>
     </article>

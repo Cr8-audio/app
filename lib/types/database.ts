@@ -18,6 +18,8 @@ export interface CrateTrack {
   artwork: string | null;
   created_at: string | null;
   bpm?: number | null; // not stored on Convex tracks yet
+  // Set on playlist tracks; 'ready' means the server verified the video.
+  audio_status?: 'ready' | 'unverified' | 'pending' | 'unavailable';
 }
 
 export interface InsertCrateTrack {
