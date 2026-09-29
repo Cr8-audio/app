@@ -1,169 +1,238 @@
 import { convexTest } from 'convex-test';
 import { describe, expect, it } from 'vitest';
 import { api, internal } from '@/convex/_generated/api';
-import type { Id } from '@/convex/_generated/dataModel';
 import schema from '@/convex/schema';
 
 const modules = import.meta.glob('../../convex/**/*.*s');
 type TestContext = ReturnType<typeof convexTest>;
 
 /**
- * The production shape: a migrated account that owns playlists under its
- * email and Supabase ID, and a Discogs sign-in account with only Favorites.
+ * The production shape: `paprika` was migrated from Supabase and owns the
+ * playlists and collection; Discogs sign-in created `baston2rue` for the same
+ * person, with the Discogs login, the connection and one favorite.
  */
-async function seedTwoAccounts(t: TestContext) {
+async function seedSamePersonTwice(t: TestContext) {
   return await t.run(async (ctx) => {
-    const migratedId = await ctx.db.insert('users', {
+    const keepId = await ctx.db.insert('users', {
       username: 'paprika',
       email: 'me@example.com',
       supabaseUserId: 'legacy-id',
+      onboardingComplete: true,
     });
-    const discogsId = await ctx.db.insert('users', { username: 'baston2rue' });
+    const mergeId = await ctx.db.insert('users', {
+      username: 'baston2rue',
+      avatarUrl: 'https://example.com/discogs-avatar.jpg',
+    });
 
     const track = (title: string) =>
       ctx.db.insert('tracks', {
         id: title,
-        discogs_release_id: 'release-1',
+        discogs_release_id: '1',
         title,
-        artist: 'Mandar',
+        artist: 'Miss Kittin & The Hacker',
         position: 'A1',
         duration: '',
       });
-    const [a, b, c] = [
-      await track('Poisoned Words'),
-      await track('Double Existence'),
-      await track('Grumax'),
-    ];
+    const kept = await track('Frank Sinatra');
+    const both = await track('1982');
+    const onlyMerge = await track('1000 Dreams Reprise');
 
-    const playlist = async (
-      userId: string,
-      title: string,
-      trackIds: Id<'tracks'>[],
-      extra: Record<string, unknown> = {},
-    ) => {
-      const playlistId = await ctx.db.insert('playlists', {
-        id: `${title}-uuid`,
-        user_id: userId,
-        title,
-        ...extra,
+    const keepFavorites = await ctx.db.insert('playlists', {
+      id: 'keep-favorites',
+      user_id: 'me@example.com',
+      title: 'Favorites',
+      is_favorites: true,
+    });
+    for (const [position, trackId] of [kept, both].entries()) {
+      await ctx.db.insert('playlist_tracks', {
+        id: `keep-${position}`,
+        playlist_id: keepFavorites,
+        track_id: trackId,
+        position,
       });
-      for (const [position, trackId] of trackIds.entries()) {
-        await ctx.db.insert('playlist_tracks', {
-          id: `${title}-${position}`,
-          playlist_id: playlistId,
-          track_id: trackId,
-          position,
-        });
-      }
-      return playlistId;
-    };
-
-    const shared = await playlist('legacy-id', 'AI Mix', [a, b], {
+    }
+    await ctx.db.insert('playlists', {
+      id: 'ai-mix',
+      user_id: 'legacy-id',
+      title: 'AI Mix',
       visibility: 'public',
       share_id: 'AIMIXLINK123',
     });
-    const privateMix = await playlist('me@example.com', 'rager', [c]);
-    await playlist('legacy-id', 'Favorites', [a, b], { is_favorites: true });
-    await playlist('me@example.com', 'Favorites', [b, c], {
+    const mergeFavorites = await ctx.db.insert('playlists', {
+      id: 'merge-favorites',
+      user_id: mergeId,
+      title: 'Favorites',
       is_favorites: true,
     });
-    const targetFavorites = await playlist(discogsId, 'Favorites', [a], {
-      is_favorites: true,
+    for (const [position, trackId] of [both, onlyMerge].entries()) {
+      await ctx.db.insert('playlist_tracks', {
+        id: `merge-${position}`,
+        playlist_id: mergeFavorites,
+        track_id: trackId,
+        position,
+      });
+    }
+
+    for (const releaseId of ['1', '2']) {
+      await ctx.db.insert('user_releases', {
+        user_id: 'legacy-id',
+        discogs_release_id: releaseId,
+      });
+    }
+    for (const releaseId of ['1', '2', '3']) {
+      await ctx.db.insert('user_releases', {
+        user_id: mergeId,
+        discogs_release_id: releaseId,
+      });
+    }
+
+    await ctx.db.insert('authAccounts', {
+      userId: keepId,
+      provider: 'resend-otp',
+      providerAccountId: 'me@example.com',
+    });
+    const discogsAccount = await ctx.db.insert('authAccounts', {
+      userId: mergeId,
+      provider: 'discogs',
+      providerAccountId: '6652785',
+    });
+    await ctx.db.insert('user_music_connections', {
+      userId: mergeId,
+      provider: 'discogs',
+      accessToken: 'token',
+      accessTokenSecret: 'secret',
+      providerUserId: '6652785',
+      providerUsername: 'Baston2rue',
+    });
+    await ctx.db.insert('user_discogs_profile', {
+      username: 'Baston2rue',
+      user_id: mergeId,
+    });
+    const session = await ctx.db.insert('authSessions', {
+      userId: mergeId,
+      expirationTime: Date.now() + 1000,
+    });
+    await ctx.db.insert('authRefreshTokens', {
+      sessionId: session,
+      expirationTime: Date.now() + 1000,
     });
 
-    return { migratedId, discogsId, shared, privateMix, targetFavorites };
+    return { keepId, mergeId, discogsAccount };
   });
 }
 
-describe('transferring playlists between accounts', () => {
-  it('reports what would move without changing anything on a dry run', async () => {
+const merge = {
+  keepUsername: 'paprika',
+  mergeUsername: 'baston2rue',
+};
+
+describe('merging two accounts of the same person', () => {
+  it('reports the merge without changing anything on a dry run', async () => {
     const t = convexTest(schema, modules);
-    const { discogsId } = await seedTwoAccounts(t);
+    const { mergeId } = await seedSamePersonTwice(t);
 
-    const report = await t.mutation(internal.admin.transferPlaylists, {
-      fromUsername: 'paprika',
-      toUsername: 'baston2rue',
+    const report = await t.mutation(internal.admin.mergeAccounts, {
+      ...merge,
       dryRun: true,
     });
 
-    expect(report).toMatchObject({
+    expect(report).toEqual({
       dryRun: true,
-      favoritesAdded: 2,
-      favoritesAlreadyThere: 1,
+      keep: 'paprika',
+      merge: 'baston2rue',
+      signInMethods: ['discogs'],
+      connections: ['discogs'],
+      playlistsMoved: [],
+      favoritesAdded: 1,
+      releasesAdded: 1,
+      releaseRowsRemoved: 3,
+      sessionsEnded: 1,
     });
-    expect(report.moved).toEqual(
-      expect.arrayContaining([
-        { title: 'AI Mix', visibility: 'public', shareId: 'AIMIXLINK123' },
-        { title: 'rager', visibility: 'private', shareId: null },
-      ]),
-    );
-    expect(report.moved).toHaveLength(2);
-    const owned = await t
-      .withIdentity({ subject: discogsId })
-      .query(api.playlists.getUserPlaylists);
-    expect(owned.map((playlist) => playlist.title)).toEqual(['Favorites']);
+    await expect(t.run((ctx) => ctx.db.get(mergeId))).resolves.not.toBeNull();
   });
 
-  it('moves playlists, keeps share links and merges favorites', async () => {
+  it('signs Discogs into the kept account and folds everything into it', async () => {
     const t = convexTest(schema, modules);
-    const { discogsId, migratedId } = await seedTwoAccounts(t);
+    const { keepId, mergeId, discogsAccount } = await seedSamePersonTwice(t);
 
-    await t.mutation(internal.admin.transferPlaylists, {
-      fromUsername: 'paprika',
-      toUsername: 'baston2rue',
-    });
+    await t.mutation(internal.admin.mergeAccounts, merge);
 
-    const owned = await t
-      .withIdentity({ subject: discogsId })
+    const state = await t.run(async (ctx) => ({
+      mergeUser: await ctx.db.get(mergeId),
+      keepUser: await ctx.db.get(keepId),
+      discogsAccount: await ctx.db.get(discogsAccount),
+      connections: await ctx.db.query('user_music_connections').collect(),
+      sessions: await ctx.db.query('authSessions').collect(),
+      refreshTokens: await ctx.db.query('authRefreshTokens').collect(),
+      profiles: await ctx.db.query('user_discogs_profile').collect(),
+      releases: await ctx.db.query('user_releases').collect(),
+    }));
+
+    expect(state.mergeUser).toBeNull();
+    // Discogs sign-in now resolves to paprika.
+    expect(state.discogsAccount?.userId).toBe(keepId);
+    expect(state.connections.map((c) => c.userId)).toEqual([keepId]);
+    expect(state.sessions).toEqual([]);
+    expect(state.refreshTokens).toEqual([]);
+    expect(state.profiles).toEqual([]);
+    expect(state.keepUser?.avatarUrl).toBe(
+      'https://example.com/discogs-avatar.jpg',
+    );
+    // The collection is the union, under paprika's existing key.
+    expect(
+      state.releases
+        .map((row) => `${row.user_id}:${row.discogs_release_id}`)
+        .sort(),
+    ).toEqual(['legacy-id:1', 'legacy-id:2', 'legacy-id:3']);
+
+    const playlists = await t
+      .withIdentity({ subject: keepId })
       .query(api.playlists.getUserPlaylists);
-    expect(owned.map((playlist) => playlist.title).sort()).toEqual([
+    expect(playlists.map((playlist) => playlist.title).sort()).toEqual([
       'AI Mix',
       'Favorites',
-      'rager',
     ]);
-    const favorites = owned.find((playlist) => playlist.is_favorites);
+    const favorites = playlists.find((playlist) => playlist.is_favorites);
     expect(favorites?.tracks.map((track) => track.title)).toEqual([
-      'Poisoned Words',
-      'Double Existence',
-      'Grumax',
+      'Frank Sinatra',
+      '1982',
+      '1000 Dreams Reprise',
     ]);
+    await expect(
+      t.query(api.playlists.getPublicPlaylist, { publicId: 'AIMIXLINK123' }),
+    ).resolves.toMatchObject({ owner: { username: 'paprika' } });
+  });
 
-    // The public link still works and now credits the new account.
-    const shared = await t.query(api.playlists.getPublicPlaylist, {
-      publicId: 'AIMIXLINK123',
-    });
-    expect(shared?.owner?.username).toBe('baston2rue');
-    const shelf = await t.query(api.playlists.getPublicPlaylistsByUsername, {
-      username: 'baston2rue',
-    });
-    expect(shelf?.playlists.map((playlist) => playlist.title)).toEqual([
-      'AI Mix',
-    ]);
+  it('refuses when both accounts sign in with the same provider', async () => {
+    const t = convexTest(schema, modules);
+    const { keepId } = await seedSamePersonTwice(t);
+    await t.run((ctx) =>
+      ctx.db.insert('authAccounts', {
+        userId: keepId,
+        provider: 'discogs',
+        providerAccountId: 'another-discogs-user',
+      }),
+    );
 
-    // The migrated account keeps only its own Favorites, untouched.
-    const left = await t
-      .withIdentity({ subject: migratedId })
-      .query(api.playlists.getUserPlaylists);
-    expect(left.map((playlist) => playlist.title)).toEqual([
-      'Favorites',
-      'Favorites',
-    ]);
+    await expect(
+      t.mutation(internal.admin.mergeAccounts, merge),
+    ).rejects.toThrow('Both accounts sign in with discogs');
   });
 
   it('refuses unknown or identical accounts', async () => {
     const t = convexTest(schema, modules);
-    await seedTwoAccounts(t);
+    await seedSamePersonTwice(t);
 
     await expect(
-      t.mutation(internal.admin.transferPlaylists, {
-        fromUsername: 'nobody',
-        toUsername: 'baston2rue',
+      t.mutation(internal.admin.mergeAccounts, {
+        keepUsername: 'paprika',
+        mergeUsername: 'nobody',
       }),
     ).rejects.toThrow('No user named nobody');
     await expect(
-      t.mutation(internal.admin.transferPlaylists, {
-        fromUsername: 'paprika',
-        toUsername: 'paprika',
+      t.mutation(internal.admin.mergeAccounts, {
+        keepUsername: 'paprika',
+        mergeUsername: 'paprika',
       }),
     ).rejects.toThrow('Pick two different accounts');
   });

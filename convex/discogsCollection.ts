@@ -52,7 +52,7 @@ export const getCollection = query({
   },
 });
 
-async function resolveCollectionOwnerKey(
+export async function resolveCollectionOwnerKey(
   ctx: QueryCtx,
   user: Doc<'users'>,
 ): Promise<string> {
