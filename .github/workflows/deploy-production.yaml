@@ -5,6 +5,13 @@ on:
     branches: [main]
   workflow_dispatch:
 
+# One production deploy at a time. Without this, two quick merges deploy side
+# by side and whichever finishes last is live, even if it's the older commit.
+# A newer push waits for the running deploy rather than cancelling it halfway.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
     name: Build & Deploy to Production
@@ -52,6 +59,9 @@ jobs:
 
       - name: Lint
         run: pnpm lint:warn
+
+      - name: Type check
+        run: pnpm type-check
 
       - name: Run tests
         run: pnpm test
