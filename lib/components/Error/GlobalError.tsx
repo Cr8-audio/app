@@ -1,5 +1,3 @@
-'use client';
-
 import { Button } from '@/lib/components/ui/button';
 
 const GlobalError = () => {

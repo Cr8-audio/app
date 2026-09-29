@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useParams } from '@tanstack/react-router';
 import { Image } from '@unpic/react';

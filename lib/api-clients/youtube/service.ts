@@ -1,6 +1,6 @@
-import type { CrateTrack, Release, Track } from '@/lib/types';
+import type { CrateTrack } from '@/lib/types';
 
-export class YouTubeSearchError extends Error {
+class YouTubeSearchError extends Error {
   status: number;
   code?: string;
 
@@ -44,19 +44,6 @@ async function readYouTubeResponse(response: Response) {
   return data;
 }
 
-export async function searchVideo(query: string): Promise<string | null> {
-  const trimmedQuery = query.trim();
-  if (!trimmedQuery) return null;
-
-  const baseUrl = getBaseUrl();
-  const response = await fetch(
-    `${baseUrl}/api/external/youtube/search?q=${encodeURIComponent(trimmedQuery)}`,
-  );
-  const data = await readYouTubeResponse(response);
-
-  return data?.videoId || null;
-}
-
 export async function searchTrackVideo(
   track: Pick<CrateTrack, 'artist' | 'title'>,
 ): Promise<string | null> {
@@ -84,36 +71,4 @@ export async function validateTrackVideo(
   );
   const data = await readYouTubeResponse(response);
   return data?.matches === true;
-}
-
-/**
- * Discogs appends numeric disambiguators to some artist names (for example
- * "Intense (2)"). They are useful in Discogs, but make YouTube matching worse.
- */
-export function buildTrackSearchQuery(
-  track: Pick<CrateTrack, 'artist' | 'title'>,
-): string {
-  const artist = track.artist.replace(/\s+\(\d+\)(?=,|$)/g, '').trim();
-  return `${artist} ${track.title} audio`.replace(/\s+/g, ' ').trim();
-}
-
-export async function findTrackVideo(
-  track: Track,
-  release: Release,
-): Promise<string | null> {
-  const matchingVideo = release.videos?.find(
-    (video) =>
-      video.title.toLowerCase() === track.title.toLowerCase() ||
-      video.title.toLowerCase().includes(track.title.toLowerCase()),
-  );
-
-  if (matchingVideo?.uri) {
-    const videoId = new URL(matchingVideo.uri).searchParams.get('v');
-    if (videoId) return videoId;
-  }
-
-  return searchTrackVideo({
-    title: track.title,
-    artist: release.artists[0]?.name || 'Unknown Artist',
-  });
 }

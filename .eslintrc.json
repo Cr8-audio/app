@@ -8,8 +8,6 @@
   "extends": ["eslint:recommended", "plugin:@typescript-eslint/recommended"],
   "ignorePatterns": [
     "dist",
-    ".vinxi",
-    ".output",
     "convex/_generated",
     "routeTree.gen.ts",
     "context-repos",

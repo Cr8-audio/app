@@ -4,9 +4,7 @@ import { DiscogsSearchResult, CrateTrack } from '@/lib/types';
  * Converts a Discogs search result to a CrateTrack format for playlist compatibility
  * This allows external tracks (not in user's collection) to be used in playlists and player
  */
-export function convertSearchResultToTrack(
-  result: DiscogsSearchResult,
-): CrateTrack {
+function convertSearchResultToTrack(result: DiscogsSearchResult): CrateTrack {
   // Generate a unique ID for external tracks using the discogs ID
   const externalId = `external_${result.id}`;
 
@@ -34,20 +32,6 @@ export function convertSearchResultToTrack(
 }
 
 /**
- * Checks if a track is an external track (not in user's collection)
- */
-export function isExternalTrack(trackId: string): boolean {
-  return trackId.startsWith('external_');
-}
-
-/**
- * Extracts the original Discogs ID from an external track ID
- */
-export function getDiscogsIdFromExternalTrack(trackId: string): string {
-  return trackId.replace('external_', '');
-}
-
-/**
  * Creates a temporary CrateTrack for immediate playback from search results
  * This is used when user wants to play a track directly from search without adding to playlist
  */
@@ -62,11 +46,4 @@ export function createTemporaryTrackForPlayback(
   }
 
   return track;
-}
-
-/**
- * Validates that a search result has the minimum required data for conversion
- */
-export function validateSearchResult(result: DiscogsSearchResult): boolean {
-  return !!(result.id && result.title);
 }

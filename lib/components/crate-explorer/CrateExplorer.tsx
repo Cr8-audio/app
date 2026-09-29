@@ -1,5 +1,3 @@
-'use client';
-
 import { useState, useEffect } from 'react';
 import useDiscogsSearch from '@/lib/hooks/useDiscogsSearch';
 import { useDiscogsCollection } from '@/lib/hooks/useDiscogsCollection';

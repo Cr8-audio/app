@@ -45,5 +45,3 @@ export function useAuth() {
     onboardingComplete: onboardingStep === 'complete',
   };
 }
-
-export default useAuth;

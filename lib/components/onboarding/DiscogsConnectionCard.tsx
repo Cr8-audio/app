@@ -214,5 +214,3 @@ export function DiscogsConnectionCard({
     </div>
   );
 }
-
-export default DiscogsConnectionCard;

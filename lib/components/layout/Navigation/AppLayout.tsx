@@ -1,5 +1,3 @@
-'use client';
-
 import { Link, Navigate, useLocation } from '@tanstack/react-router';
 import { LibraryBig, ListMusic } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
