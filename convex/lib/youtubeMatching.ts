@@ -73,6 +73,14 @@ const NON_MUSIC_TERMS = [
   'tutorial',
 ];
 
+/**
+ * Categories where music often lands without being filed as Music: record
+ * shops (Yoyaku, for one) and vinyl rips use Film & Animation, People &
+ * Blogs or Entertainment. A video there must name the artist and the exact
+ * title; every other non-music category is rejected outright.
+ */
+const LOOSE_MUSIC_CATEGORIES = new Set(['1', '22', '24']);
+
 const MUSIC_SIGNALS = [
   'audio',
   'full album',
@@ -121,12 +129,18 @@ function containsPhrase(haystack: string, phrase: string) {
  * requires title evidence and, whenever Discogs gave us a useful artist,
  * artist evidence too. The category and negative-context checks catch generic
  * titles such as "Pickled Beets" before a recipe can reach the player.
+ * Outside the Music category the bar is higher (see LOOSE_MUSIC_CATEGORIES).
  */
 export function evaluateYouTubeCandidate(
   track: TrackIdentity,
   candidate: YouTubeCandidate,
 ): YouTubeMatchResult {
-  if (candidate.categoryId && candidate.categoryId !== '10') {
+  const isMusicCategory =
+    !candidate.categoryId || candidate.categoryId === '10';
+  if (
+    !isMusicCategory &&
+    !LOOSE_MUSIC_CATEGORIES.has(candidate.categoryId ?? '')
+  ) {
     return { matches: false, score: 0, reason: 'not-music' };
   }
 
@@ -177,6 +191,13 @@ export function evaluateYouTubeCandidate(
 
   if (!hasArtistEvidence) {
     return { matches: false, score: 0, reason: 'artist-mismatch' };
+  }
+
+  if (
+    !isMusicCategory &&
+    !(hasExactTitle && hasArtistPhrase && !artistIsGeneric)
+  ) {
+    return { matches: false, score: 0, reason: 'not-music' };
   }
 
   const musicSignalCount = MUSIC_SIGNALS.filter((signal) =>

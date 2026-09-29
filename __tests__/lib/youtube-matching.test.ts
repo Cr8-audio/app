@@ -72,4 +72,41 @@ describe('YouTube track matching', () => {
 
     expect(result).toMatchObject({ matches: false, reason: 'not-music' });
   });
+
+  it('accepts a record shop upload filed outside Music when it names the artist and title', () => {
+    const result = evaluateYouTubeCandidate(
+      { artist: 'Tripmastaz', title: '4erti' },
+      {
+        title: 'A. Tripmastaz - 4erti [TARTOUFFE011-1]',
+        channelTitle: 'Yoyaku Record Store',
+        categoryId: '1',
+      },
+    );
+
+    expect(result.matches).toBe(true);
+  });
+
+  it.each([
+    [
+      'the artist is missing',
+      { artist: 'Tripmastaz', title: '4erti' },
+      'Various - 4erti',
+    ],
+    [
+      'the artist is generic',
+      { artist: 'Various', title: 'Inercia' },
+      'Various - Inercia',
+    ],
+  ])(
+    'rejects a loose-category upload when %s',
+    (_case, track, candidateTitle) => {
+      const result = evaluateYouTubeCandidate(track, {
+        title: candidateTitle,
+        channelTitle: 'Some Channel',
+        categoryId: '22',
+      });
+
+      expect(result.matches).toBe(false);
+    },
+  );
 });
