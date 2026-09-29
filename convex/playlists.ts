@@ -126,7 +126,7 @@ function toPublicOwner(owner: Doc<'users'>) {
   };
 }
 
-async function getPlaylistsForUser(
+export async function getPlaylistsForUser(
   ctx: Pick<QueryCtx, 'db'>,
   user: Doc<'users'>,
 ) {

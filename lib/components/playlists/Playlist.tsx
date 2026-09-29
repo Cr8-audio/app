@@ -7,6 +7,7 @@ import {
   ArrowUp,
   Clock,
   ListMusic,
+  Lock,
   Pause,
   Pencil,
   Play,
@@ -161,20 +162,27 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
             Edit details
           </Button>
 
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-10 rounded-full px-4"
-            onClick={() => setShareOpen(true)}
-          >
-            <Share2 className="mr-2 h-3.5 w-3.5" />
-            Share
-            <span className="ml-2 inline-flex items-center gap-1 border-l border-border/70 pl-2 text-muted-foreground">
-              <visibility.icon className="h-3.5 w-3.5" />
-              {visibility.label}
+          {activePlaylist.is_favorites ? (
+            <span className="inline-flex h-10 items-center gap-1.5 px-2 text-xs text-muted-foreground">
+              <Lock className="h-3.5 w-3.5" />
+              Favorites stay private. Make a playlist to share.
             </span>
-          </Button>
+          ) : (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-10 rounded-full px-4"
+              onClick={() => setShareOpen(true)}
+            >
+              <Share2 className="mr-2 h-3.5 w-3.5" />
+              Share
+              <span className="ml-2 inline-flex items-center gap-1 border-l border-border/70 pl-2 text-muted-foreground">
+                <visibility.icon className="h-3.5 w-3.5" />
+                {visibility.label}
+              </span>
+            </Button>
+          )}
         </div>
       </div>
 
