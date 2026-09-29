@@ -50,7 +50,11 @@ function AuthenticatedRedirect() {
       return;
     }
 
-    navigate({ to: '/analyze/chat', replace: true });
+    navigate({
+      to: '/$username/tracks',
+      params: { username: user.username },
+      replace: true,
+    });
   }, [user, navigate]);
 
   return <PageLoading />;
@@ -65,7 +69,7 @@ const collectionSteps = [
   {
     number: '02',
     title: 'Dig with intent',
-    description: 'Search your shelves or ask the DJ assistant for a direction.',
+    description: 'Search your shelves and play what you find.',
   },
   {
     number: '03',
@@ -151,8 +155,8 @@ function LandingPage() {
             </h1>
             <p className="mt-7 max-w-xl text-base leading-7 text-muted-foreground sm:text-lg sm:leading-8">
               Connect Discogs and Crate turns your collection into a living
-              workspace—ready to search, shape into playlists, and explore with
-              a DJ assistant.
+              workspace—ready to search, shape into playlists, and share with
+              anyone.
             </p>
 
             <div className="mt-9 max-w-sm">

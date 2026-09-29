@@ -2,24 +2,23 @@
 
 Crate helps DJs work with the records they own. You sign in with Discogs,
 Crate syncs your collection, and from there you can search it, play tracks
-through YouTube, build playlists and ask a DJ assistant for help with a set.
+through YouTube, and build playlists you can share with a public link.
 
 Live at [cr8.audio](https://cr8.audio).
 
-Crate is moving toward an MCP server, so the same capabilities work from any
-agent harness as well as the app. The app's own agent tools
-([#98](https://github.com/Cr8-audio/app/issues/98),
-[#87](https://github.com/Cr8-audio/app/issues/87)) come first.
+Crate is moving toward an MCP server, so you can search your collection and
+build playlists from any agent harness (Claude, ChatGPT, …). The app has no
+built-in assistant: the harness is the chat, and it runs on the user's own
+model subscription.
 
 ## Stack
 
-| Layer     | What                                                                                                                                                            |
-| --------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| App       | React 18, [TanStack Start](https://tanstack.com/start) and Router (file routes in `app/`), Tailwind CSS 4, Zustand                                              |
-| Backend   | [Convex](https://convex.dev): database, queries and mutations, [Convex Auth](https://labs.convex.dev/auth), [Convex Agent](https://github.com/get-convex/agent) |
-| Assistant | Anthropic through the AI SDK, run by the `djAssistant` Convex agent                                                                                             |
-| Hosting   | Cloudflare Workers, built with `@cloudflare/vite-plugin`                                                                                                        |
-| Discogs   | [`@cr8.audio/discogs-sdk`](https://github.com/Cr8-audio/discogs-sdk)                                                                                            |
+| Layer   | What                                                                                                               |
+| ------- | ------------------------------------------------------------------------------------------------------------------ |
+| App     | React 18, [TanStack Start](https://tanstack.com/start) and Router (file routes in `app/`), Tailwind CSS 4, Zustand |
+| Backend | [Convex](https://convex.dev): database, queries and mutations, [Convex Auth](https://labs.convex.dev/auth)         |
+| Hosting | Cloudflare Workers, built with `@cloudflare/vite-plugin`                                                           |
+| Discogs | [`@cr8.audio/discogs-sdk`](https://github.com/Cr8-audio/discogs-sdk)                                               |
 
 ## Getting started
 
@@ -47,7 +46,6 @@ Then set the variables below.
 | Variable                                          | Where                               | Used for                                                                  |
 | ------------------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------- |
 | `DISCOGS_CONSUMER_KEY`, `DISCOGS_CONSUMER_SECRET` | Convex deployment                   | Discogs sign-in, collection sync and search                               |
-| `ANTHROPIC_API_KEY`                               | Convex deployment                   | The DJ assistant                                                          |
 | `JWT_PRIVATE_KEY`, `JWKS`, `SITE_URL`             | Convex deployment                   | Convex Auth (set by `npx @convex-dev/auth`)                               |
 | `YOUTUBE_API_KEY`                                 | Worker secret (`.dev.vars` locally) | `/api/external/youtube/*` track lookup                                    |
 | `VITE_CONVEX_URL`                                 | Build (`.env.local` locally)        | The Convex deployment the app talks to                                    |
@@ -75,7 +73,7 @@ Workers on `workers.dev`. See `convex/lib/discogsOAuth.ts`.
 
 ```text
 app/          routes (TanStack file routes); app/api/ holds server routes
-convex/       backend: schema, auth, Discogs, playlists, chat, agents/
+convex/       backend: schema, auth, Discogs, playlists
 lib/          components, hooks, stores (player), API clients
 __tests__/    Vitest suites (convex, features, hooks)
 .github/      CI and deploy workflows

@@ -1,18 +1,15 @@
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useQuery } from 'convex/react';
 import { Image } from '@unpic/react';
 import {
   ArrowRight,
   Disc3,
-  Heart,
   LibraryBig,
   ListMusic,
   Music2,
   Pause,
   Play,
-  Send,
-  Sparkles,
 } from 'lucide-react';
 import { api } from '@/convex/_generated/api';
 import { useAuth } from '@/lib/hooks/useAuth';
@@ -121,7 +118,6 @@ function TrackCard({
 }
 
 function OverviewContent({ username }: { username: string }) {
-  const navigate = useNavigate();
   const { displayName } = useAuth();
   const convexTracks = useQuery(api.tracks.getUserTracks);
   const playlists = useQuery(api.playlists.getUserPlaylists);
@@ -133,7 +129,6 @@ function OverviewContent({ username }: { username: string }) {
     setQueue,
     togglePlayPause,
   } = usePlayerStore();
-  const [prompt, setPrompt] = useState('');
 
   useEffect(() => {
     initializePlayer();
@@ -154,27 +149,6 @@ function OverviewContent({ username }: { username: string }) {
     6,
   );
   const artistCount = new Set(tracks.map((track) => track.artist)).size;
-  const genres = tracks.flatMap((track) =>
-    Array.isArray(track.genres)
-      ? track.genres
-      : typeof track.genres === 'string'
-        ? track.genres.split(',').map((genre) => genre.trim())
-        : [],
-  );
-  const leadingGenre = genres.find(Boolean);
-  const bpms = tracks
-    .map((track) => track.bpm)
-    .filter((bpm): bpm is number => typeof bpm === 'number');
-  const middleBpm = bpms.length
-    ? Math.round(bpms.reduce((sum, bpm) => sum + bpm, 0) / bpms.length)
-    : 124;
-  const suggestedPrompts = [
-    leadingGenre
-      ? `Build a warm-up set from my ${leadingGenre} records`
-      : 'Build a warm-up set from my collection',
-    `Find a smooth run around ${middleBpm} BPM`,
-    'Give me a left-field transition I would not pick myself',
-  ];
 
   if (convexTracks === undefined || playlists === undefined) {
     return (
@@ -183,14 +157,6 @@ function OverviewContent({ username }: { username: string }) {
       </div>
     );
   }
-
-  const startAsk = (value: string) => {
-    const nextPrompt = value.trim();
-    navigate({
-      to: '/analyze/chat',
-      search: nextPrompt ? { prompt: nextPrompt } : {},
-    });
-  };
 
   const playTrack = async (track: CrateTrack) => {
     const index = rotation.findIndex((candidate) => candidate.id === track.id);
@@ -206,48 +172,30 @@ function OverviewContent({ username }: { username: string }) {
       <section className="relative overflow-hidden rounded-[1.75rem] border border-border/70 bg-card px-5 py-7 shadow-soft sm:px-8 sm:py-10 lg:grid lg:grid-cols-[minmax(0,1.15fr)_minmax(18rem,0.85fr)] lg:items-center lg:gap-10 lg:px-12 lg:py-12">
         <div className="relative z-10 max-w-2xl">
           <div className="mb-5 flex items-center gap-2 text-xs font-semibold text-primary">
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Grounded in {tracks.length.toLocaleString()} tracks</span>
+            <Disc3 className="h-3.5 w-3.5" />
+            <span>{tracks.length.toLocaleString()} playable tracks</span>
           </div>
           <h2 className="max-w-xl text-[2.25rem] font-semibold leading-[1.03] tracking-[-0.055em] text-foreground sm:text-5xl lg:text-[3.5rem]">
             What should we pull from the crate?
           </h2>
           <p className="mt-4 max-w-xl text-sm leading-6 text-muted-foreground sm:text-base sm:leading-7">
-            Welcome back, {displayName || username}. Describe the room, the
-            energy, or the transition. Crate will work from music you actually
-            own.
+            Welcome back, {displayName || username}. Pull a record, or shape
+            what you own into a set you can share.
           </p>
 
-          <form
-            className="mt-7 flex items-center gap-2 rounded-[1rem] border border-border bg-popover p-2 shadow-soft focus-within:border-primary"
-            onSubmit={(event) => {
-              event.preventDefault();
-              startAsk(prompt);
-            }}
-          >
-            <input
-              value={prompt}
-              onChange={(event) => setPrompt(event.target.value)}
-              placeholder="Try “late-night house, 118–124 BPM”"
-              className="h-11 min-w-0 flex-1 bg-transparent px-2 text-sm text-foreground outline-none placeholder:text-muted-foreground"
-              aria-label="Ask your crate"
-            />
-            <Button type="submit" size="icon" aria-label="Open Ask Crate">
-              <Send className="h-4 w-4" />
+          <div className="mt-7 flex flex-wrap gap-2">
+            <Button asChild>
+              <Link to="/$username/tracks" params={{ username }}>
+                <LibraryBig className="mr-2 h-4 w-4" />
+                Open library
+              </Link>
             </Button>
-          </form>
-
-          <div className="mt-3 flex flex-wrap gap-2">
-            {suggestedPrompts.map((suggestion) => (
-              <button
-                key={suggestion}
-                type="button"
-                onClick={() => startAsk(suggestion)}
-                className="rounded-full border border-border/80 bg-background/65 px-3 py-1.5 text-left text-[0.7rem] font-medium text-muted-foreground transition-colors hover:border-primary/30 hover:bg-accent hover:text-accent-foreground"
-              >
-                {suggestion}
-              </button>
-            ))}
+            <Button asChild variant="outline">
+              <Link to="/$username/playlists" params={{ username }}>
+                <ListMusic className="mr-2 h-4 w-4" />
+                Your playlists
+              </Link>
+            </Button>
           </div>
         </div>
 
@@ -348,49 +296,6 @@ function OverviewContent({ username }: { username: string }) {
             </Link>
           </div>
         )}
-      </section>
-
-      <section className="mt-12 grid gap-4 pb-6 lg:grid-cols-2">
-        <Link
-          to="/$username/tracks"
-          params={{ username }}
-          className="group flex items-center justify-between rounded-[1.25rem] border border-border/70 bg-card p-5 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-soft"
-        >
-          <div className="flex items-center gap-4">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-accent text-accent-foreground">
-              <LibraryBig className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                Your library
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Filter tracks by artist, genre, and BPM.
-              </p>
-            </div>
-          </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
-        </Link>
-        <Link
-          to="/$username/playlists"
-          params={{ username }}
-          className="group flex items-center justify-between rounded-[1.25rem] border border-border/70 bg-card p-5 transition-[transform,box-shadow] hover:-translate-y-0.5 hover:shadow-soft"
-        >
-          <div className="flex items-center gap-4">
-            <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-muted text-foreground">
-              <Heart className="h-5 w-5" />
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                Your playlists
-              </p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Turn good finds into a set you can return to.
-              </p>
-            </div>
-          </div>
-          <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-1" />
-        </Link>
       </section>
     </div>
   );

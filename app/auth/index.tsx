@@ -53,13 +53,19 @@ function AuthenticatedRedirect() {
     return <Navigate to="/onboarding" replace />;
   }
 
-  return <Navigate to="/analyze/chat" replace />;
+  return (
+    <Navigate
+      to="/$username/tracks"
+      params={{ username: user.username }}
+      replace
+    />
+  );
 }
 
 const benefits = [
   'Start with the records already in your Discogs collection',
   'Search, shortlist, and build playlists from what you own',
-  'Ask a DJ assistant for the next track or a new direction',
+  'Share a playlist with a link anyone can play',
 ];
 
 function SignInForm() {

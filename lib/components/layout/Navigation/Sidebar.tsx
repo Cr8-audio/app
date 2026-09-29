@@ -1,10 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router';
-import {
-  LibraryBig,
-  ListMusic,
-  MessageCircle,
-  SlidersHorizontal,
-} from 'lucide-react';
+import { LibraryBig, ListMusic, SlidersHorizontal } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { cn } from '@/lib/utils/tailwind';
 import {
@@ -21,13 +16,6 @@ export default function Sidebar() {
   if (!username) return null;
 
   const navigationItems = [
-    {
-      name: 'Ask',
-      description: 'Dig with your assistant',
-      href: '/analyze/chat',
-      icon: MessageCircle,
-      active: pathname.startsWith('/analyze'),
-    },
     {
       name: 'Library',
       description: 'Tracks and releases',

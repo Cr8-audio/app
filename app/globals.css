@@ -2,8 +2,6 @@
 @import 'tailwindcss';
 @plugin 'tailwindcss-animate';
 
-@import './crate-chat-home.css';
-
 /*
  * Crate should feel like a record room: warm paper, precise ink, one cobalt
  * signal colour, and album artwork doing most of the expressive work.
@@ -55,7 +53,6 @@
   --radius-base: 0.625rem;
   --radius-card: 1.125rem;
   --radius-chip: 999px;
-  --radius-composer: 1.25rem;
 
   --shadow-soft: 0 18px 55px -38px hsl(228 20% 20% / 0.38);
   --shadow-float: 0 24px 70px -40px hsl(228 20% 20% / 0.48);

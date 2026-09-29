@@ -1,7 +1,7 @@
 'use client';
 
 import { Link, Navigate, useLocation } from '@tanstack/react-router';
-import { LibraryBig, ListMusic, MessageCircle } from 'lucide-react';
+import { LibraryBig, ListMusic } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
 import { cn } from '@/lib/utils/tailwind';
 import Sidebar from './Sidebar';
@@ -17,12 +17,6 @@ interface AppLayoutProps {
 function MobileNavigation({ username }: { username: string }) {
   const { pathname } = useLocation();
   const items = [
-    {
-      label: 'Ask',
-      href: '/analyze/chat',
-      icon: MessageCircle,
-      active: pathname.startsWith('/analyze'),
-    },
     {
       label: 'Library',
       href: `/${username}/tracks`,
@@ -42,7 +36,7 @@ function MobileNavigation({ username }: { username: string }) {
   return (
     <nav
       aria-label="Primary navigation"
-      className="grid h-[4.35rem] flex-shrink-0 grid-cols-3 border-t border-border/80 bg-card/95 px-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
+      className="grid h-[4.35rem] flex-shrink-0 grid-cols-2 border-t border-border/80 bg-card/95 px-3 pb-[env(safe-area-inset-bottom)] backdrop-blur-xl md:hidden"
     >
       {items.map((item) => {
         const Icon = item.icon;
@@ -105,7 +99,9 @@ export default function AppLayout({ children }: AppLayoutProps) {
     );
   }
 
-  if (isOnboardingRoute) return <Navigate to="/analyze/chat" replace />;
+  if (isOnboardingRoute) {
+    return <Navigate to="/$username/tracks" params={{ username }} replace />;
+  }
 
   const [routeUsername, section, subSection] = normalizedPath
     .split('/')
