@@ -28,6 +28,7 @@ import {
 import { useQuery } from 'convex/react';
 import { toast } from 'sonner';
 import { api } from '@/convex/_generated/api';
+import { formatImportTime } from '@/convex/lib/importEstimate';
 import { Button } from '@/lib/components/ui/button';
 import {
   Dialog,
@@ -442,7 +443,8 @@ export default function TracksTable() {
               <span className="inline-flex items-center gap-1.5">
                 <Loader2 className="h-3 w-3 animate-spin" />
                 Importing tracklists from Discogs: {progress.ready} of{' '}
-                {progress.total} records ready
+                {progress.total} records ready,{' '}
+                {formatImportTime(progress.minutesLeft)} left
               </span>
             ) : (
               'Search, play, and organize without leaving your library.'
@@ -472,7 +474,7 @@ export default function TracksTable() {
             {searchQuery
               ? 'Try another artist, title, genre, or style.'
               : isImporting
-                ? `Crate is fetching the tracklists for your ${progress.total} records from Discogs. Tracks appear here as each record arrives.`
+                ? `Crate is fetching the tracklists for your ${progress.total} records from Discogs, ${formatImportTime(progress.minutesLeft)} in all. Tracks appear here as each record arrives.`
                 : 'Explore your Discogs collection to find the music you want close at hand.'}
           </p>
           {searchQuery ? (
