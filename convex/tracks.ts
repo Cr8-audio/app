@@ -1,6 +1,82 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { query } from './_generated/server';
+import { query, type QueryCtx } from './_generated/server';
+import type { Doc } from './_generated/dataModel';
 import { v } from 'convex/values';
+import { resolveCollectionOwnerKey } from './discogsCollection';
+import { libraryPage } from './lib/libraryPage';
+import { trackAudioStatus } from './lib/playlistSharing';
+
+/** Every track on the signed-in user's records, in collection order. */
+async function collectionTracks(ctx: QueryCtx) {
+  const userId = await getAuthUserId(ctx);
+  const user = userId ? await ctx.db.get(userId) : null;
+  if (!user) return null;
+
+  const ownerKey = await resolveCollectionOwnerKey(ctx, user);
+  const releases = await ctx.db
+    .query('user_releases')
+    .withIndex('by_user', (q) => q.eq('user_id', ownerKey))
+    .collect();
+  const groups = await Promise.all(
+    releases.map((release) =>
+      ctx.db
+        .query('tracks')
+        .withIndex('by_discogs_release', (q) =>
+          q.eq('discogs_release_id', release.discogs_release_id),
+        )
+        .collect(),
+    ),
+  );
+  return groups.flat();
+}
+
+function toLibraryTrack(track: Doc<'tracks'>) {
+  return {
+    ...track,
+    id: track.id || track._id,
+    audio_status: trackAudioStatus(track),
+  };
+}
+
+/**
+ * One page of the library, searched and sorted on the server. The library
+ * used to download every track (about 800 KB for 1,500) to show ten.
+ */
+export const listLibrary = query({
+  args: {
+    search: v.optional(v.string()),
+    sortBy: v.optional(v.union(v.literal('title'), v.literal('artist'))),
+    sortDesc: v.optional(v.boolean()),
+    pageIndex: v.number(),
+    pageSize: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const tracks = (await collectionTracks(ctx)) ?? [];
+    const page = libraryPage(tracks, args);
+    return { ...page, tracks: page.tracks.map(toLibraryTrack) };
+  },
+});
+
+/** What the overview page shows: counts, a few covers and a few tracks. */
+export const getLibraryOverview = query({
+  args: {},
+  handler: async (ctx) => {
+    const tracks = (await collectionTracks(ctx)) ?? [];
+    const artwork = [
+      ...new Set(
+        tracks
+          .map((track) => track.artwork)
+          .filter((url): url is string => Boolean(url)),
+      ),
+    ].slice(0, 4);
+    return {
+      trackCount: tracks.length,
+      artistCount: new Set(tracks.map((track) => track.artist)).size,
+      artwork,
+      sample: tracks.slice(0, 6).map(toLibraryTrack),
+    };
+  },
+});
 
 /**
  * Get all tracks for the authenticated user

@@ -19,6 +19,7 @@ import type * as lib_discogsClient from "../lib/discogsClient.js";
 import type * as lib_discogsOAuth from "../lib/discogsOAuth.js";
 import type * as lib_discogsSearch from "../lib/discogsSearch.js";
 import type * as lib_discogsTracklist from "../lib/discogsTracklist.js";
+import type * as lib_libraryPage from "../lib/libraryPage.js";
 import type * as lib_playlistSharing from "../lib/playlistSharing.js";
 import type * as lib_username from "../lib/username.js";
 import type * as lib_youtubeApi from "../lib/youtubeApi.js";
@@ -50,6 +51,7 @@ declare const fullApi: ApiFromModules<{
   "lib/discogsOAuth": typeof lib_discogsOAuth;
   "lib/discogsSearch": typeof lib_discogsSearch;
   "lib/discogsTracklist": typeof lib_discogsTracklist;
+  "lib/libraryPage": typeof lib_libraryPage;
   "lib/playlistSharing": typeof lib_playlistSharing;
   "lib/username": typeof lib_username;
   "lib/youtubeApi": typeof lib_youtubeApi;

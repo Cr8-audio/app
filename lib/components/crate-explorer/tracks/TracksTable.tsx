@@ -19,12 +19,8 @@ import {
 } from 'lucide-react';
 import {
   createColumnHelper,
-  FilterFn,
   flexRender,
   getCoreRowModel,
-  getFilteredRowModel,
-  getPaginationRowModel,
-  getSortedRowModel,
   PaginationState,
   SortingState,
   useReactTable,
@@ -48,7 +44,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/lib/components/ui/select';
+import useDebounce from '@/lib/hooks/useDebounce';
 import { useFavorites } from '@/lib/hooks/useFavorites';
+import { useLastDefined } from '@/lib/hooks/useLastDefined';
 import { usePlaylists } from '@/lib/hooks/usePlaylists';
 import { usePlayerStore } from '@/lib/stores';
 import { CrateTrack } from '@/lib/types';
@@ -70,17 +68,9 @@ function formatGenres(genres: string | null, styles: string | null) {
 
 export default function TracksTable() {
   const { username } = useParams({ strict: false });
-  const convexTracks = useQuery(api.tracks.getUserTracks);
   // Tracklists arrive from Discogs a batch at a time after each sync.
   const progress = useQuery(api.releaseTracks.getTracklistProgress);
   const isImporting = !!progress && progress.ready < progress.total;
-  const allTracks = useMemo(() => {
-    if (!convexTracks) return [];
-    return convexTracks.map((track) => ({
-      ...track,
-      id: track.id || track._id,
-    })) as CrateTrack[];
-  }, [convexTracks]);
 
   const {
     playlists: convexPlaylists,
@@ -104,6 +94,29 @@ export default function TracksTable() {
     pageIndex: 0,
     pageSize: 10,
   });
+
+  // Search, sorting and paging run on the server, which sends one page.
+  const search = useDebounce(searchQuery.trim(), 250);
+  const sortBy = sorting[0]?.id;
+  const library = useLastDefined(
+    useQuery(api.tracks.listLibrary, {
+      search: search || undefined,
+      sortBy: sortBy === 'title' || sortBy === 'artist' ? sortBy : undefined,
+      sortDesc: sorting[0]?.desc,
+      pageIndex: pagination.pageIndex,
+      pageSize: pagination.pageSize,
+    }),
+  );
+  const pageTracks = useMemo(
+    () => (library?.tracks ?? []) as CrateTrack[],
+    [library],
+  );
+  const firstPage = () =>
+    setPagination((current) => ({ ...current, pageIndex: 0 }));
+  const changeSearch = (value: string) => {
+    setSearchQuery(value);
+    firstPage();
+  };
   const [isCreatingPlaylist, setIsCreatingPlaylist] = useState(false);
   const [newPlaylistName, setNewPlaylistName] = useState('');
   const [selectedTrack, setSelectedTrack] = useState<CrateTrack | null>(null);
@@ -376,29 +389,22 @@ export default function TracksTable() {
     [playingTrackId, isPlaying, isTogglingFavorite],
   );
 
-  const globalFilter: FilterFn<CrateTrack> = (row, _columnId, value) => {
-    const search = String(value).toLowerCase();
-    const track = row.original;
-    return [track.title, track.artist, track.genres, track.styles]
-      .filter(Boolean)
-      .some((field) => field?.toLowerCase().includes(search));
-  };
-
   const table = useReactTable({
-    data: allTracks,
+    data: pageTracks,
     columns,
-    state: { sorting, globalFilter: searchQuery, pagination },
-    globalFilterFn: globalFilter,
-    onSortingChange: setSorting,
-    onGlobalFilterChange: setSearchQuery,
+    state: { sorting, pagination },
+    manualSorting: true,
+    manualPagination: true,
+    pageCount: library?.pageCount ?? 1,
+    onSortingChange: (updater) => {
+      setSorting(updater);
+      firstPage();
+    },
     onPaginationChange: setPagination,
     getCoreRowModel: getCoreRowModel(),
-    getSortedRowModel: getSortedRowModel(),
-    getFilteredRowModel: getFilteredRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
   });
 
-  if (convexTracks === undefined) {
+  if (library === undefined) {
     return (
       <div className="space-y-5">
         <div className="flex items-center justify-between gap-4">
@@ -422,14 +428,14 @@ export default function TracksTable() {
   }
 
   const visibleRows = table.getRowModel().rows;
-  const filteredCount = table.getFilteredRowModel().rows.length;
+  const filteredCount = library.filteredTotal;
 
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <p className="text-sm font-medium text-foreground">
-            {allTracks.length} {allTracks.length === 1 ? 'track' : 'tracks'}
+            {library.total} {library.total === 1 ? 'track' : 'tracks'}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
             {isImporting ? (
@@ -447,7 +453,7 @@ export default function TracksTable() {
           <SearchInput
             ref={searchInputRef}
             value={searchQuery}
-            onChange={setSearchQuery}
+            onChange={changeSearch}
           />
         </div>
       </div>
@@ -473,7 +479,7 @@ export default function TracksTable() {
             <Button
               variant="outline"
               className="mt-6 rounded-full"
-              onClick={() => setSearchQuery('')}
+              onClick={() => changeSearch('')}
             >
               Clear search
             </Button>
