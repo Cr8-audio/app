@@ -104,14 +104,12 @@ Production and previews deploy to the cr8.audio Cloudflare account with the
 `CLOUDFLARE_PRODUCTION_API_TOKEN` secret. The preview bot comments on the PR
 with its link.
 
-CI doesn't deploy Convex. After a change in `convex/` is merged, deploy it:
+A push to `main` deploys Convex first (`convex deploy` with the
+`CONVEX_DEPLOY_KEY` secret), then builds the frontend against it and ships
+the Worker. PR previews and staging only build the frontend.
 
-```bash
-npx convex deploy
-```
-
-If the change adds a migration in `convex/migrations.ts`, run it once after
-deploying, for example:
+Migrations don't run on deploy. If a change adds one in
+`convex/migrations.ts`, run it once after it reaches production, for example:
 
 ```bash
 npx convex run --prod migrations:run '{"fn": "migrations:backfillPlaylistVisibility"}'
