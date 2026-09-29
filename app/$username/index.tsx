@@ -25,9 +25,7 @@ export const Route = createFileRoute('/$username/')({
   component: UserOverviewPage,
 });
 
-function CollectionArtwork({ tracks }: { tracks: CrateTrack[] }) {
-  const artworks = tracks.filter((track) => track.artwork).slice(0, 4);
-
+function CollectionArtwork({ artworks }: { artworks: string[] }) {
   return (
     <div className="relative mx-auto h-[15rem] w-[15rem] sm:h-[18rem] sm:w-[18rem]">
       <div className="absolute inset-[12%] rounded-full bg-foreground shadow-float">
@@ -35,7 +33,7 @@ function CollectionArtwork({ tracks }: { tracks: CrateTrack[] }) {
         <div className="absolute inset-[28%] rounded-full border border-white/10" />
         <div className="absolute inset-[44%] rounded-full bg-primary" />
       </div>
-      {artworks.map((track, index) => {
+      {artworks.map((artwork, index) => {
         const positions = [
           '-left-1 top-2 rotate-[-7deg]',
           '-right-2 top-5 rotate-[8deg]',
@@ -44,14 +42,14 @@ function CollectionArtwork({ tracks }: { tracks: CrateTrack[] }) {
         ];
         return (
           <div
-            key={track.id}
+            key={artwork}
             className={cn(
               'absolute h-[42%] w-[42%] overflow-hidden rounded-[1.05rem] border-[5px] border-card bg-muted shadow-float',
               positions[index],
             )}
           >
             <Image
-              src={track.artwork!}
+              src={artwork}
               alt=""
               width={140}
               height={140}
@@ -119,9 +117,10 @@ function TrackCard({
 
 function OverviewContent({ username }: { username: string }) {
   const { displayName } = useAuth();
-  const convexTracks = useQuery(api.tracks.getUserTracks);
+  // A summary, not the whole collection: counts, covers and a few tracks.
+  const overview = useQuery(api.tracks.getLibraryOverview);
   const playlists = useQuery(api.playlists.getUserPlaylists);
-  const { getFavoriteTracksFromAllTracks } = useFavorites();
+  const { favorites } = useFavorites();
   const {
     initializePlayer,
     isPlaying,
@@ -134,23 +133,27 @@ function OverviewContent({ username }: { username: string }) {
     initializePlayer();
   }, [initializePlayer]);
 
-  const tracks = useMemo(
+  const favoriteTracks = useMemo(
     () =>
-      (convexTracks ?? []).map((track) => ({
-        ...track,
-        id: track.id || track._id,
-      })) as CrateTrack[],
-    [convexTracks],
+      favorites.flatMap((favorite) =>
+        favorite?.tracks
+          ? [
+              {
+                ...favorite.tracks,
+                id: favorite.tracks.id || favorite.tracks._id,
+              },
+            ]
+          : [],
+      ) as CrateTrack[],
+    [favorites],
   );
+  const rotation = (
+    favoriteTracks.length
+      ? favoriteTracks
+      : ((overview?.sample ?? []) as CrateTrack[])
+  ).slice(0, 6);
 
-  const favoriteTracks = getFavoriteTracksFromAllTracks(tracks);
-  const rotation = (favoriteTracks.length ? favoriteTracks : tracks).slice(
-    0,
-    6,
-  );
-  const artistCount = new Set(tracks.map((track) => track.artist)).size;
-
-  if (convexTracks === undefined || playlists === undefined) {
+  if (overview === undefined || playlists === undefined) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <LoadingSpinner />
@@ -173,7 +176,7 @@ function OverviewContent({ username }: { username: string }) {
         <div className="relative z-10 max-w-2xl">
           <div className="mb-5 flex items-center gap-2 text-xs font-semibold text-primary">
             <Disc3 className="h-3.5 w-3.5" />
-            <span>{tracks.length.toLocaleString()} playable tracks</span>
+            <span>{overview.trackCount.toLocaleString()} playable tracks</span>
           </div>
           <h2 className="max-w-xl text-[2.25rem] font-semibold leading-[1.03] tracking-[-0.055em] text-foreground sm:text-5xl lg:text-[3.5rem]">
             What should we pull from the crate?
@@ -200,7 +203,7 @@ function OverviewContent({ username }: { username: string }) {
         </div>
 
         <div className="mt-10 lg:mt-0">
-          <CollectionArtwork tracks={tracks} />
+          <CollectionArtwork artworks={overview.artwork} />
         </div>
       </section>
 
@@ -208,10 +211,10 @@ function OverviewContent({ username }: { username: string }) {
         {[
           {
             label: 'Playable tracks',
-            value: tracks.length,
+            value: overview.trackCount,
             icon: LibraryBig,
           },
-          { label: 'Artists', value: artistCount, icon: Music2 },
+          { label: 'Artists', value: overview.artistCount, icon: Music2 },
           {
             label: 'Saved playlists',
             value: playlists.length,
