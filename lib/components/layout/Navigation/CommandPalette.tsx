@@ -8,7 +8,6 @@ import {
   Home,
   LibraryBig,
   ListMusic,
-  MessageCircle,
   Search,
   Settings,
   X,
@@ -44,14 +43,6 @@ export default function CommandPalette({
   const commands = useMemo<CommandItem[]>(() => {
     if (!username) return [];
     return [
-      {
-        id: 'ask',
-        title: 'Ask Crate',
-        description: 'Find a vibe, BPM lane, or next track',
-        keywords: ['assistant', 'chat', 'mix', 'recommend'],
-        icon: MessageCircle,
-        href: '/analyze/chat',
-      },
       {
         id: 'library',
         title: 'Your tracks',

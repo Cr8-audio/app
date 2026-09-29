@@ -33,7 +33,11 @@ function OnboardingPage() {
     if (!user) return;
 
     if (user.username) {
-      navigate({ to: '/analyze/chat', replace: true });
+      navigate({
+        to: '/$username/tracks',
+        params: { username: user.username },
+        replace: true,
+      });
     }
   }, [user, navigate]);
 
@@ -76,7 +80,11 @@ function OnboardingPage() {
       });
 
       toast.success('Welcome to Crate. Your collection is syncing.');
-      navigate({ to: '/analyze/chat', replace: true });
+      navigate({
+        to: '/$username/tracks',
+        params: { username: username.toLowerCase() },
+        replace: true,
+      });
     } catch (error) {
       console.error('Failed to set username:', error);
       toast.error(

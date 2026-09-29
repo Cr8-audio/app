@@ -12,11 +12,10 @@ import { Route as rootRouteImport } from './app/__root'
 import { Route as IndexRouteImport } from './app/index'
 import { Route as OnboardingIndexRouteImport } from './app/onboarding/index'
 import { Route as AuthIndexRouteImport } from './app/auth/index'
-import { Route as AnalyzeIndexRouteImport } from './app/analyze.index'
 import { Route as UsernameIndexRouteImport } from './app/$username/index'
 import { Route as PPublicIdRouteImport } from './app/p/$publicId'
 import { Route as ListenUsernameRouteImport } from './app/listen/$username'
-import { Route as AnalyzeChatRouteImport } from './app/analyze.chat'
+import { Route as AnalyzeSplatRouteImport } from './app/analyze.$'
 import { Route as UsernameTracksRouteImport } from './app/$username/tracks'
 import { Route as UsernamePlaylistsRouteImport } from './app/$username/playlists'
 import { Route as UsernameCollectionRouteImport } from './app/$username/collection'
@@ -41,11 +40,6 @@ const AuthIndexRoute = AuthIndexRouteImport.update({
   path: '/auth/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AnalyzeIndexRoute = AnalyzeIndexRouteImport.update({
-  id: '/analyze/',
-  path: '/analyze/',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const UsernameIndexRoute = UsernameIndexRouteImport.update({
   id: '/$username/',
   path: '/$username/',
@@ -61,9 +55,9 @@ const ListenUsernameRoute = ListenUsernameRouteImport.update({
   path: '/listen/$username',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AnalyzeChatRoute = AnalyzeChatRouteImport.update({
-  id: '/analyze/chat',
-  path: '/analyze/chat',
+const AnalyzeSplatRoute = AnalyzeSplatRouteImport.update({
+  id: '/analyze/$',
+  path: '/analyze/$',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UsernameTracksRoute = UsernameTracksRouteImport.update({
@@ -115,11 +109,10 @@ export interface FileRoutesByFullPath {
   '/$username/collection': typeof UsernameCollectionRoute
   '/$username/playlists': typeof UsernamePlaylistsRoute
   '/$username/tracks': typeof UsernameTracksRoute
-  '/analyze/chat': typeof AnalyzeChatRoute
+  '/analyze/$': typeof AnalyzeSplatRoute
   '/listen/$username': typeof ListenUsernameRoute
   '/p/$publicId': typeof PPublicIdRoute
   '/$username': typeof UsernameIndexRoute
-  '/analyze': typeof AnalyzeIndexRoute
   '/auth': typeof AuthIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/$username/settings/connections': typeof UsernameSettingsConnectionsRoute
@@ -133,11 +126,10 @@ export interface FileRoutesByTo {
   '/$username/collection': typeof UsernameCollectionRoute
   '/$username/playlists': typeof UsernamePlaylistsRoute
   '/$username/tracks': typeof UsernameTracksRoute
-  '/analyze/chat': typeof AnalyzeChatRoute
+  '/analyze/$': typeof AnalyzeSplatRoute
   '/listen/$username': typeof ListenUsernameRoute
   '/p/$publicId': typeof PPublicIdRoute
   '/$username': typeof UsernameIndexRoute
-  '/analyze': typeof AnalyzeIndexRoute
   '/auth': typeof AuthIndexRoute
   '/onboarding': typeof OnboardingIndexRoute
   '/$username/settings/connections': typeof UsernameSettingsConnectionsRoute
@@ -152,11 +144,10 @@ export interface FileRoutesById {
   '/$username/collection': typeof UsernameCollectionRoute
   '/$username/playlists': typeof UsernamePlaylistsRoute
   '/$username/tracks': typeof UsernameTracksRoute
-  '/analyze/chat': typeof AnalyzeChatRoute
+  '/analyze/$': typeof AnalyzeSplatRoute
   '/listen/$username': typeof ListenUsernameRoute
   '/p/$publicId': typeof PPublicIdRoute
   '/$username/': typeof UsernameIndexRoute
-  '/analyze/': typeof AnalyzeIndexRoute
   '/auth/': typeof AuthIndexRoute
   '/onboarding/': typeof OnboardingIndexRoute
   '/$username/settings/connections': typeof UsernameSettingsConnectionsRoute
@@ -172,11 +163,10 @@ export interface FileRouteTypes {
     | '/$username/collection'
     | '/$username/playlists'
     | '/$username/tracks'
-    | '/analyze/chat'
+    | '/analyze/$'
     | '/listen/$username'
     | '/p/$publicId'
     | '/$username'
-    | '/analyze'
     | '/auth'
     | '/onboarding'
     | '/$username/settings/connections'
@@ -190,11 +180,10 @@ export interface FileRouteTypes {
     | '/$username/collection'
     | '/$username/playlists'
     | '/$username/tracks'
-    | '/analyze/chat'
+    | '/analyze/$'
     | '/listen/$username'
     | '/p/$publicId'
     | '/$username'
-    | '/analyze'
     | '/auth'
     | '/onboarding'
     | '/$username/settings/connections'
@@ -208,11 +197,10 @@ export interface FileRouteTypes {
     | '/$username/collection'
     | '/$username/playlists'
     | '/$username/tracks'
-    | '/analyze/chat'
+    | '/analyze/$'
     | '/listen/$username'
     | '/p/$publicId'
     | '/$username/'
-    | '/analyze/'
     | '/auth/'
     | '/onboarding/'
     | '/$username/settings/connections'
@@ -227,11 +215,10 @@ export interface RootRouteChildren {
   UsernameCollectionRoute: typeof UsernameCollectionRoute
   UsernamePlaylistsRoute: typeof UsernamePlaylistsRoute
   UsernameTracksRoute: typeof UsernameTracksRoute
-  AnalyzeChatRoute: typeof AnalyzeChatRoute
+  AnalyzeSplatRoute: typeof AnalyzeSplatRoute
   ListenUsernameRoute: typeof ListenUsernameRoute
   PPublicIdRoute: typeof PPublicIdRoute
   UsernameIndexRoute: typeof UsernameIndexRoute
-  AnalyzeIndexRoute: typeof AnalyzeIndexRoute
   AuthIndexRoute: typeof AuthIndexRoute
   OnboardingIndexRoute: typeof OnboardingIndexRoute
   UsernameSettingsConnectionsRoute: typeof UsernameSettingsConnectionsRoute
@@ -264,13 +251,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/analyze/': {
-      id: '/analyze/'
-      path: '/analyze'
-      fullPath: '/analyze'
-      preLoaderRoute: typeof AnalyzeIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/$username/': {
       id: '/$username/'
       path: '/$username'
@@ -292,11 +272,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ListenUsernameRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/analyze/chat': {
-      id: '/analyze/chat'
-      path: '/analyze/chat'
-      fullPath: '/analyze/chat'
-      preLoaderRoute: typeof AnalyzeChatRouteImport
+    '/analyze/$': {
+      id: '/analyze/$'
+      path: '/analyze/$'
+      fullPath: '/analyze/$'
+      preLoaderRoute: typeof AnalyzeSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$username/tracks': {
@@ -363,11 +343,10 @@ const rootRouteChildren: RootRouteChildren = {
   UsernameCollectionRoute: UsernameCollectionRoute,
   UsernamePlaylistsRoute: UsernamePlaylistsRoute,
   UsernameTracksRoute: UsernameTracksRoute,
-  AnalyzeChatRoute: AnalyzeChatRoute,
+  AnalyzeSplatRoute: AnalyzeSplatRoute,
   ListenUsernameRoute: ListenUsernameRoute,
   PPublicIdRoute: PPublicIdRoute,
   UsernameIndexRoute: UsernameIndexRoute,
-  AnalyzeIndexRoute: AnalyzeIndexRoute,
   AuthIndexRoute: AuthIndexRoute,
   OnboardingIndexRoute: OnboardingIndexRoute,
   UsernameSettingsConnectionsRoute: UsernameSettingsConnectionsRoute,

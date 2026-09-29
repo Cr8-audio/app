@@ -28,9 +28,6 @@ import {
 import CommandPalette from './CommandPalette';
 
 function getPageMeta(pathname: string, username: string | null) {
-  if (pathname.startsWith('/analyze')) {
-    return { eyebrow: 'Your collection', title: 'Ask Crate' };
-  }
   if (
     username &&
     (pathname.startsWith(`/${username}/tracks`) ||

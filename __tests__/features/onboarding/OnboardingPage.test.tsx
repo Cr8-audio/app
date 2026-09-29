@@ -123,15 +123,17 @@ describe('OnboardingPage - Username Validation Logic', () => {
   });
 
   describe('Redirect logic', () => {
-    it('redirects to chat if onboarding is complete', () => {
+    it('redirects to the library if onboarding is complete', () => {
       const user = {
         onboardingComplete: true,
         username: 'testuser',
       };
 
       const destination =
-        user.onboardingComplete && user.username ? '/analyze/chat' : null;
-      expect(destination).toBe('/analyze/chat');
+        user.onboardingComplete && user.username
+          ? `/${user.username}/tracks`
+          : null;
+      expect(destination).toBe('/testuser/tracks');
     });
 
     it('stays on page if no username yet', () => {

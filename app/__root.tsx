@@ -40,11 +40,11 @@ export const Route = createRootRoute({
       {
         name: 'description',
         content:
-          'Turn your Discogs collection into searchable, playable sets with a personal DJ assistant.',
+          'Turn your Discogs collection into searchable, playable sets you can share.',
       },
       {
         name: 'keywords',
-        content: 'Crate, Discogs, music collection, playlists, DJ assistant',
+        content: 'Crate, Discogs, music collection, playlists',
       },
     ],
     links: [
