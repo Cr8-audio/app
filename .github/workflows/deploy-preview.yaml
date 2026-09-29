@@ -14,7 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     env:
       PREVIEW_HOST: pr-${{ github.event.pull_request.number }}.cr8.audio
-      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+      # Google counts search quota per Cloud project, so previews use a key
+      # from a separate project and can't use up production's searches. Until
+      # YOUTUBE_PREVIEW_API_KEY is set they fall back to the production key.
+      YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_PREVIEW_API_KEY || secrets.YOUTUBE_API_KEY }}
+      HAS_PREVIEW_YOUTUBE_KEY: ${{ secrets.YOUTUBE_PREVIEW_API_KEY != '' }}
 
     steps:
       - name: Checkout
@@ -70,6 +74,10 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_PRODUCTION_API_TOKEN }}
           accountId: 2f84630cfef8a6b13712d41a0e8d9afc
           command: deploy --config dist/server/wrangler.json --name crate-app-pr-${{ github.event.pull_request.number }} --domain ${{ env.PREVIEW_HOST }}
+
+      - name: Warn about the shared production YouTube key
+        if: env.YOUTUBE_API_KEY != '' && env.HAS_PREVIEW_YOUTUBE_KEY != 'true'
+        run: echo "::warning::Previews are using production's YouTube key and its daily search quota. Add YOUTUBE_PREVIEW_API_KEY from a separate Google Cloud project."
 
       - name: Warn about disabled preview audio search
         if: env.YOUTUBE_API_KEY == ''

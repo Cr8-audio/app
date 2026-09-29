@@ -1,11 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { env } from 'cloudflare:workers';
 import { evaluateYouTubeCandidate } from '@/convex/lib/youtubeMatching';
+import { isRateLimited, tooManyRequests } from '@/lib/security/rateLimit';
 
 export const Route = createFileRoute('/api/external/youtube/$videoId')({
   server: {
     handlers: {
       GET: async ({ params, request }) => {
+        if (await isRateLimited(env.YOUTUBE_LOOKUP_LIMITER, request)) {
+          return tooManyRequests('audio lookups');
+        }
         try {
           const videoId = params.videoId;
           if (!/^[A-Za-z0-9_-]{11}$/.test(videoId)) {
