@@ -1,5 +1,10 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { query, mutation } from './_generated/server';
+import {
+  query,
+  mutation,
+  internalQuery,
+  internalMutation,
+} from './_generated/server';
 import { v } from 'convex/values';
 import { getUsernameValidationError } from './lib/username';
 
@@ -18,9 +23,11 @@ export const getCurrentUser = query({
 });
 
 /**
- * Get a user by their username (for public profiles)
+ * Get a user by their username. Internal: it returns the whole user document
+ * (email, legacy ID). Public profiles use playlists.getPublicPlaylistsByUsername,
+ * which only exposes the public owner fields.
  */
-export const getUserByUsername = query({
+export const getUserByUsername = internalQuery({
   args: { username: v.string() },
   handler: async (ctx, { username }) => {
     return await ctx.db
@@ -163,8 +170,12 @@ export const updateProfile = mutation({
 /**
  * Link Supabase user ID to current user
  * This is needed to connect the new Convex user to their old Supabase data
+ *
+ * Internal: nothing proves the caller owns the Supabase ID, and owning it
+ * means owning that account's playlists and collection. Run it for a user
+ * from the CLI with `npx convex run --prod --identity`.
  */
-export const linkSupabaseUserId = mutation({
+export const linkSupabaseUserId = internalMutation({
   args: {
     supabaseUserId: v.string(),
   },
@@ -191,9 +202,11 @@ export const linkSupabaseUserId = mutation({
 
 /**
  * Try to automatically link legacy data based on matching criteria
- * Call this during onboarding to find and link existing data
+ *
+ * Internal: it returns another account's Supabase ID. Discogs sign-in links
+ * migrated accounts on its own (discogsAuth.findUserForDiscogsAccount).
  */
-export const tryAutoLinkLegacyData = mutation({
+export const tryAutoLinkLegacyData = internalMutation({
   args: {},
   handler: async (ctx) => {
     const userId = await getAuthUserId(ctx);
@@ -363,7 +376,7 @@ export const removeDiscogsProfile = mutation({
  * Get legacy data stats for a potential Supabase user ID
  * Used to show the user what data will be linked
  */
-export const getLegacyDataStats = query({
+export const getLegacyDataStats = internalQuery({
   args: { supabaseUserId: v.string() },
   handler: async (ctx, { supabaseUserId }) => {
     const releases = await ctx.db
@@ -391,10 +404,12 @@ export const getLegacyDataStats = query({
 
 /**
  * Admin mutation to directly link a Supabase user ID to a Convex user
- * This is a temporary function for data migration
- * Call: users:adminLinkSupabaseId with convexUserId and supabaseUserId
+ * This is a temporary function for data migration. For example:
+ *
+ *   npx convex run --prod users:adminLinkSupabaseId \
+ *     '{"convexUserId": "...", "supabaseUserId": "..."}'
  */
-export const adminLinkSupabaseId = mutation({
+export const adminLinkSupabaseId = internalMutation({
   args: {
     convexUserId: v.id('users'),
     supabaseUserId: v.string(),
