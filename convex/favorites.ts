@@ -1,42 +1,62 @@
 import { getAuthUserId } from '@convex-dev/auth/server';
-import { query, mutation } from './_generated/server';
 import { v } from 'convex/values';
+import type { Doc, Id } from './_generated/dataModel';
+import {
+  query,
+  mutation,
+  type MutationCtx,
+  type QueryCtx,
+} from './_generated/server';
+import { isLegacyFlagSet } from './lib/playlistSharing';
+import { getPlaylistsForUser } from './playlists';
+
+type ReadCtx = Pick<QueryCtx, 'db'>;
 
 /**
- * Helper to get or create the user's favorites playlist
+ * The user's Favorites playlists. Playlists are stored under whichever owner
+ * key was current when they were made (Convex ID, email or migrated Supabase
+ * ID), so one person can have several; they read as one list. The first is
+ * where new favorites go: the email or Convex ID one they've always gone to,
+ * else a migrated one, so a second list isn't created next to it.
  */
-async function getOrCreateFavoritesPlaylist(
-  ctx: any,
-  userId: string,
-  userEmail: string | undefined,
+export async function favoritesPlaylistsOf(ctx: ReadCtx, user: Doc<'users'>) {
+  const legacyLast = (playlist: Doc<'playlists'>) =>
+    playlist.user_id === user.supabaseUserId ? 1 : 0;
+  return (await getPlaylistsForUser(ctx, user))
+    .filter((playlist) => isLegacyFlagSet(playlist.is_favorites))
+    .sort(
+      (a, b) =>
+        legacyLast(a) - legacyLast(b) || a._creationTime - b._creationTime,
+    );
+}
+
+async function signedInUser(ctx: QueryCtx | MutationCtx) {
+  const userId = await getAuthUserId(ctx);
+  return userId ? await ctx.db.get(userId) : null;
+}
+
+/** The app sends a Convex track ID or the old UUID kept in `tracks.id`. */
+async function resolveTrackId(ctx: ReadCtx, trackId: string) {
+  const convexId = ctx.db.normalizeId('tracks', trackId);
+  if (convexId) return convexId;
+  const track = await ctx.db
+    .query('tracks')
+    .withIndex('by_old_id', (q) => q.eq('id', trackId))
+    .first();
+  return track?._id ?? null;
+}
+
+function favoriteRow(
+  ctx: ReadCtx,
+  playlistId: Id<'playlists'>,
+  trackId: Id<'tracks'>,
 ) {
-  // First, try to find existing favorites playlist
-  const allPlaylists = await ctx.db.query('playlists').collect();
-
-  let favoritesPlaylist = allPlaylists.find(
-    (p: any) =>
-      (p.user_id === userEmail || p.user_id === userId) &&
-      (p.is_favorites === true ||
-        p.is_favorites === 't' ||
-        p.is_favorites === 'true'),
-  );
-
-  if (!favoritesPlaylist) {
-    // Create favorites playlist
-    const playlistId = await ctx.db.insert('playlists', {
-      id: crypto.randomUUID(),
-      user_id: userEmail || userId,
-      title: 'Favorites',
-      description: 'Your favorite tracks',
-      is_public: false,
-      is_favorites: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    });
-    favoritesPlaylist = await ctx.db.get(playlistId);
-  }
-
-  return favoritesPlaylist;
+  return ctx.db
+    .query('playlist_tracks')
+    .withIndex('by_playlist_track', (q) =>
+      q.eq('playlist_id', playlistId).eq('track_id', trackId),
+    )
+    .first();
 }
 
 /**
@@ -45,57 +65,46 @@ async function getOrCreateFavoritesPlaylist(
 export const getFavorites = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return { favoriteTrackIds: [], favorites: [] };
-    }
-
-    const user = await ctx.db.get(userId);
+    const user = await signedInUser(ctx);
     if (!user) {
       return { favoriteTrackIds: [], favorites: [] };
     }
 
-    // Find the favorites playlist
-    const allPlaylists = await ctx.db.query('playlists').collect();
-    const favoritesPlaylist = allPlaylists.find(
-      (p) =>
-        (p.user_id === user.email || p.user_id === userId) &&
-        (p.is_favorites === true ||
-          p.is_favorites === 't' ||
-          p.is_favorites === 'true'),
-    );
-
-    if (!favoritesPlaylist) {
-      return { favoriteTrackIds: [], favorites: [] };
+    const rows = [];
+    for (const playlist of await favoritesPlaylistsOf(ctx, user)) {
+      rows.push(
+        ...(await ctx.db
+          .query('playlist_tracks')
+          .withIndex('by_playlist_position', (q) =>
+            q.eq('playlist_id', playlist._id),
+          )
+          .collect()),
+      );
     }
-
-    // Get playlist tracks
-    const playlistTracks = await ctx.db
-      .query('playlist_tracks')
-      .filter((q) => q.eq(q.field('playlist_id'), favoritesPlaylist._id))
-      .collect();
-
-    // Get the actual tracks
-    const favorites = await Promise.all(
-      playlistTracks.map(async (pt) => {
-        const track = await ctx.db.get(pt.track_id);
-        return track
-          ? {
-              track_id: track.id, // Old string ID for compatibility
-              _trackId: track._id, // Convex ID
-              created_at: pt.created_at,
-              tracks: track, // Nested track for API compatibility
-            }
-          : null;
-      }),
+    const seen = new Set<Id<'tracks'>>();
+    const firstRows = rows.filter(
+      (row) => !seen.has(row.track_id) && seen.add(row.track_id),
     );
 
-    const validFavorites = favorites.filter(Boolean);
-    const favoriteTrackIds = validFavorites.map((f) => f?.track_id);
+    const favorites = (
+      await Promise.all(
+        firstRows.map(async (row) => {
+          const track = await ctx.db.get(row.track_id);
+          return track
+            ? {
+                track_id: track.id, // Old string ID for compatibility
+                _trackId: track._id, // Convex ID
+                created_at: row.created_at,
+                tracks: track, // Nested track for API compatibility
+              }
+            : null;
+        }),
+      )
+    ).filter((favorite) => favorite !== null);
 
     return {
-      favoriteTrackIds,
-      favorites: validFavorites,
+      favoriteTrackIds: favorites.map((favorite) => favorite.track_id),
+      favorites,
     };
   },
 });
@@ -107,65 +116,49 @@ export const addFavorite = mutation({
   args: {
     trackId: v.union(v.id('tracks'), v.string()), // Accept both Convex ID and old string ID
   },
-  handler: async (ctx, { trackId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
+  handler: async (ctx, args) => {
+    const user = await signedInUser(ctx);
+    if (!user) {
       throw new Error('Not authenticated');
     }
 
-    const user = await ctx.db.get(userId);
-    if (!user) {
-      throw new Error('User not found');
+    const trackId = await resolveTrackId(ctx, args.trackId);
+    if (!trackId) {
+      throw new Error('Track not found');
     }
 
-    // Get or create favorites playlist
-    const favoritesPlaylist = await getOrCreateFavoritesPlaylist(
-      ctx,
-      userId,
-      user.email,
-    );
-
-    // Resolve track ID - if string, look up by old ID
-    let convexTrackId = trackId;
-    if (typeof trackId === 'string' && !trackId.startsWith('j')) {
-      // Looks like an old UUID, find by old_id
-      const track = await ctx.db
-        .query('tracks')
-        .withIndex('by_old_id', (q) => q.eq('id', trackId))
-        .first();
-
-      if (!track) {
-        throw new Error('Track not found');
+    const playlists = await favoritesPlaylistsOf(ctx, user);
+    for (const playlist of playlists) {
+      if (await favoriteRow(ctx, playlist._id, trackId)) {
+        return { success: true, message: 'Track already in favorites' };
       }
-      convexTrackId = track._id;
     }
 
-    // Check if already in favorites
-    const existingTracks = await ctx.db
+    const now = new Date().toISOString();
+    const playlistId =
+      playlists[0]?._id ??
+      (await ctx.db.insert('playlists', {
+        id: crypto.randomUUID(),
+        user_id: user.email || user._id,
+        title: 'Favorites',
+        description: 'Your favorite tracks',
+        is_public: false,
+        is_favorites: true,
+        created_at: now,
+        updated_at: now,
+      }));
+
+    const last = await ctx.db
       .query('playlist_tracks')
-      .filter((q) => q.eq(q.field('playlist_id'), favoritesPlaylist._id))
-      .collect();
-
-    const alreadyFavorited = existingTracks.some(
-      (pt) => pt.track_id === convexTrackId,
-    );
-    if (alreadyFavorited) {
-      return { success: true, message: 'Track already in favorites' };
-    }
-
-    // Get highest position
-    const maxPosition = existingTracks.reduce(
-      (max, pt) => Math.max(max, pt.position),
-      -1,
-    );
-
-    // Add to favorites
+      .withIndex('by_playlist_position', (q) => q.eq('playlist_id', playlistId))
+      .order('desc')
+      .first();
     await ctx.db.insert('playlist_tracks', {
       id: crypto.randomUUID(),
-      playlist_id: favoritesPlaylist._id,
-      track_id: convexTrackId as any, // Type assertion for flexibility
-      position: maxPosition + 1,
-      created_at: new Date().toISOString(),
+      playlist_id: playlistId,
+      track_id: trackId,
+      position: (last?.position ?? -1) + 1,
+      created_at: now,
     });
 
     return { success: true, message: 'Added to favorites' };
@@ -173,63 +166,24 @@ export const addFavorite = mutation({
 });
 
 /**
- * Remove a track from favorites
+ * Remove a track from favorites (from each Favorites playlist it's in)
  */
 export const removeFavorite = mutation({
   args: {
     trackId: v.union(v.id('tracks'), v.string()),
   },
-  handler: async (ctx, { trackId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
+  handler: async (ctx, args) => {
+    const user = await signedInUser(ctx);
+    if (!user) {
       throw new Error('Not authenticated');
     }
 
-    const user = await ctx.db.get(userId);
-    if (!user) {
-      throw new Error('User not found');
-    }
-
-    // Find favorites playlist
-    const allPlaylists = await ctx.db.query('playlists').collect();
-    const favoritesPlaylist = allPlaylists.find(
-      (p) =>
-        (p.user_id === user.email || p.user_id === userId) &&
-        (p.is_favorites === true ||
-          p.is_favorites === 't' ||
-          p.is_favorites === 'true'),
-    );
-
-    if (!favoritesPlaylist) {
-      return { success: true, message: 'No favorites playlist' };
-    }
-
-    // Resolve track ID
-    let convexTrackId = trackId;
-    if (typeof trackId === 'string' && !trackId.startsWith('j')) {
-      const track = await ctx.db
-        .query('tracks')
-        .withIndex('by_old_id', (q) => q.eq('id', trackId))
-        .first();
-
-      if (track) {
-        convexTrackId = track._id;
+    const trackId = await resolveTrackId(ctx, args.trackId);
+    if (trackId) {
+      for (const playlist of await favoritesPlaylistsOf(ctx, user)) {
+        const row = await favoriteRow(ctx, playlist._id, trackId);
+        if (row) await ctx.db.delete(row._id);
       }
-    }
-
-    // Find and remove
-    const playlistTrack = await ctx.db
-      .query('playlist_tracks')
-      .filter((q) =>
-        q.and(
-          q.eq(q.field('playlist_id'), favoritesPlaylist._id),
-          q.eq(q.field('track_id'), convexTrackId),
-        ),
-      )
-      .first();
-
-    if (playlistTrack) {
-      await ctx.db.delete(playlistTrack._id);
     }
 
     return { success: true, message: 'Removed from favorites' };
@@ -241,55 +195,20 @@ export const removeFavorite = mutation({
  */
 export const isFavorited = query({
   args: { trackId: v.union(v.id('tracks'), v.string()) },
-  handler: async (ctx, { trackId }) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      return false;
-    }
-
-    const user = await ctx.db.get(userId);
+  handler: async (ctx, args) => {
+    const user = await signedInUser(ctx);
     if (!user) {
       return false;
     }
 
-    // Find favorites playlist
-    const allPlaylists = await ctx.db.query('playlists').collect();
-    const favoritesPlaylist = allPlaylists.find(
-      (p) =>
-        (p.user_id === user.email || p.user_id === userId) &&
-        (p.is_favorites === true ||
-          p.is_favorites === 't' ||
-          p.is_favorites === 'true'),
-    );
-
-    if (!favoritesPlaylist) {
+    const trackId = await resolveTrackId(ctx, args.trackId);
+    if (!trackId) {
       return false;
     }
 
-    // Resolve track ID
-    let convexTrackId = trackId;
-    if (typeof trackId === 'string' && !trackId.startsWith('j')) {
-      const track = await ctx.db
-        .query('tracks')
-        .withIndex('by_old_id', (q) => q.eq('id', trackId))
-        .first();
-
-      if (track) {
-        convexTrackId = track._id;
-      }
+    for (const playlist of await favoritesPlaylistsOf(ctx, user)) {
+      if (await favoriteRow(ctx, playlist._id, trackId)) return true;
     }
-
-    // Check if in favorites
-    const playlistTrack = await ctx.db
-      .query('playlist_tracks')
-      .filter((q) =>
-        q.and(
-          q.eq(q.field('playlist_id'), favoritesPlaylist._id),
-          q.eq(q.field('track_id'), convexTrackId),
-        ),
-      )
-      .first();
-
-    return !!playlistTrack;
+    return false;
   },
 });
