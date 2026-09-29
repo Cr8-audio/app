@@ -10,6 +10,14 @@ export default defineConfig({
       ignoreConfigErrors: true,
     }),
   ],
+  resolve: {
+    alias: {
+      'cloudflare:workers': new URL(
+        './__tests__/setup/cloudflare-workers.ts',
+        import.meta.url,
+      ).pathname,
+    },
+  },
   test: {
     environment: 'jsdom',
     globals: true,

@@ -5,6 +5,20 @@ assets = { directory = "dist/client" }
 compatibility_date = "2024-12-16"
 compatibility_flags = ["nodejs_compat"]
 
+# Per-IP allowances for /api/external/youtube/*: searches cost 100 of the
+# Google project's roughly 100 daily searches, lookups 1 unit. Bindings aren't
+# inherited, so each environment declares its own, with its own counters
+# (namespace_id). Staging has none, so it isn't limited.
+[[ratelimits]]
+name = "YOUTUBE_SEARCH_LIMITER"
+namespace_id = "1001"
+simple = { limit = 10, period = 60 }
+
+[[ratelimits]]
+name = "YOUTUBE_LOOKUP_LIMITER"
+namespace_id = "1002"
+simple = { limit = 60, period = 60 }
+
 [env.production]
 name = "crate-app-production"
 account_id = "2f84630cfef8a6b13712d41a0e8d9afc"
@@ -12,6 +26,16 @@ routes = [
   { pattern = "cr8.audio", custom_domain = true },
   { pattern = "www.cr8.audio", custom_domain = true }
 ]
+
+[[env.production.ratelimits]]
+name = "YOUTUBE_SEARCH_LIMITER"
+namespace_id = "2001"
+simple = { limit = 10, period = 60 }
+
+[[env.production.ratelimits]]
+name = "YOUTUBE_LOOKUP_LIMITER"
+namespace_id = "2002"
+simple = { limit = 60, period = 60 }
 
 [env.staging]
 name = "crate-app"
@@ -26,6 +50,16 @@ name = "crate-app-preview"
 account_id = "2f84630cfef8a6b13712d41a0e8d9afc"
 workers_dev = false
 preview_urls = false
+
+[[env.preview.ratelimits]]
+name = "YOUTUBE_SEARCH_LIMITER"
+namespace_id = "3001"
+simple = { limit = 10, period = 60 }
+
+[[env.preview.ratelimits]]
+name = "YOUTUBE_LOOKUP_LIMITER"
+namespace_id = "3002"
+simple = { limit = 60, period = 60 }
 
 # Environment variables
 [env.production.vars]
