@@ -1,4 +1,3 @@
-import { useEffect, useMemo } from 'react';
 import { createFileRoute } from '@tanstack/react-router';
 import { useQuery } from 'convex/react';
 import {
@@ -6,6 +5,7 @@ import {
   Clock3,
   Disc3,
   Globe2,
+  Link2,
   ListMusic,
   Pause,
   Play,
@@ -13,66 +13,74 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/convex/_generated/api';
+import { PlayerVideo } from '@/lib/components/public/PlayerVideo';
 import { PublicArtworkMosaic } from '@/lib/components/public/PublicArtworkMosaic';
+import {
+  isPlayable,
+  loadPublicPlaylist,
+  usePublicPlayback,
+  type PublicTrack,
+} from '@/lib/components/public/publicPlayback';
 import { Button } from '@/lib/components/ui/button';
 import PersistentPlayer from '@/lib/components/ui/persistent-player';
 import { usePlayerStore } from '@/lib/stores';
-import type { CrateTrack } from '@/lib/types';
 import { formatDuration } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/tailwind';
 
 export const Route = createFileRoute('/p/$publicId')({
-  head: () => ({
-    meta: [
-      { title: 'Listen on Crate' },
-      {
-        name: 'description',
-        content: 'A record collection, shaped into a set and shared on Crate.',
-      },
-    ],
-  }),
+  loader: ({ params }) => loadPublicPlaylist(params.publicId),
+  head: ({ loaderData: playlist }) => {
+    if (!playlist) {
+      return {
+        meta: [
+          { title: 'Listen on Crate' },
+          { name: 'robots', content: 'noindex' },
+        ],
+      };
+    }
+    const ownerName =
+      playlist.owner?.displayName || playlist.owner?.username || 'a digger';
+    const description =
+      playlist.description ||
+      `A set from ${ownerName}'s record collection, shared on Crate.`;
+    const image =
+      playlist.coverImageUrl ??
+      playlist.tracks.find((track) => track.artwork)?.artwork;
+    return {
+      meta: [
+        { title: `${playlist.title} · Crate` },
+        { name: 'description', content: description },
+        { property: 'og:title', content: playlist.title },
+        { property: 'og:description', content: description },
+        { property: 'og:type', content: 'music.playlist' },
+        ...(image ? [{ property: 'og:image', content: image }] : []),
+        {
+          name: 'twitter:card',
+          content: image ? 'summary_large_image' : 'summary',
+        },
+        // Unlisted playlists work by link but stay out of search results.
+        ...(playlist.visibility === 'unlisted'
+          ? [{ name: 'robots', content: 'noindex' }]
+          : []),
+      ],
+    };
+  },
   component: PublicPlaylistPage,
 });
 
-type PublicTrack = CrateTrack & { playlistPosition: number };
-
 function PublicPlaylistPage() {
   const { publicId } = Route.useParams();
-  const playlist = useQuery(api.playlists.getPublicPlaylist, { publicId });
-  const {
-    currentTrack,
-    queue,
-    playingTrackId,
-    isPlaying,
-    initializePlayer,
-    setQueue,
-    togglePlayPause,
-  } = usePlayerStore();
+  const loaded = Route.useLoaderData();
+  const live = useQuery(api.playlists.getPublicPlaylist, { publicId });
+  const playlist = live === undefined ? loaded : live;
+  const currentTrack = usePlayerStore((state) => state.currentTrack);
+  const queue = usePlayerStore((state) => state.queue);
+  const playback = usePublicPlayback(playlist, { loop: false });
+  const tracks = playlist?.tracks ?? [];
 
-  useEffect(() => {
-    void initializePlayer();
-  }, [initializePlayer]);
-
-  const tracks = useMemo(
-    () => (playlist?.tracks ?? []) as PublicTrack[],
-    [playlist?.tracks],
-  );
-  const currentPlaylistIndex = tracks.findIndex(
-    (track) => track.id === playingTrackId,
-  );
-  const isThisPlaylistPlaying = currentPlaylistIndex >= 0 && isPlaying;
-
-  const playTrack = async (track: PublicTrack, index: number) => {
-    setQueue(tracks, index);
-    const didStart = await togglePlayPause(track);
+  const playTrack = async (track?: PublicTrack) => {
+    const didStart = await playback.play(track?.id);
     if (!didStart) toast.error('No playable audio found for this track');
-  };
-
-  const togglePlaylist = async () => {
-    const startIndex = currentPlaylistIndex >= 0 ? currentPlaylistIndex : 0;
-    const track = tracks[startIndex];
-    if (!track) return;
-    await playTrack(track, startIndex);
   };
 
   const sharePlaylist = async () => {
@@ -94,18 +102,7 @@ function PublicPlaylistPage() {
     toast.success('Playlist link copied');
   };
 
-  if (playlist === undefined) {
-    return (
-      <main className="flex min-h-screen items-center justify-center bg-[#f5f2eb] text-[#252621]">
-        <div className="flex items-center gap-3 text-sm text-black/55">
-          <Disc3 className="h-5 w-5 animate-spin" />
-          Opening the crate…
-        </div>
-      </main>
-    );
-  }
-
-  if (playlist === null) {
+  if (!playlist) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f5f2eb] px-6 text-[#252621]">
         <div className="max-w-md text-center">
@@ -174,15 +171,29 @@ function PublicPlaylistPage() {
       <main>
         <section className="border-b border-black/10 bg-[radial-gradient(circle_at_85%_15%,rgba(95,99,233,0.13),transparent_32%)]">
           <div className="mx-auto grid max-w-6xl gap-8 px-5 py-10 sm:px-8 sm:py-14 md:grid-cols-[minmax(15rem,22rem)_1fr] md:items-end md:gap-12 lg:py-20">
-            <PublicArtworkMosaic
-              artworkUrls={artworkUrls}
-              coverImageUrl={playlist.coverImageUrl}
+            <PlayerVideo
+              showVideo={playback.isActive}
               className="aspect-square w-full rounded-[1.75rem] shadow-[0_28px_70px_rgba(31,32,29,0.16)]"
+              cover={
+                <PublicArtworkMosaic
+                  artworkUrls={artworkUrls}
+                  coverImageUrl={playlist.coverImageUrl}
+                  className="h-full w-full"
+                />
+              }
             />
 
             <div className="pb-1">
               <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-black/45">
-                <Globe2 className="h-3.5 w-3.5" /> Public playlist
+                {playlist.visibility === 'unlisted' ? (
+                  <>
+                    <Link2 className="h-3.5 w-3.5" /> Shared by link
+                  </>
+                ) : (
+                  <>
+                    <Globe2 className="h-3.5 w-3.5" /> Public playlist
+                  </>
+                )}
               </div>
               <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-[0.98] tracking-[-0.055em] sm:text-6xl lg:text-7xl">
                 {playlist.title}
@@ -196,15 +207,15 @@ function PublicPlaylistPage() {
                 <Button
                   type="button"
                   className="h-12 rounded-full bg-[#20211f] px-6 text-white shadow-none hover:bg-black"
-                  onClick={() => void togglePlaylist()}
-                  disabled={tracks.length === 0}
+                  onClick={() => void playTrack()}
+                  disabled={playback.queue.length === 0}
                 >
-                  {isThisPlaylistPlaying ? (
+                  {playback.isPlaying ? (
                     <Pause className="mr-2 h-4 w-4" fill="currentColor" />
                   ) : (
                     <Play className="mr-2 h-4 w-4" fill="currentColor" />
                   )}
-                  {isThisPlaylistPlaying ? 'Pause' : 'Play set'}
+                  {playback.isPlaying ? 'Pause' : 'Play set'}
                 </Button>
                 <p className="text-sm text-black/50">
                   Curated by{' '}
@@ -238,18 +249,22 @@ function PublicPlaylistPage() {
           ) : (
             <ol className="divide-y divide-black/[0.075]">
               {tracks.map((track, index) => {
-                const isCurrent = playingTrackId === track.id;
+                const isCurrent = playback.playingTrackId === track.id;
+                const playable = isPlayable(track);
+                const isPlaying = isCurrent && playback.isPlaying;
                 return (
                   <li
                     key={`${track.id}-${track.playlistPosition}`}
                     className={cn(
                       'group grid grid-cols-[2.5rem_3rem_minmax(0,1fr)_auto] items-center gap-3 py-3 transition-colors sm:grid-cols-[3rem_3.5rem_minmax(0,1fr)_minmax(9rem,0.4fr)_auto] sm:gap-4 sm:py-3.5',
                       isCurrent && 'text-[#4f54dc]',
+                      !playable && 'opacity-45',
                     )}
                   >
                     <button
                       type="button"
-                      onClick={() => void playTrack(track, index)}
+                      disabled={!playable}
+                      onClick={() => void playTrack(track)}
                       className={cn(
                         'flex h-10 w-10 items-center justify-center rounded-full text-sm tabular-nums transition-colors',
                         isCurrent
@@ -257,12 +272,12 @@ function PublicPlaylistPage() {
                           : 'text-black/35 hover:bg-black/[0.06] hover:text-black',
                       )}
                       aria-label={
-                        isCurrent && isPlaying
+                        isPlaying
                           ? `Pause ${track.title}`
                           : `Play ${track.title}`
                       }
                     >
-                      {isCurrent && isPlaying ? (
+                      {isPlaying ? (
                         <Pause className="h-3.5 w-3.5" fill="currentColor" />
                       ) : (
                         <>
@@ -304,7 +319,11 @@ function PublicPlaylistPage() {
                         .join(' · ') || '—'}
                     </p>
                     <span className="text-xs tabular-nums text-black/40">
-                      {formatDuration(track.duration)}
+                      {track.audio_status === 'pending'
+                        ? 'Finding audio…'
+                        : track.audio_status === 'unavailable'
+                          ? 'No audio'
+                          : formatDuration(track.duration)}
                     </span>
                   </li>
                 );
