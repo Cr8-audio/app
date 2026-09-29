@@ -10,35 +10,25 @@
 
 import { Route as rootRouteImport } from './app/__root'
 import { Route as IndexRouteImport } from './app/index'
-import { Route as OnboardingIndexRouteImport } from './app/onboarding/index'
-import { Route as AuthIndexRouteImport } from './app/auth/index'
 import { Route as UsernameIndexRouteImport } from './app/$username/index'
-import { Route as PPublicIdRouteImport } from './app/p/$publicId'
-import { Route as ListenUsernameRouteImport } from './app/listen/$username'
-import { Route as EmbedPublicIdRouteImport } from './app/embed.$publicId'
-import { Route as AnalyzeSplatRouteImport } from './app/analyze.$'
-import { Route as UsernameTracksRouteImport } from './app/$username/tracks'
-import { Route as UsernamePlaylistsRouteImport } from './app/$username/playlists'
 import { Route as UsernameCollectionRouteImport } from './app/$username/collection'
+import { Route as UsernamePlaylistsRouteImport } from './app/$username/playlists'
+import { Route as UsernameTracksRouteImport } from './app/$username/tracks'
+import { Route as AnalyzeSplatRouteImport } from './app/analyze.$'
+import { Route as AuthIndexRouteImport } from './app/auth/index'
+import { Route as EmbedPublicIdRouteImport } from './app/embed.$publicId'
+import { Route as ListenUsernameRouteImport } from './app/listen/$username'
+import { Route as OnboardingIndexRouteImport } from './app/onboarding/index'
+import { Route as PPublicIdRouteImport } from './app/p/$publicId'
 import { Route as UsernameSettingsIndexRouteImport } from './app/$username/settings/index'
-import { Route as ConnectDiscogsCallbackRouteImport } from './app/connect/discogs/callback'
 import { Route as UsernameSettingsConnectionsRouteImport } from './app/$username/settings/connections'
-import { Route as ApiExternalYoutubeSearchRouteImport } from './app/api/external/youtube/search'
+import { Route as ConnectDiscogsCallbackRouteImport } from './app/connect/discogs/callback'
 import { Route as ApiExternalYoutubeVideoIdRouteImport } from './app/api/external/youtube/$videoId'
+import { Route as ApiExternalYoutubeSearchRouteImport } from './app/api/external/youtube/search'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
-  id: '/onboarding/',
-  path: '/onboarding/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthIndexRoute = AuthIndexRouteImport.update({
-  id: '/auth/',
-  path: '/auth/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UsernameIndexRoute = UsernameIndexRouteImport.update({
@@ -46,29 +36,9 @@ const UsernameIndexRoute = UsernameIndexRouteImport.update({
   path: '/$username/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PPublicIdRoute = PPublicIdRouteImport.update({
-  id: '/p/$publicId',
-  path: '/p/$publicId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ListenUsernameRoute = ListenUsernameRouteImport.update({
-  id: '/listen/$username',
-  path: '/listen/$username',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const EmbedPublicIdRoute = EmbedPublicIdRouteImport.update({
-  id: '/embed/$publicId',
-  path: '/embed/$publicId',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AnalyzeSplatRoute = AnalyzeSplatRouteImport.update({
-  id: '/analyze/$',
-  path: '/analyze/$',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UsernameTracksRoute = UsernameTracksRouteImport.update({
-  id: '/$username/tracks',
-  path: '/$username/tracks',
+const UsernameCollectionRoute = UsernameCollectionRouteImport.update({
+  id: '/$username/collection',
+  path: '/$username/collection',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UsernamePlaylistsRoute = UsernamePlaylistsRouteImport.update({
@@ -76,19 +46,44 @@ const UsernamePlaylistsRoute = UsernamePlaylistsRouteImport.update({
   path: '/$username/playlists',
   getParentRoute: () => rootRouteImport,
 } as any)
-const UsernameCollectionRoute = UsernameCollectionRouteImport.update({
-  id: '/$username/collection',
-  path: '/$username/collection',
+const UsernameTracksRoute = UsernameTracksRouteImport.update({
+  id: '/$username/tracks',
+  path: '/$username/tracks',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AnalyzeSplatRoute = AnalyzeSplatRouteImport.update({
+  id: '/analyze/$',
+  path: '/analyze/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthIndexRoute = AuthIndexRouteImport.update({
+  id: '/auth/',
+  path: '/auth/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EmbedPublicIdRoute = EmbedPublicIdRouteImport.update({
+  id: '/embed/$publicId',
+  path: '/embed/$publicId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ListenUsernameRoute = ListenUsernameRouteImport.update({
+  id: '/listen/$username',
+  path: '/listen/$username',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OnboardingIndexRoute = OnboardingIndexRouteImport.update({
+  id: '/onboarding/',
+  path: '/onboarding/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PPublicIdRoute = PPublicIdRouteImport.update({
+  id: '/p/$publicId',
+  path: '/p/$publicId',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UsernameSettingsIndexRoute = UsernameSettingsIndexRouteImport.update({
   id: '/$username/settings/',
   path: '/$username/settings/',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ConnectDiscogsCallbackRoute = ConnectDiscogsCallbackRouteImport.update({
-  id: '/connect/discogs/callback',
-  path: '/connect/discogs/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UsernameSettingsConnectionsRoute =
@@ -97,16 +92,21 @@ const UsernameSettingsConnectionsRoute =
     path: '/$username/settings/connections',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiExternalYoutubeSearchRoute =
-  ApiExternalYoutubeSearchRouteImport.update({
-    id: '/api/external/youtube/search',
-    path: '/api/external/youtube/search',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const ConnectDiscogsCallbackRoute = ConnectDiscogsCallbackRouteImport.update({
+  id: '/connect/discogs/callback',
+  path: '/connect/discogs/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiExternalYoutubeVideoIdRoute =
   ApiExternalYoutubeVideoIdRouteImport.update({
     id: '/api/external/youtube/$videoId',
     path: '/api/external/youtube/$videoId',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiExternalYoutubeSearchRoute =
+  ApiExternalYoutubeSearchRouteImport.update({
+    id: '/api/external/youtube/search',
+    path: '/api/external/youtube/search',
     getParentRoute: () => rootRouteImport,
   } as any)
 
@@ -119,12 +119,12 @@ export interface FileRoutesByFullPath {
   '/embed/$publicId': typeof EmbedPublicIdRoute
   '/listen/$username': typeof ListenUsernameRoute
   '/p/$publicId': typeof PPublicIdRoute
-  '/$username': typeof UsernameIndexRoute
-  '/auth': typeof AuthIndexRoute
-  '/onboarding': typeof OnboardingIndexRoute
+  '/$username/': typeof UsernameIndexRoute
+  '/auth/': typeof AuthIndexRoute
+  '/onboarding/': typeof OnboardingIndexRoute
   '/$username/settings/connections': typeof UsernameSettingsConnectionsRoute
   '/connect/discogs/callback': typeof ConnectDiscogsCallbackRoute
-  '/$username/settings': typeof UsernameSettingsIndexRoute
+  '/$username/settings/': typeof UsernameSettingsIndexRoute
   '/api/external/youtube/$videoId': typeof ApiExternalYoutubeVideoIdRoute
   '/api/external/youtube/search': typeof ApiExternalYoutubeSearchRoute
 }
@@ -176,12 +176,12 @@ export interface FileRouteTypes {
     | '/embed/$publicId'
     | '/listen/$username'
     | '/p/$publicId'
-    | '/$username'
-    | '/auth'
-    | '/onboarding'
+    | '/$username/'
+    | '/auth/'
+    | '/onboarding/'
     | '/$username/settings/connections'
     | '/connect/discogs/callback'
-    | '/$username/settings'
+    | '/$username/settings/'
     | '/api/external/youtube/$videoId'
     | '/api/external/youtube/search'
   fileRoutesByTo: FileRoutesByTo
@@ -250,67 +250,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/onboarding/': {
-      id: '/onboarding/'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth/': {
-      id: '/auth/'
-      path: '/auth'
-      fullPath: '/auth'
-      preLoaderRoute: typeof AuthIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/$username/': {
       id: '/$username/'
       path: '/$username'
-      fullPath: '/$username'
+      fullPath: '/$username/'
       preLoaderRoute: typeof UsernameIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/p/$publicId': {
-      id: '/p/$publicId'
-      path: '/p/$publicId'
-      fullPath: '/p/$publicId'
-      preLoaderRoute: typeof PPublicIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/listen/$username': {
-      id: '/listen/$username'
-      path: '/listen/$username'
-      fullPath: '/listen/$username'
-      preLoaderRoute: typeof ListenUsernameRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/embed/$publicId': {
-      id: '/embed/$publicId'
-      path: '/embed/$publicId'
-      fullPath: '/embed/$publicId'
-      preLoaderRoute: typeof EmbedPublicIdRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/analyze/$': {
-      id: '/analyze/$'
-      path: '/analyze/$'
-      fullPath: '/analyze/$'
-      preLoaderRoute: typeof AnalyzeSplatRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$username/tracks': {
-      id: '/$username/tracks'
-      path: '/$username/tracks'
-      fullPath: '/$username/tracks'
-      preLoaderRoute: typeof UsernameTracksRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/$username/playlists': {
-      id: '/$username/playlists'
-      path: '/$username/playlists'
-      fullPath: '/$username/playlists'
-      preLoaderRoute: typeof UsernamePlaylistsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$username/collection': {
@@ -320,18 +264,67 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsernameCollectionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/$username/playlists': {
+      id: '/$username/playlists'
+      path: '/$username/playlists'
+      fullPath: '/$username/playlists'
+      preLoaderRoute: typeof UsernamePlaylistsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$username/tracks': {
+      id: '/$username/tracks'
+      path: '/$username/tracks'
+      fullPath: '/$username/tracks'
+      preLoaderRoute: typeof UsernameTracksRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/analyze/$': {
+      id: '/analyze/$'
+      path: '/analyze/$'
+      fullPath: '/analyze/$'
+      preLoaderRoute: typeof AnalyzeSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/': {
+      id: '/auth/'
+      path: '/auth'
+      fullPath: '/auth/'
+      preLoaderRoute: typeof AuthIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/embed/$publicId': {
+      id: '/embed/$publicId'
+      path: '/embed/$publicId'
+      fullPath: '/embed/$publicId'
+      preLoaderRoute: typeof EmbedPublicIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/listen/$username': {
+      id: '/listen/$username'
+      path: '/listen/$username'
+      fullPath: '/listen/$username'
+      preLoaderRoute: typeof ListenUsernameRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding/': {
+      id: '/onboarding/'
+      path: '/onboarding'
+      fullPath: '/onboarding/'
+      preLoaderRoute: typeof OnboardingIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$publicId': {
+      id: '/p/$publicId'
+      path: '/p/$publicId'
+      fullPath: '/p/$publicId'
+      preLoaderRoute: typeof PPublicIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/$username/settings/': {
       id: '/$username/settings/'
       path: '/$username/settings'
-      fullPath: '/$username/settings'
+      fullPath: '/$username/settings/'
       preLoaderRoute: typeof UsernameSettingsIndexRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/connect/discogs/callback': {
-      id: '/connect/discogs/callback'
-      path: '/connect/discogs/callback'
-      fullPath: '/connect/discogs/callback'
-      preLoaderRoute: typeof ConnectDiscogsCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/$username/settings/connections': {
@@ -341,11 +334,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsernameSettingsConnectionsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/external/youtube/search': {
-      id: '/api/external/youtube/search'
-      path: '/api/external/youtube/search'
-      fullPath: '/api/external/youtube/search'
-      preLoaderRoute: typeof ApiExternalYoutubeSearchRouteImport
+    '/connect/discogs/callback': {
+      id: '/connect/discogs/callback'
+      path: '/connect/discogs/callback'
+      fullPath: '/connect/discogs/callback'
+      preLoaderRoute: typeof ConnectDiscogsCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/external/youtube/$videoId': {
@@ -353,6 +346,13 @@ declare module '@tanstack/react-router' {
       path: '/api/external/youtube/$videoId'
       fullPath: '/api/external/youtube/$videoId'
       preLoaderRoute: typeof ApiExternalYoutubeVideoIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/external/youtube/search': {
+      id: '/api/external/youtube/search'
+      path: '/api/external/youtube/search'
+      fullPath: '/api/external/youtube/search'
+      preLoaderRoute: typeof ApiExternalYoutubeSearchRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
