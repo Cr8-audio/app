@@ -67,15 +67,18 @@ export const saveTrackAudio = internalMutation({
       v.object({
         trackId: v.id('tracks'),
         videoId: v.union(v.string(), v.null()),
+        // false: the stored video failed and nothing was searched, so clear
+        // it but leave the track unchecked (pending) for a later search.
+        checked: v.optional(v.boolean()),
       }),
     ),
   },
   handler: async (ctx, { checkedAt, results }) => {
-    for (const { trackId, videoId } of results) {
+    for (const { trackId, videoId, checked = true } of results) {
       if (!(await ctx.db.get(trackId))) continue;
       await ctx.db.patch(trackId, {
         youtube_video_id: videoId ?? undefined,
-        youtube_checked_at: checkedAt,
+        youtube_checked_at: checked ? checkedAt : undefined,
       });
     }
   },
@@ -84,15 +87,18 @@ export const saveTrackAudio = internalMutation({
 /**
  * Verify stored videos (one cheap batched call), then search for the tracks
  * that have none, a limited number per run. The rest continue in a later run.
+ * With searchMissing false (library imports), only verify: a wrong video is
+ * cleared and the track waits for a search when it's played or shared.
  */
 export const matchTrackAudio = internalAction({
   args: {
     trackIds: v.array(v.id('tracks')),
     attempt: v.optional(v.number()),
+    searchMissing: v.optional(v.boolean()),
   },
   handler: async (
     ctx,
-    { trackIds, attempt = 1 },
+    { trackIds, attempt = 1, searchMissing = true },
   ): Promise<{ matched: number; remaining: number }> => {
     const apiKey = process.env.YOUTUBE_API_KEY;
     if (!apiKey) {
@@ -111,8 +117,11 @@ export const matchTrackAudio = internalAction({
     if (tracks.length === 0) return { matched: 0, remaining: 0 };
 
     const checkedAt = Date.now();
-    const results: Array<{ trackId: Id<'tracks'>; videoId: string | null }> =
-      [];
+    const results: Array<{
+      trackId: Id<'tracks'>;
+      videoId: string | null;
+      checked?: boolean;
+    }> = [];
     const toSearch: TrackNeedingAudio[] = [];
     let retry: { afterMs: number; attempt: number } | null = null;
 
@@ -127,12 +136,20 @@ export const matchTrackAudio = internalAction({
         for (const track of batch) {
           if (passed.has(track.videoId!)) {
             results.push({ trackId: track.trackId, videoId: track.videoId });
-          } else {
+          } else if (searchMissing) {
             toSearch.push(track);
+          } else {
+            results.push({
+              trackId: track.trackId,
+              videoId: null,
+              checked: false,
+            });
           }
         }
       }
-      toSearch.push(...tracks.filter((track) => !track.videoId));
+      if (searchMissing) {
+        toSearch.push(...tracks.filter((track) => !track.videoId));
+      }
 
       for (const track of toSearch.slice(0, MAX_SEARCHES_PER_RUN)) {
         const match = await searchYouTubeTrack(apiKey, track);
@@ -176,6 +193,7 @@ export const matchTrackAudio = internalAction({
         {
           trackIds: remaining,
           attempt: retry.attempt,
+          searchMissing,
         },
       );
     }

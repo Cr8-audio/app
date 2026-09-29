@@ -53,7 +53,7 @@ export const getCollection = query({
 });
 
 export async function resolveCollectionOwnerKey(
-  ctx: QueryCtx,
+  ctx: Pick<QueryCtx, 'db'>,
   user: Doc<'users'>,
 ): Promise<string> {
   const keys = [user.supabaseUserId, user.email, user._id].filter(

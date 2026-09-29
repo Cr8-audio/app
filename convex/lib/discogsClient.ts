@@ -3,6 +3,7 @@
  * (`convex/discogs.ts`) and sign-in (`convex/discogsAuth.ts`).
  */
 import { DiscogsSDK } from '@cr8.audio/discogs-sdk';
+import type { DiscogsReleaseDetail } from './discogsTracklist';
 
 const USER_AGENT = 'CrateApp/1.0 +https://cr8.audio';
 
@@ -70,5 +71,37 @@ export async function fetchDiscogsAvatar(
     return profile.avatar_url || undefined;
   } catch {
     return undefined;
+  }
+}
+
+/**
+ * GET /releases/{id}, signed with the user's tokens (60 requests a minute).
+ * The SDK has no release endpoint yet, so this goes through its signed
+ * request helper, which also retries 429s. Returns null when Discogs no
+ * longer has the release.
+ */
+export async function fetchDiscogsRelease(
+  credentials: { accessToken: string; accessTokenSecret: string },
+  releaseId: string,
+): Promise<DiscogsReleaseDetail | null> {
+  const base = createDiscogsSdk().auth.base;
+  try {
+    return await base.requestPublic<DiscogsReleaseDetail>(
+      `releases/${encodeURIComponent(releaseId)}`,
+      {
+        method: 'GET',
+        headers: {
+          Authorization: base.generateOAuthHeaderPublic(
+            credentials.accessToken,
+            credentials.accessTokenSecret,
+          ),
+        },
+      },
+    );
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('HTTP error 404')) {
+      return null;
+    }
+    throw error;
   }
 }

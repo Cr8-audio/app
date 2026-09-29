@@ -462,6 +462,12 @@ export const syncCollection = internalAction({
         ok: true,
         releaseCount: new Set(seen).size,
       });
+      // Releases are summaries; fetch tracklists for the ones without tracks.
+      await ctx.scheduler.runAfter(
+        0,
+        internal.releaseTracks.importReleaseTracks,
+        { userId },
+      );
     } catch (error) {
       await ctx.runMutation(internal.discogs.setSyncResult, {
         userId,
