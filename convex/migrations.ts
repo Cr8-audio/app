@@ -4,6 +4,7 @@ import { components } from './_generated/api.js';
 import { DataModel } from './_generated/dataModel.js';
 import { QueryCtx } from './_generated/server';
 import { Id } from './_generated/dataModel';
+import { isShared, playlistVisibility } from './lib/playlistSharing';
 
 export const migrations = new Migrations<DataModel>(components.migrations);
 export const run = migrations.runner();
@@ -121,6 +122,23 @@ export const migrateTrackAnalysis = migrations.define({
   },
 });
 
+/**
+ * Replace the legacy is_public flag with visibility. Playlists that were
+ * already public keep their UUID as the share ID, so their links still work.
+ */
+export const backfillPlaylistVisibility = migrations.define({
+  table: 'playlists',
+  migrateOne: (_, doc) => {
+    if (doc.visibility && doc.is_public === undefined) return;
+    const visibility = playlistVisibility(doc);
+    return {
+      visibility,
+      is_public: undefined,
+      share_id: doc.share_id ?? (isShared(visibility) ? doc.id : undefined),
+    };
+  },
+});
+
 // Run all migrations in order
 export const runAll = migrations.runner([
   'migrations:convertBooleans' as any,
@@ -129,4 +147,5 @@ export const runAll = migrations.runner([
   'migrations:convertUserReleasesDiscogsIds' as any,
   'migrations:migratePlaylistTracks' as any,
   'migrations:migrateTrackAnalysis' as any,
+  'migrations:backfillPlaylistVisibility' as any,
 ]);

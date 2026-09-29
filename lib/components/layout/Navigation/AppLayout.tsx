@@ -85,6 +85,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
     normalizedPath === '/auth' ||
     normalizedPath === '/connect/discogs/callback' ||
     normalizedPath.startsWith('/p/') ||
+    normalizedPath.startsWith('/embed/') ||
     normalizedPath.startsWith('/listen/');
   const isOnboardingRoute = normalizedPath === '/onboarding';
 

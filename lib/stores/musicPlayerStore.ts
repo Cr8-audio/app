@@ -8,6 +8,14 @@ import {
   searchTrackVideo,
   validateTrackVideo,
 } from '@/lib/api-clients/youtube/service';
+import {
+  createPlayOrder,
+  nextPosition,
+  nextShuffleCycle,
+  previousPosition,
+  removeFromOrder,
+  type KeyOf,
+} from '@/lib/player/playOrder';
 
 const YOUTUBE_IFRAME_API_URL = 'https://www.youtube.com/iframe_api';
 const YOUTUBE_PLAYER_ID = 'youtube-player';
@@ -16,6 +24,7 @@ const YOUTUBE_SCRIPT_ID = 'youtube-iframe-api';
 let youtubeApiPromise: Promise<void> | null = null;
 let playerInitializationPromise: Promise<void> | null = null;
 let playbackRequestId = 0;
+let videoHost: HTMLElement | null = null;
 
 const resolvedVideoIds = new Map<string, string>();
 const videoResolutionPromises = new Map<string, Promise<string | null>>();
@@ -32,7 +41,9 @@ interface PlayerState {
   currentIndex: number;
   isShuffleEnabled: boolean;
   isRepeatEnabled: boolean;
-  shuffledIndices: number[];
+  /** Queue indices in play order; see lib/player/playOrder. */
+  playOrder: number[];
+  orderPosition: number;
   volume: number;
 
   // Progress tracking
@@ -60,6 +71,8 @@ interface PlayerState {
   playPrevious: () => Promise<boolean>;
   toggleShuffle: () => void;
   toggleRepeat: () => void;
+  setShuffle: (enabled: boolean) => void;
+  setRepeat: (enabled: boolean) => void;
   setVolume: (volume: number) => void;
 
   // Progress controls
@@ -73,15 +86,11 @@ interface PlayerState {
   reset: () => void;
 }
 
-// Helper function to shuffle array indices
-const shuffleArray = (array: number[]): number[] => {
-  const shuffled = [...array];
-  for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-  }
-  return shuffled;
-};
+/** Shuffle keeps tracks from the same record apart. */
+const recordKeyOf =
+  (queue: CrateTrack[]): KeyOf =>
+  (index) =>
+    String(queue[index]?.discogs_release_id ?? queue[index]?.artist ?? index);
 
 const loadYouTubeIframeApi = (): Promise<void> => {
   if (window.YT?.Player) return Promise.resolve();
@@ -143,6 +152,11 @@ const createPlayerContainer = () => {
 
   const container = document.createElement('div');
   container.id = YOUTUBE_PLAYER_ID;
+  if (videoHost) {
+    container.style.cssText = 'position:absolute;inset:0;';
+    videoHost.appendChild(container);
+    return;
+  }
   container.setAttribute('aria-hidden', 'true');
   container.style.cssText =
     'position:fixed;top:-10000px;left:-10000px;width:200px;height:200px;pointer-events:none;';
@@ -152,6 +166,9 @@ const createPlayerContainer = () => {
 const resolvePlayableTrack = async (
   track: CrateTrack,
 ): Promise<CrateTrack | null> => {
+  // The server already checked this video against the track (playlistAudio).
+  if (track.audio_status === 'ready' && track.youtube_video_id) return track;
+
   const knownVideoId =
     resolvedVideoIds.get(track.id) ?? track.youtube_video_id ?? null;
   if (knownVideoId) {
@@ -210,7 +227,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   currentIndex: 0,
   isShuffleEnabled: false,
   isRepeatEnabled: false,
-  shuffledIndices: [],
+  playOrder: [],
+  orderPosition: 0,
   volume: 80,
   currentTime: 0,
   duration: 0,
@@ -232,8 +250,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         let didBecomeReady = false;
 
         const ytPlayer = new window.YT.Player(YOUTUBE_PLAYER_ID, {
-          width: '200',
-          height: '200',
+          width: videoHost ? '100%' : '200',
+          height: videoHost ? '100%' : '200',
           playerVars: {
             autoplay: 0,
             controls: 0,
@@ -368,9 +386,12 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
           item.id === resolvedTrack.id ? { ...item, ...resolvedTrack } : item,
         );
 
+        const orderPosition = state.playOrder.indexOf(queueIndex);
         return {
           queue,
           currentIndex: queueIndex === -1 ? state.currentIndex : queueIndex,
+          orderPosition:
+            orderPosition === -1 ? state.orderPosition : orderPosition,
           playingTrackId: resolvedTrack.id,
           currentTrack: resolvedTrack,
           isPlaying: true,
@@ -438,14 +459,17 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         ? track
         : { ...track, youtube_video_id: videoId };
     });
-    const indices = Array.from({ length: queue.length }, (_, i) => i);
+    const { order, position } = createPlayOrder({
+      length: queue.length,
+      startIndex,
+      shuffle: get().isShuffleEnabled,
+      keyOf: recordKeyOf(queue),
+    });
     set({
       queue,
-      currentIndex:
-        queue.length === 0
-          ? 0
-          : Math.min(Math.max(startIndex, 0), queue.length - 1),
-      shuffledIndices: shuffleArray(indices),
+      currentIndex: order[position] ?? 0,
+      playOrder: order,
+      orderPosition: position,
     });
   },
 
@@ -458,12 +482,11 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
         videoId === track.youtube_video_id
           ? track
           : { ...track, youtube_video_id: videoId };
-      const newQueue = [...queue, queuedTrack];
-      const indices = Array.from({ length: newQueue.length }, (_, i) => i);
-      set({
-        queue: newQueue,
-        shuffledIndices: shuffleArray(indices),
-      });
+      // Queued tracks play after everything already in the order.
+      set((state) => ({
+        queue: [...queue, queuedTrack],
+        playOrder: [...state.playOrder, queue.length],
+      }));
     }
   },
 
@@ -471,18 +494,20 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     const { queue, currentIndex, playingTrackId } = get();
     if (trackId === playingTrackId) return;
 
-    const newQueue = queue.filter((track) => track.id !== trackId);
-    const indices = Array.from({ length: newQueue.length }, (_, i) => i);
-
-    // Adjust current index if necessary
     const removedIndex = queue.findIndex((track) => track.id === trackId);
+    if (removedIndex === -1) return;
     const newIndex =
       removedIndex < currentIndex ? currentIndex - 1 : currentIndex;
+    const { order, position } = removeFromOrder(
+      { order: get().playOrder, position: get().orderPosition },
+      removedIndex,
+    );
 
     set({
-      queue: newQueue,
+      queue: queue.filter((track) => track.id !== trackId),
       currentIndex: Math.max(0, newIndex),
-      shuffledIndices: shuffleArray(indices),
+      playOrder: order,
+      orderPosition: position,
     });
   },
 
@@ -494,7 +519,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     set({
       queue: [],
       currentIndex: 0,
-      shuffledIndices: [],
+      playOrder: [],
+      orderPosition: 0,
       currentTrack: null,
       playingTrackId: null,
       isPlaying: false,
@@ -503,91 +529,37 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     });
   },
 
-  playNext: async () => {
-    const {
-      queue,
-      currentIndex,
-      isShuffleEnabled,
-      isRepeatEnabled,
-      shuffledIndices,
-      playTrack,
-    } = get();
-    if (queue.length === 0) return false;
-
-    let nextIndex: number;
-
-    if (isShuffleEnabled) {
-      const currentShuffledIndex = shuffledIndices.indexOf(currentIndex);
-      const nextShuffledIndex =
-        (currentShuffledIndex + 1) % shuffledIndices.length;
-      nextIndex = shuffledIndices[nextShuffledIndex];
-    } else {
-      nextIndex = (currentIndex + 1) % queue.length;
-    }
-
-    // Handle repeat mode
-    if (
-      !isRepeatEnabled &&
-      nextIndex === 0 &&
-      currentIndex === queue.length - 1
-    ) {
-      // End of queue and no repeat
-      return false;
-    }
-
-    const nextTrack = queue[nextIndex];
-    if (nextTrack) {
-      return playTrack(nextTrack);
-    }
-
-    return false;
-  },
+  playNext: () => advance(1),
 
   playPrevious: async () => {
-    const {
-      queue,
-      currentIndex,
-      isShuffleEnabled,
-      shuffledIndices,
-      playTrack,
-    } = get();
-    if (queue.length === 0) return false;
-
-    let prevIndex: number;
-
-    if (isShuffleEnabled) {
-      const currentShuffledIndex = shuffledIndices.indexOf(currentIndex);
-      const prevShuffledIndex =
-        currentShuffledIndex === 0
-          ? shuffledIndices.length - 1
-          : currentShuffledIndex - 1;
-      prevIndex = shuffledIndices[prevShuffledIndex];
-    } else {
-      prevIndex = currentIndex === 0 ? queue.length - 1 : currentIndex - 1;
-    }
-
-    const prevTrack = queue[prevIndex];
-    if (prevTrack) {
-      return playTrack(prevTrack);
-    }
-
-    return false;
+    const played = await advance(-1);
+    // At the start of a non-repeating queue, go back to the top of the track.
+    if (!played && get().currentTrack) get().seekTo(0);
+    return played;
   },
 
-  toggleShuffle: () => {
-    const { isShuffleEnabled, queue } = get();
-    const newShuffleState = !isShuffleEnabled;
-    const indices = Array.from({ length: queue.length }, (_, i) => i);
+  toggleShuffle: () => get().setShuffle(!get().isShuffleEnabled),
 
+  toggleRepeat: () => get().setRepeat(!get().isRepeatEnabled),
+
+  setShuffle: (enabled) => {
+    const { queue, currentIndex } = get();
+    // Re-anchor on the current track: shuffling keeps it playing and puts the
+    // rest after it; turning shuffle off continues in queue order from here.
+    const { order, position } = createPlayOrder({
+      length: queue.length,
+      startIndex: currentIndex,
+      shuffle: enabled,
+      keyOf: recordKeyOf(queue),
+    });
     set({
-      isShuffleEnabled: newShuffleState,
-      shuffledIndices: newShuffleState ? shuffleArray(indices) : indices,
+      isShuffleEnabled: enabled,
+      playOrder: order,
+      orderPosition: position,
     });
   },
 
-  toggleRepeat: () => {
-    set((state) => ({ isRepeatEnabled: !state.isRepeatEnabled }));
-  },
+  setRepeat: (enabled) => set({ isRepeatEnabled: enabled }),
 
   setVolume: (volume) => {
     const { player } = get();
@@ -669,7 +641,8 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       currentIndex: 0,
       isShuffleEnabled: false,
       isRepeatEnabled: false,
-      shuffledIndices: [],
+      playOrder: [],
+      orderPosition: 0,
       volume: 80,
       currentTime: 0,
       duration: 0,
@@ -677,3 +650,61 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     });
   },
 }));
+
+/**
+ * Move through the play order, skipping tracks that turn out to have no
+ * playable audio. Each track is tried at most once per call, and it stops if
+ * the listener starts something else meanwhile.
+ */
+async function advance(direction: 1 | -1): Promise<boolean> {
+  const store = usePlayerStore;
+  for (let attempt = 0; attempt < store.getState().queue.length; attempt++) {
+    const state = store.getState();
+    const current = { order: state.playOrder, position: state.orderPosition };
+    const position =
+      direction === 1
+        ? nextPosition(current, state.isRepeatEnabled)
+        : previousPosition(current, state.isRepeatEnabled);
+    if (position === null) return false;
+
+    // Each loop of a repeating shuffle gets a fresh order.
+    const order =
+      direction === 1 &&
+      position === 0 &&
+      state.isShuffleEnabled &&
+      state.queue.length > 1
+        ? nextShuffleCycle({
+            length: state.queue.length,
+            lastIndex: state.currentIndex,
+            keyOf: recordKeyOf(state.queue),
+          })
+        : state.playOrder;
+    store.setState({ playOrder: order, orderPosition: position });
+
+    const track = state.queue[order[position]];
+    const requestBefore = playbackRequestId;
+    if (track && (await state.playTrack(track))) return true;
+    if (playbackRequestId !== requestBefore + 1) return false;
+  }
+  return false;
+}
+
+/**
+ * Render the YouTube player inside `host` instead of offscreen. Public pages
+ * and embeds must show it: YouTube's developer policies don't allow playing
+ * from a player that isn't displayed. Pass null when the host unmounts.
+ */
+export function setPlayerVideoHost(host: HTMLElement | null) {
+  if (host === videoHost) return;
+  videoHost = host;
+
+  // The existing player lives in the old place; build a new one on next play.
+  const { player, stopTimeTracking } = usePlayerStore.getState();
+  if (!player && !playerInitializationPromise) return;
+  playbackRequestId += 1;
+  stopTimeTracking();
+  player?.destroy();
+  document.getElementById(YOUTUBE_PLAYER_ID)?.remove();
+  playerInitializationPromise = null;
+  usePlayerStore.setState({ player: null, isReady: false, isPlaying: false });
+}

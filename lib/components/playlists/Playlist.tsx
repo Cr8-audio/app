@@ -6,14 +6,11 @@ import {
   ArrowDown,
   ArrowUp,
   Clock,
-  Copy,
-  ExternalLink,
-  Globe,
   ListMusic,
-  Lock,
   Pause,
   Pencil,
   Play,
+  Share2,
   Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -27,12 +24,13 @@ import {
   DialogTitle,
 } from '@/lib/components/ui/dialog';
 import { Input } from '@/lib/components/ui/input';
-import { Switch } from '@/lib/components/ui/switch';
 import { usePlaylists } from '@/lib/hooks/usePlaylists';
 import { usePlayerStore } from '@/lib/stores';
 import type { CrateTrack } from '@/lib/types';
 import { formatDuration } from '@/lib/utils/format';
 import { cn } from '@/lib/utils/tailwind';
+import { ShareDialog } from './ShareDialog';
+import { VISIBILITY_OPTIONS } from './visibility';
 
 interface PlaylistProps {
   activePlaylistId: string;
@@ -55,6 +53,7 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
     setQueue,
   } = usePlayerStore();
   const [editOpen, setEditOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [editTitle, setEditTitle] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [isSavingDetails, setIsSavingDetails] = useState(false);
@@ -72,7 +71,7 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
 
   const playlistId = activePlaylist._id || activePlaylist.id;
   const tracks = (activePlaylist.tracks ?? []) as PlaylistTrack[];
-  const sharePath = activePlaylist.id ? `/p/${activePlaylist.id}` : null;
+  const visibility = VISIBILITY_OPTIONS[activePlaylist.visibility];
 
   const handlePlayTrack = async (track: PlaylistTrack, index: number) => {
     setQueue(tracks, index);
@@ -88,15 +87,6 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
     } catch (error) {
       console.error('Error removing track:', error);
       toast.error('Failed to remove track');
-    }
-  };
-
-  const handleTogglePublic = async (checked: boolean) => {
-    if (!playlistId) return;
-    try {
-      await updatePlaylist(playlistId, { is_public: checked });
-    } catch (error) {
-      console.error('Error updating playlist visibility:', error);
     }
   };
 
@@ -118,14 +108,6 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
     } finally {
       setIsSavingDetails(false);
     }
-  };
-
-  const copyShareLink = async () => {
-    if (!sharePath) return;
-    await navigator.clipboard.writeText(
-      `${window.location.origin}${sharePath}`,
-    );
-    toast.success('Public playlist link copied');
   };
 
   const moveTrack = async (index: number, direction: -1 | 1) => {
@@ -179,48 +161,20 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
             Edit details
           </Button>
 
-          {activePlaylist.is_public && sharePath && (
-            <>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-10 rounded-full px-4"
-                onClick={() => void copyShareLink()}
-              >
-                <Copy className="mr-2 h-3.5 w-3.5" />
-                Copy link
-              </Button>
-              <a
-                href={sharePath}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex h-10 items-center rounded-full border border-border bg-background px-4 text-sm font-medium text-foreground transition-colors hover:bg-muted"
-              >
-                Open
-                <ExternalLink className="ml-2 h-3.5 w-3.5" />
-              </a>
-            </>
-          )}
-
-          <div className="flex min-h-10 items-center gap-3 rounded-full border border-border/70 bg-background px-3">
-            <Switch
-              id={`public-${playlistId}`}
-              checked={activePlaylist.is_public ?? false}
-              onCheckedChange={handleTogglePublic}
-            />
-            <label
-              htmlFor={`public-${playlistId}`}
-              className="flex cursor-pointer items-center gap-2 text-sm font-medium text-foreground"
-            >
-              {activePlaylist.is_public ? (
-                <Globe className="h-4 w-4 text-primary" />
-              ) : (
-                <Lock className="h-4 w-4 text-muted-foreground" />
-              )}
-              {activePlaylist.is_public ? 'Public' : 'Private'}
-            </label>
-          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-10 rounded-full px-4"
+            onClick={() => setShareOpen(true)}
+          >
+            <Share2 className="mr-2 h-3.5 w-3.5" />
+            Share
+            <span className="ml-2 inline-flex items-center gap-1 border-l border-border/70 pl-2 text-muted-foreground">
+              <visibility.icon className="h-3.5 w-3.5" />
+              {visibility.label}
+            </span>
+          </Button>
         </div>
       </div>
 
@@ -444,6 +398,11 @@ export const Playlist = ({ activePlaylistId }: PlaylistProps) => {
           </div>
         </>
       )}
+      <ShareDialog
+        open={shareOpen}
+        onOpenChange={setShareOpen}
+        playlist={activePlaylist}
+      />
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-w-md rounded-2xl">
           <DialogHeader>
