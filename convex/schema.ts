@@ -72,6 +72,9 @@ export default defineSchema({
     discogs_release_data: v.optional(v.any()),
     basic_release_data: v.optional(v.any()),
     uploaded_at: v.optional(v.string()),
+    // When its tracklist was imported into `tracks` (see releaseTracks.ts),
+    // even if it had no playable tracks, so it isn't fetched again.
+    tracklist_checked_at: v.optional(v.number()),
   }).index('by_discogs_id', ['discogs_release_id']),
 
   playlists: defineTable({

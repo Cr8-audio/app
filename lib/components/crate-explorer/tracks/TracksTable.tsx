@@ -14,6 +14,7 @@ import {
   Play,
   Plus,
   PlusCircle,
+  Loader2,
   Rows3,
 } from 'lucide-react';
 import {
@@ -70,6 +71,9 @@ function formatGenres(genres: string | null, styles: string | null) {
 export default function TracksTable() {
   const { username } = useParams({ strict: false });
   const convexTracks = useQuery(api.tracks.getUserTracks);
+  // Tracklists arrive from Discogs a batch at a time after each sync.
+  const progress = useQuery(api.releaseTracks.getTracklistProgress);
+  const isImporting = !!progress && progress.ready < progress.total;
   const allTracks = useMemo(() => {
     if (!convexTracks) return [];
     return convexTracks.map((track) => ({
@@ -428,7 +432,15 @@ export default function TracksTable() {
             {allTracks.length} {allTracks.length === 1 ? 'track' : 'tracks'}
           </p>
           <p className="mt-1 text-xs text-muted-foreground">
-            Search, play, and organize without leaving your library.
+            {isImporting ? (
+              <span className="inline-flex items-center gap-1.5">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Importing tracklists from Discogs: {progress.ready} of{' '}
+                {progress.total} records ready
+              </span>
+            ) : (
+              'Search, play, and organize without leaving your library.'
+            )}
           </p>
         </div>
         <div className="w-full sm:max-w-md">
@@ -446,12 +458,16 @@ export default function TracksTable() {
           <h2 className="mt-5 text-lg font-semibold text-foreground">
             {searchQuery
               ? 'No tracks match that search'
-              : 'No tracks saved yet'}
+              : isImporting
+                ? 'Your tracks are on their way'
+                : 'No tracks saved yet'}
           </h2>
           <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-muted-foreground">
             {searchQuery
               ? 'Try another artist, title, genre, or style.'
-              : 'Explore your Discogs collection to find the music you want close at hand.'}
+              : isImporting
+                ? `Crate is fetching the tracklists for your ${progress.total} records from Discogs. Tracks appear here as each record arrives.`
+                : 'Explore your Discogs collection to find the music you want close at hand.'}
           </p>
           {searchQuery ? (
             <Button
