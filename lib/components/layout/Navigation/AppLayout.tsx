@@ -7,6 +7,7 @@ import { cn } from '@/lib/utils/tailwind';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import PersistentPlayer from '@/lib/components/ui/persistent-player';
+import { PlayerVideoDock } from '@/lib/components/ui/player-video-dock';
 import { LoadingSpinner } from '@/lib/components/ui/loading';
 import CrateLogo from '@/lib/components/common/Logo';
 
@@ -152,6 +153,7 @@ export default function AppLayout({ children }: AppLayoutProps) {
       </div>
 
       <div className="relative z-[60] flex-shrink-0">
+        <PlayerVideoDock />
         <PersistentPlayer />
       </div>
     </div>

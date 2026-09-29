@@ -1,12 +1,16 @@
-import { useEffect, useRef, type ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import { setPlayerVideoHost } from '@/lib/stores/musicPlayerStore';
 import { cn } from '@/lib/utils/tailwind';
 
 /**
- * Where the YouTube player renders on public pages and embeds. YouTube's
- * developer policies don't allow playing from a hidden player and require at
- * least 200×200 pixels, so the box enforces that size. `cover` (the artwork)
- * sits on top until something plays.
+ * Where the YouTube player renders. YouTube's developer policies don't allow
+ * playing from a hidden player and require at least 200×200 pixels, so the
+ * box enforces that size. `cover` (the artwork) sits on top until something
+ * plays.
+ *
+ * The host registers through a ref callback, which React runs before any
+ * effect, so a page that starts the player on mount creates it here rather
+ * than offscreen.
  */
 export function PlayerVideo({
   showVideo,
@@ -17,13 +21,6 @@ export function PlayerVideo({
   cover: ReactNode;
   className?: string;
 }) {
-  const hostRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setPlayerVideoHost(hostRef.current);
-    return () => setPlayerVideoHost(null);
-  }, []);
-
   return (
     <div
       className={cn(
@@ -32,7 +29,7 @@ export function PlayerVideo({
         className,
       )}
     >
-      <div ref={hostRef} className="absolute inset-0" />
+      <div ref={setPlayerVideoHost} className="absolute inset-0" />
       {!showVideo && <div className="absolute inset-0">{cover}</div>}
     </div>
   );
