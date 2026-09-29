@@ -4,6 +4,9 @@
  *
  *   npx convex run --prod admin:mergeAccounts \
  *     '{"keepUsername": "paprika", "mergeUsername": "baston2rue", "dryRun": true}'
+ *
+ * Either account can be given by user ID instead, for one that hasn't picked
+ * a username yet.
  */
 import { v } from 'convex/values';
 import type { Doc, Id } from './_generated/dataModel';
@@ -12,12 +15,17 @@ import { resolveCollectionOwnerKey } from './discogsCollection';
 import { isLegacyFlagSet } from './lib/playlistSharing';
 import { getPlaylistsForUser } from './playlists';
 
-async function userByUsername(ctx: MutationCtx, username: string) {
-  const user = await ctx.db
-    .query('users')
-    .withIndex('by_username', (q) => q.eq('username', username.toLowerCase()))
-    .first();
-  if (!user) throw new Error(`No user named ${username}`);
+async function findUser(ctx: MutationCtx, usernameOrId: string) {
+  const userId = ctx.db.normalizeId('users', usernameOrId);
+  const user = userId
+    ? await ctx.db.get(userId)
+    : await ctx.db
+        .query('users')
+        .withIndex('by_username', (q) =>
+          q.eq('username', usernameOrId.toLowerCase()),
+        )
+        .first();
+  if (!user) throw new Error(`No user named ${usernameOrId}`);
   return user;
 }
 
@@ -69,8 +77,8 @@ export const mergeAccounts = internalMutation({
     dryRun: v.optional(v.boolean()),
   },
   handler: async (ctx, { keepUsername, mergeUsername, dryRun = false }) => {
-    const keep = await userByUsername(ctx, keepUsername);
-    const merge = await userByUsername(ctx, mergeUsername);
+    const keep = await findUser(ctx, keepUsername);
+    const merge = await findUser(ctx, mergeUsername);
     if (keep._id === merge._id) throw new Error('Pick two different accounts');
 
     // Sign-in methods. Two identities with the same provider is a real
@@ -154,8 +162,8 @@ export const mergeAccounts = internalMutation({
 
     const report = {
       dryRun,
-      keep: keep.username,
-      merge: merge.username,
+      keep: keep.username ?? keep._id,
+      merge: merge.username ?? merge._id,
       signInMethods: accounts.map((account) => account.provider),
       connections: connections.map((connection) => connection.provider),
       playlistsMoved: regular.map((playlist) => playlist.title),

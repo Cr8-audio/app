@@ -75,6 +75,37 @@ export async function fetchDiscogsAvatar(
 }
 
 /**
+ * The email on the Discogs account, lowercased. Discogs only shows it to the
+ * account itself, so the request is signed with the user's tokens, and it's
+ * only returned for an activated account: Discogs activates an account by
+ * confirming its email. Best effort; sign-in works without it.
+ */
+export async function fetchDiscogsVerifiedEmail(
+  credentials: { accessToken: string; accessTokenSecret: string },
+  username: string,
+): Promise<string | undefined> {
+  const base = createDiscogsSdk().auth.base;
+  try {
+    const profile = await base.requestPublic<{
+      email?: string;
+      activated?: boolean;
+    }>(`users/${encodeURIComponent(username)}`, {
+      method: 'GET',
+      headers: {
+        Authorization: base.generateOAuthHeaderPublic(
+          credentials.accessToken,
+          credentials.accessTokenSecret,
+        ),
+      },
+    });
+    const email = profile.email?.trim().toLowerCase();
+    return profile.activated === true && email ? email : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+/**
  * GET /releases/{id}, signed with the user's tokens (60 requests a minute).
  * The SDK has no release endpoint yet, so this goes through its signed
  * request helper, which also retries 429s. Returns null when Discogs no
