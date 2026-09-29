@@ -1,1 +1,0 @@
-export { DiscogsConnectionCard } from './DiscogsConnectionCard';

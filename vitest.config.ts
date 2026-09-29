@@ -15,7 +15,7 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./vitest.setup.ts'],
     include: ['__tests__/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
-    exclude: ['node_modules', 'dist', '.vinxi', '.output'],
+    exclude: ['node_modules', 'dist'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -24,7 +24,6 @@ export default defineConfig({
         '__tests__/',
         '**/*.d.ts',
         'convex/_generated/',
-        '.vinxi/',
         'dist/',
       ],
     },

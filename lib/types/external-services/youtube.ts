@@ -1,9 +1,3 @@
-export interface PlaybackError {
-  message: string;
-  details?: string;
-  trackPosition?: string;
-}
-
 export interface YouTubePlayer {
   destroy(): void;
   loadVideoById(params: { videoId: string; suggestedQuality: string }): void;
@@ -18,7 +12,7 @@ export interface YouTubePlayer {
   getDuration(): number;
 }
 
-export interface YouTubeConfig {
+interface YouTubeConfig {
   width: string;
   height: string;
   playerVars: {
@@ -56,6 +50,6 @@ export interface YouTubeEvent {
   target: YouTubePlayer;
 }
 
-export interface YouTubePlayerEvent {
+interface YouTubePlayerEvent {
   target: YouTubePlayer;
 }

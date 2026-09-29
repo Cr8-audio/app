@@ -11,7 +11,7 @@ interface TrackContextType {
   dateAdded?: string;
 }
 
-export const TrackContext = createContext<TrackContextType | null>(null);
+const TrackContext = createContext<TrackContextType | null>(null);
 
 export const useTrackContext = () => {
   const context = useContext(TrackContext);

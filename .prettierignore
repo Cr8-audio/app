@@ -4,9 +4,6 @@ routeTree.gen.ts
 
 # Build outputs
 dist/
-.vinxi/
-.output/
-.next/
 
 # Dependencies
 node_modules/
