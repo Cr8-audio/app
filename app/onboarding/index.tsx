@@ -9,6 +9,7 @@ import { getUsernameValidationError } from '@/convex/lib/username';
 import { Button } from '@/lib/components/ui/button';
 import { LoadingSpinner } from '@/lib/components/ui/loading';
 import CrateLogo from '@/lib/components/common/Logo';
+import { ImportStatus } from '@/lib/components/library/ImportStatus';
 
 export const Route = createFileRoute('/onboarding/')({
   component: OnboardingPage,
@@ -151,8 +152,7 @@ function OnboardingPage() {
             </h1>
             <p className="mt-6 max-w-md text-base leading-7 text-muted-foreground">
               Pick the name people will see around Crate. Your Discogs
-              connection is ready; we’ll start bringing in your collection after
-              this.
+              collection is already on its way in.
             </p>
 
             <div className="mt-9 rounded-2xl border border-border bg-card p-5 shadow-sm">
@@ -169,6 +169,8 @@ function OnboardingPage() {
                 </div>
               </div>
             </div>
+
+            <ImportStatus className="mt-3" />
           </section>
 
           <section
@@ -238,7 +240,7 @@ function OnboardingPage() {
 
                 <div className="mt-2 flex flex-wrap items-start justify-between gap-x-4 gap-y-1 text-xs">
                   <p id="username-preview" className="text-muted-foreground">
-                    crate.audio/
+                    cr8.audio/
                     <span className="font-mono text-foreground">
                       {username || 'yourname'}
                     </span>

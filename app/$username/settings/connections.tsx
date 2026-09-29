@@ -1,4 +1,5 @@
 import { createFileRoute } from '@tanstack/react-router';
+import { ImportStatus } from '@/lib/components/library/ImportStatus';
 import { DiscogsConnectionCard } from '@/lib/components/onboarding/DiscogsConnectionCard';
 
 export const Route = createFileRoute('/$username/settings/connections')({
@@ -30,6 +31,7 @@ function ConnectionsPage() {
           </p>
         </div>
         <DiscogsConnectionCard />
+        <ImportStatus className="mt-3" />
       </section>
     </main>
   );

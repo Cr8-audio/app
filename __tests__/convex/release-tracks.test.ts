@@ -145,6 +145,38 @@ describe('importing tracklists for synced releases', () => {
     expect(requested).toEqual(['100', '404']);
   });
 
+  it('tells the user how much is left and about how long it takes', async () => {
+    const t = convexTest(schema, modules);
+    const userId = await seedNewUser(
+      t,
+      Array.from({ length: 95 }, (_, index) => String(1000 + index)),
+    );
+    await t.run(async (ctx) => {
+      await ctx.db.insert('tracks', {
+        id: 'already-here',
+        discogs_release_id: '1000',
+        title: 'Deck The House',
+        artist: 'Akufen',
+        position: 'A',
+        duration: '',
+      });
+      const connection = await ctx.db.query('user_music_connections').first();
+      await ctx.db.patch(connection!._id, { syncStatus: 'syncing' });
+    });
+
+    const progress = await t
+      .withIdentity({ subject: userId })
+      .query(api.releaseTracks.getTracklistProgress);
+
+    // 94 records left at about 30 a minute.
+    expect(progress).toEqual({
+      total: 95,
+      ready: 1,
+      minutesLeft: 4,
+      syncing: true,
+    });
+  });
+
   it('reuses tracks another owner of the release already has', async () => {
     const t = convexTest(schema, modules);
     const userId = await seedNewUser(t, ['100']);

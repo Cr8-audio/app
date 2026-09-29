@@ -25,8 +25,10 @@ import {
 } from './_generated/server';
 import { resolveCollectionOwnerKey } from './discogsCollection';
 import { fetchDiscogsRelease } from './lib/discogsClient';
+import { importMinutesLeft } from './lib/importEstimate';
 import { tracksFromRelease } from './lib/discogsTracklist';
 
+// About 30 records a minute; keep lib/importEstimate.ts in step.
 export const RELEASES_PER_RUN = 25;
 const NEXT_BATCH_DELAY_MS = 30_000;
 const RATE_LIMIT_RETRY_MS = 60_000;
@@ -109,8 +111,10 @@ export const releasesNeedingTracks = internalQuery({
 });
 
 /**
- * How many of the signed-in user's records have their tracks yet, so the
- * library can say it's still importing rather than look empty.
+ * How many of the signed-in user's records have their tracks yet, and about
+ * how long the rest will take, so onboarding and the library can say so
+ * instead of looking empty. `syncing` means the collection itself is still
+ * being read, so `total` will grow.
  */
 export const getTracklistProgress = query({
   args: {},
@@ -118,7 +122,18 @@ export const getTracklistProgress = query({
     const userId = await getAuthUserId(ctx);
     if (!userId) return null;
     const { total, needed } = await scanCollection(ctx, userId, Infinity);
-    return { total, ready: total - needed.length };
+    const connection = await ctx.db
+      .query('user_music_connections')
+      .withIndex('by_user_provider', (q) =>
+        q.eq('userId', userId).eq('provider', 'discogs'),
+      )
+      .first();
+    return {
+      total,
+      ready: total - needed.length,
+      minutesLeft: importMinutesLeft(needed.length),
+      syncing: connection?.syncStatus === 'syncing',
+    };
   },
 });
 
