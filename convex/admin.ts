@@ -12,6 +12,7 @@ import { v } from 'convex/values';
 import type { Doc, Id } from './_generated/dataModel';
 import { internalMutation, type MutationCtx } from './_generated/server';
 import { resolveCollectionOwnerKey } from './discogsCollection';
+import { favoritesPlaylistsOf } from './favorites';
 import { isLegacyFlagSet } from './lib/playlistSharing';
 import { getPlaylistsForUser } from './playlists';
 
@@ -36,13 +37,9 @@ async function playlistTracksOf(ctx: MutationCtx, playlistId: Id<'playlists'>) {
     .collect();
 }
 
-/** The Favorites playlist addFavorite writes to (owner is email or ID). */
+/** The Favorites playlist addFavorite writes to. */
 async function favoritesOf(ctx: MutationCtx, user: Doc<'users'>) {
-  return (await getPlaylistsForUser(ctx, user)).find(
-    (playlist) =>
-      isLegacyFlagSet(playlist.is_favorites) &&
-      (playlist.user_id === user.email || playlist.user_id === user._id),
-  );
+  return (await favoritesPlaylistsOf(ctx, user))[0];
 }
 
 /** Collection rows stored under any of a user's owner keys. */
