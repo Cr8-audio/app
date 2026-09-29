@@ -209,7 +209,8 @@ export function DiscogsConnectionCard({
       </div>
 
       <div className="border-t border-border/60 bg-muted/25 px-5 py-3 text-xs text-muted-foreground sm:px-6">
-        Your Discogs access token is encrypted and stored server-side.
+        Your Discogs access token stays on Crate’s server and never reaches your
+        browser.
       </div>
     </div>
   );
