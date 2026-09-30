@@ -30,6 +30,7 @@ import type * as musicConnections from "../musicConnections.js";
 import type * as playlistAudio from "../playlistAudio.js";
 import type * as playlists from "../playlists.js";
 import type * as releaseTracks from "../releaseTracks.js";
+import type * as trackAudio from "../trackAudio.js";
 import type * as tracks from "../tracks.js";
 import type * as users from "../users.js";
 import type * as waitlist from "../waitlist.js";
@@ -63,6 +64,7 @@ declare const fullApi: ApiFromModules<{
   playlistAudio: typeof playlistAudio;
   playlists: typeof playlists;
   releaseTracks: typeof releaseTracks;
+  trackAudio: typeof trackAudio;
   tracks: typeof tracks;
   users: typeof users;
   waitlist: typeof waitlist;
