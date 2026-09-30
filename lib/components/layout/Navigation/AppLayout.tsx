@@ -1,6 +1,7 @@
 import { Link, Navigate, useLocation } from '@tanstack/react-router';
 import { LibraryBig, ListMusic } from 'lucide-react';
 import { useAuth } from '@/lib/hooks/useAuth';
+import { useServerAudio } from '@/lib/player/useServerAudio';
 import { cn } from '@/lib/utils/tailwind';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
@@ -77,6 +78,7 @@ function BareLoadingState() {
 export default function AppLayout({ children }: AppLayoutProps) {
   const { pathname } = useLocation();
   const { isAuthenticated, isLoading, username } = useAuth();
+  useServerAudio(isAuthenticated);
   const normalizedPath =
     pathname.length > 1 ? pathname.replace(/\/$/, '') : pathname;
   const isAlwaysBareRoute =

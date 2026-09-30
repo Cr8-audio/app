@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import type { ResolvedAudio } from '@/convex/trackAudio';
 import type {
   YouTubePlayer as YTPlayer,
   YouTubeEvent,
@@ -30,6 +31,11 @@ const resolvedVideoIds = new Map<string, string>();
 const videoResolutionPromises = new Map<string, Promise<string | null>>();
 const validatedVideoIds = new Map<string, string>();
 const videoValidationPromises = new Map<string, Promise<boolean>>();
+
+/** Finds a stored track's audio on the server (convex/trackAudio). */
+type ServerAudio = (trackId: string) => Promise<ResolvedAudio>;
+let serverAudio: ServerAudio | null = null;
+const serverAudioPromises = new Map<string, Promise<ResolvedAudio>>();
 
 interface PlayerState {
   player: YTPlayer | null;
@@ -163,11 +169,43 @@ const createPlayerContainer = () => {
   document.body.appendChild(container);
 };
 
+/** One request per track at a time; a failed request leaves it to the browser. */
+const resolveOnServer = (resolve: ServerAudio, trackId: string) => {
+  let request = serverAudioPromises.get(trackId);
+  if (!request) {
+    request = resolve(trackId)
+      .catch((error): ResolvedAudio => {
+        console.warn('Could not find audio on the server:', error);
+        return { status: 'unhandled' };
+      })
+      .finally(() => serverAudioPromises.delete(trackId));
+    serverAudioPromises.set(trackId, request);
+  }
+  return request;
+};
+
 const resolvePlayableTrack = async (
   track: CrateTrack,
 ): Promise<CrateTrack | null> => {
   // The server already checked this video against the track (playlistAudio).
   if (track.audio_status === 'ready' && track.youtube_video_id) return track;
+
+  // Signed in, the server finds the audio and saves it on the track, so a
+  // track is searched for once rather than on every visit.
+  if (serverAudio && !validatedVideoIds.has(track.id)) {
+    const saved = await resolveOnServer(serverAudio, track.id);
+    if (saved.status === 'quota') throw new Error('YouTube quota is used up');
+    if (saved.status === 'no-match') return null;
+    if (saved.status === 'ready') {
+      resolvedVideoIds.set(track.id, saved.videoId);
+      validatedVideoIds.set(track.id, saved.videoId);
+      return {
+        ...track,
+        youtube_video_id: saved.videoId,
+        audio_status: 'ready',
+      };
+    }
+  }
 
   const knownVideoId =
     resolvedVideoIds.get(track.id) ?? track.youtube_video_id ?? null;
@@ -630,6 +668,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     videoResolutionPromises.clear();
     validatedVideoIds.clear();
     videoValidationPromises.clear();
+    serverAudioPromises.clear();
 
     set({
       player: null,
@@ -707,4 +746,12 @@ export function setPlayerVideoHost(host: HTMLElement | null) {
   document.getElementById(YOUTUBE_PLAYER_ID)?.remove();
   playerInitializationPromise = null;
   usePlayerStore.setState({ player: null, isReady: false, isPlaying: false });
+}
+
+/**
+ * Let the player find audio through the server, which needs a signed-in
+ * listener. Pass null to go back to searching from the browser.
+ */
+export function setServerAudio(resolve: ServerAudio | null) {
+  serverAudio = resolve;
 }
