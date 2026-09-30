@@ -23,7 +23,7 @@ import {
   SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import { useQuery } from 'convex/react';
+import { useConvex, useQuery } from 'convex/react';
 import { toast } from 'sonner';
 import { api } from '@/convex/_generated/api';
 import { formatImportTime } from '@/convex/lib/importEstimate';
@@ -47,6 +47,7 @@ import useDebounce from '@/lib/hooks/useDebounce';
 import { useFavorites } from '@/lib/hooks/useFavorites';
 import { useLastDefined } from '@/lib/hooks/useLastDefined';
 import { usePlaylists } from '@/lib/hooks/usePlaylists';
+import { extendQueue } from '@/lib/player/extendQueue';
 import { usePlayerStore } from '@/lib/stores';
 import { CrateTrack } from '@/lib/types';
 import { cn } from '@/lib/utils/tailwind';
@@ -97,11 +98,14 @@ export default function TracksTable() {
   // Search, sorting and paging run on the server, which sends one page.
   const search = useDebounce(searchQuery.trim(), 250);
   const sortBy = sorting[0]?.id;
+  const libraryOrder = {
+    search: search || undefined,
+    sortBy: sortBy === 'title' || sortBy === 'artist' ? sortBy : undefined,
+    sortDesc: sorting[0]?.desc,
+  } as const;
   const library = useLastDefined(
     useQuery(api.tracks.listLibrary, {
-      search: search || undefined,
-      sortBy: sortBy === 'title' || sortBy === 'artist' ? sortBy : undefined,
-      sortDesc: sorting[0]?.desc,
+      ...libraryOrder,
       pageIndex: pagination.pageIndex,
       pageSize: pagination.pageSize,
     }),
@@ -132,16 +136,42 @@ export default function TracksTable() {
     initializePlayer();
   }, [initializePlayer]);
 
+  // The rest of the library in this search and sort, for the player to
+  // carry on past the page. Loaded on the first play, once per view.
+  const convex = useConvex();
+  const libraryQueue = useRef<{ view: string; tracks: Promise<CrateTrack[]> }>(
+    undefined,
+  );
+  const loadLibraryQueue = () => {
+    const view = JSON.stringify(libraryOrder);
+    if (libraryQueue.current?.view !== view) {
+      libraryQueue.current = {
+        view,
+        tracks: convex.query(
+          api.tracks.listLibraryQueue,
+          libraryOrder,
+        ) as Promise<CrateTrack[]>,
+      };
+    }
+    return libraryQueue.current.tracks;
+  };
+
   const handlePlayToggle = async (track: CrateTrack) => {
     try {
-      const { playingTrackId: currentTrackId, queue } =
-        usePlayerStore.getState();
-      const queueIndex = queue.findIndex((item) => item.id === track.id);
-
-      // Clicking one library row should not silently put the entire collection
-      // into the queue. Explicit "add to queue" remains available beside it.
-      if (currentTrackId !== track.id && queueIndex === -1) {
-        setQueue([track], 0);
+      // A row plays on through the library from there, like a playlist
+      // does. It starts from this page and the rest follows once loaded.
+      if (usePlayerStore.getState().playingTrackId !== track.id) {
+        const page = pageTracks;
+        setQueue(
+          page,
+          page.findIndex((item) => item.id === track.id),
+        );
+        loadLibraryQueue()
+          .then((all) => extendQueue(page, all))
+          .catch((error) => {
+            libraryQueue.current = undefined;
+            console.error('Could not queue the rest of the library:', error);
+          });
       }
 
       const didStart = await togglePlayPause(track);

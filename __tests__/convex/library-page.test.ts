@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_PAGE_SIZE, libraryPage } from '@/convex/lib/libraryPage';
+import {
+  MAX_PAGE_SIZE,
+  libraryOrder,
+  libraryPage,
+} from '@/convex/lib/libraryPage';
 
 const tracks = [
   {
@@ -56,6 +60,22 @@ describe('library pages', () => {
       'Track 10',
     ]);
     expect(sorted(true)[0]).toBe('Track 10');
+  });
+
+  it('gives the player every match in the same order, unpaged', () => {
+    const order = { search: 'a', sortBy: 'title', sortDesc: true } as const;
+    const paged = [0, 1, 2].flatMap(
+      (pageIndex) =>
+        libraryPage(tracks, { ...order, pageIndex, pageSize: 2 }).tracks,
+    );
+    expect(libraryOrder(tracks, order)).toEqual(paged);
+    expect(paged.map((track) => track.title)).toEqual([
+      'Track 10',
+      'Track 2',
+      'Timemorf',
+      'Deck The House',
+      'bach to back',
+    ]);
   });
 
   it('clamps a page past the end and an oversized page size', () => {
