@@ -18,7 +18,13 @@ const TrackGrid = ({ viewMode, items }: TrackGridProps) => {
     try {
       const tempTrack = createTemporaryTrackForPlayback(result);
       setLoadingTrackId(tempTrack.id);
-      setQueue([tempTrack], 0);
+      // Play on through the records on screen from this one.
+      if (usePlayerStore.getState().playingTrackId !== tempTrack.id) {
+        setQueue(
+          items.map((item) => createTemporaryTrackForPlayback(item)),
+          items.indexOf(result),
+        );
+      }
       const didStart = await togglePlayPause(tempTrack);
       if (!didStart) toast.error('No playable audio found for this release');
     } catch (error) {

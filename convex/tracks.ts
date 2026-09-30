@@ -3,7 +3,7 @@ import { query, type QueryCtx } from './_generated/server';
 import type { Doc } from './_generated/dataModel';
 import { v } from 'convex/values';
 import { resolveCollectionOwnerKey } from './discogsCollection';
-import { libraryPage } from './lib/libraryPage';
+import { libraryOrder, libraryPage } from './lib/libraryPage';
 import { trackAudioStatus } from './lib/playlistSharing';
 
 /** Every track on the signed-in user's records, in collection order. */
@@ -38,22 +38,45 @@ function toLibraryTrack(track: Doc<'tracks'>) {
   };
 }
 
+const libraryOrderArgs = {
+  search: v.optional(v.string()),
+  sortBy: v.optional(v.union(v.literal('title'), v.literal('artist'))),
+  sortDesc: v.optional(v.boolean()),
+};
+
 /**
  * One page of the library, searched and sorted on the server. The library
  * used to download every track (about 800 KB for 1,500) to show ten.
  */
 export const listLibrary = query({
-  args: {
-    search: v.optional(v.string()),
-    sortBy: v.optional(v.union(v.literal('title'), v.literal('artist'))),
-    sortDesc: v.optional(v.boolean()),
-    pageIndex: v.number(),
-    pageSize: v.number(),
-  },
+  args: { ...libraryOrderArgs, pageIndex: v.number(), pageSize: v.number() },
   handler: async (ctx, args) => {
     const tracks = (await collectionTracks(ctx)) ?? [];
     const page = libraryPage(tracks, args);
     return { ...page, tracks: page.tracks.map(toLibraryTrack) };
+  },
+});
+
+/**
+ * The whole library in the order the table lists it, for the player to carry
+ * on past the page a track was started from. Fetched once when playback
+ * starts, and trimmed to what the player shows (about 450 bytes a track).
+ */
+export const listLibraryQueue = query({
+  args: libraryOrderArgs,
+  handler: async (ctx, args) => {
+    const tracks = (await collectionTracks(ctx)) ?? [];
+    return libraryOrder(tracks, args).map((track) => ({
+      id: track.id || track._id,
+      discogs_release_id: String(track.discogs_release_id),
+      youtube_video_id: track.youtube_video_id ?? null,
+      title: track.title,
+      artist: track.artist,
+      duration: track.duration,
+      genres: track.genres ?? null,
+      artwork: track.artwork ?? null,
+      audio_status: trackAudioStatus(track),
+    }));
   },
 });
 

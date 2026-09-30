@@ -23,21 +23,14 @@ export function matchesSearch(track: LibraryTrackFields, search: string) {
   );
 }
 
-export function libraryPage<T extends LibraryTrackFields>(
+/** The tracks matching a search, in the order the library lists them. */
+export function libraryOrder<T extends LibraryTrackFields>(
   tracks: T[],
   {
     search = '',
     sortBy,
     sortDesc = false,
-    pageIndex,
-    pageSize,
-  }: {
-    search?: string;
-    sortBy?: LibrarySortField;
-    sortDesc?: boolean;
-    pageIndex: number;
-    pageSize: number;
-  },
+  }: { search?: string; sortBy?: LibrarySortField; sortDesc?: boolean },
 ) {
   const filtered = tracks.filter((track) => matchesSearch(track, search));
   if (sortBy) {
@@ -51,6 +44,24 @@ export function libraryPage<T extends LibraryTrackFields>(
         }) * direction,
     );
   }
+  return filtered;
+}
+
+export function libraryPage<T extends LibraryTrackFields>(
+  tracks: T[],
+  {
+    pageIndex,
+    pageSize,
+    ...order
+  }: {
+    search?: string;
+    sortBy?: LibrarySortField;
+    sortDesc?: boolean;
+    pageIndex: number;
+    pageSize: number;
+  },
+) {
+  const filtered = libraryOrder(tracks, order);
 
   const size = Math.min(Math.max(Math.floor(pageSize), 1), MAX_PAGE_SIZE);
   const pageCount = Math.max(Math.ceil(filtered.length / size), 1);

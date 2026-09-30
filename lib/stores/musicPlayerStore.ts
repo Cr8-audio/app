@@ -27,6 +27,11 @@ let playerInitializationPromise: Promise<void> | null = null;
 let playbackRequestId = 0;
 let videoHost: HTMLElement | null = null;
 
+/** Past this point in a track, "previous" restarts it, as players do. */
+const RESTART_AFTER_SECONDS = 3;
+/** How many tracks "next" will pass over looking for one with audio. */
+const MAX_TRACKS_TRIED = 10;
+
 const resolvedVideoIds = new Map<string, string>();
 const videoResolutionPromises = new Map<string, Promise<string | null>>();
 const validatedVideoIds = new Map<string, string>();
@@ -43,8 +48,15 @@ interface PlayerState {
   isPlaying: boolean;
   playingTrackId: string | null;
   currentTrack: CrateTrack | null;
+  /** The list being played through: a playlist, a record, the library. */
   queue: CrateTrack[];
   currentIndex: number;
+  /** Tracks the listener queued. They play next, then `queue` carries on. */
+  upNext: CrateTrack[];
+  /** The current track came from `upNext`, so it has no place in the order. */
+  isPlayingUpNext: boolean;
+  /** Why "next" or "previous" last gave up; a new object each time. */
+  playbackIssue: { reason: 'no-audio' | 'unavailable' } | null;
   isShuffleEnabled: boolean;
   isRepeatEnabled: boolean;
   /** Queue indices in play order; see lib/player/playOrder. */
@@ -69,6 +81,9 @@ interface PlayerState {
   // Queue management
   setQueue: (tracks: CrateTrack[], startIndex?: number) => void;
   addToQueue: (track: CrateTrack) => void;
+  playUpNext: (trackId: string) => Promise<boolean>;
+  removeFromUpNext: (trackId: string) => void;
+  clearUpNext: () => void;
   removeFromQueue: (trackId: string) => void;
   clearQueue: () => void;
 
@@ -263,6 +278,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   currentTrack: null,
   queue: [],
   currentIndex: 0,
+  upNext: [],
+  isPlayingUpNext: false,
+  playbackIssue: null,
   isShuffleEnabled: false,
   isRepeatEnabled: false,
   playOrder: [],
@@ -393,63 +411,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   setIsReady: (ready) => set({ isReady: ready }),
   setPlayingTrackId: (trackId) => set({ playingTrackId: trackId }),
 
-  playTrack: async (track) => {
-    const requestId = ++playbackRequestId;
-
-    try {
-      const queuedTrack = get().queue.find((item) => item.id === track.id);
-      const resolvedTrack = await resolvePlayableTrack({
-        ...track,
-        youtube_video_id:
-          track.youtube_video_id ?? queuedTrack?.youtube_video_id ?? null,
-      });
-      if (!resolvedTrack || requestId !== playbackRequestId) return false;
-
-      await get().initializePlayer();
-      if (requestId !== playbackRequestId) return false;
-
-      const { player, isReady, startTimeTracking } = get();
-      if (!player || !isReady || !resolvedTrack.youtube_video_id) return false;
-
-      player.loadVideoById({
-        videoId: resolvedTrack.youtube_video_id,
-        suggestedQuality: 'highres',
-      });
-
-      set((state) => {
-        const queueIndex = state.queue.findIndex(
-          (item) => item.id === resolvedTrack.id,
-        );
-        const queue = state.queue.map((item) =>
-          item.id === resolvedTrack.id ? { ...item, ...resolvedTrack } : item,
-        );
-
-        const orderPosition = state.playOrder.indexOf(queueIndex);
-        return {
-          queue,
-          currentIndex: queueIndex === -1 ? state.currentIndex : queueIndex,
-          orderPosition:
-            orderPosition === -1 ? state.orderPosition : orderPosition,
-          playingTrackId: resolvedTrack.id,
-          currentTrack: resolvedTrack,
-          isPlaying: true,
-          currentTime: 0,
-          duration: 0,
-        };
-      });
-
-      player.playVideo();
-      startTimeTracking();
-      return true;
-    } catch (error) {
-      console.error('Failed to play track:', error);
-      if (requestId === playbackRequestId) {
-        get().stopTimeTracking();
-        set({ isPlaying: false });
-      }
-      return false;
-    }
-  },
+  playTrack: async (track) => (await startTrack(track)) === 'playing',
 
   pauseTrack: () => {
     const { player, stopTimeTracking } = get();
@@ -512,25 +474,33 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
 
   addToQueue: (track) => {
-    const { queue } = get();
-    if (!queue.find((t) => t.id === track.id)) {
-      const videoId =
-        resolvedVideoIds.get(track.id) ?? track.youtube_video_id ?? null;
-      const queuedTrack =
-        videoId === track.youtube_video_id
-          ? track
-          : { ...track, youtube_video_id: videoId };
-      // Queued tracks play after everything already in the order.
-      set((state) => ({
-        queue: [...queue, queuedTrack],
-        playOrder: [...state.playOrder, queue.length],
-      }));
-    }
+    if (get().upNext.some((queued) => queued.id === track.id)) return;
+    const videoId =
+      resolvedVideoIds.get(track.id) ?? track.youtube_video_id ?? null;
+    const queuedTrack =
+      videoId === track.youtube_video_id
+        ? track
+        : { ...track, youtube_video_id: videoId };
+    set((state) => ({ upNext: [...state.upNext, queuedTrack] }));
   },
 
+  playUpNext: async (trackId) => {
+    const track = get().upNext.find((queued) => queued.id === trackId);
+    if (!track) return false;
+    get().removeFromUpNext(trackId);
+    return (await startTrack(track, { fromUpNext: true })) === 'playing';
+  },
+
+  removeFromUpNext: (trackId) =>
+    set((state) => ({
+      upNext: state.upNext.filter((queued) => queued.id !== trackId),
+    })),
+
+  clearUpNext: () => set({ upNext: [] }),
+
   removeFromQueue: (trackId) => {
-    const { queue, currentIndex, playingTrackId } = get();
-    if (trackId === playingTrackId) return;
+    const { queue, currentIndex, playingTrackId, isPlayingUpNext } = get();
+    if (trackId === playingTrackId && !isPlayingUpNext) return;
 
     const removedIndex = queue.findIndex((track) => track.id === trackId);
     if (removedIndex === -1) return;
@@ -557,6 +527,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     set({
       queue: [],
       currentIndex: 0,
+      upNext: [],
+      isPlayingUpNext: false,
+      playbackIssue: null,
       playOrder: [],
       orderPosition: 0,
       currentTrack: null,
@@ -570,6 +543,10 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   playNext: () => advance(1),
 
   playPrevious: async () => {
+    if (get().currentTrack && get().currentTime > RESTART_AFTER_SECONDS) {
+      get().seekTo(0);
+      return true;
+    }
     const played = await advance(-1);
     // At the start of a non-repeating queue, go back to the top of the track.
     if (!played && get().currentTrack) get().seekTo(0);
@@ -678,6 +655,9 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       isPlaying: false,
       queue: [],
       currentIndex: 0,
+      upNext: [],
+      isPlayingUpNext: false,
+      playbackIssue: null,
       isShuffleEnabled: false,
       isRepeatEnabled: false,
       playOrder: [],
@@ -691,41 +671,151 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
 }));
 
 /**
- * Move through the play order, skipping tracks that turn out to have no
- * playable audio. Each track is tried at most once per call, and it stops if
- * the listener starts something else meanwhile.
+ * How an attempt to play a track ended. `no-audio` is about the track (move
+ * on to the next); `unavailable` is about the search or the player (the next
+ * track would fail the same way); `superseded` means the listener started
+ * something else meanwhile.
+ */
+type PlayOutcome = 'playing' | 'no-audio' | 'unavailable' | 'superseded';
+
+async function startTrack(
+  track: CrateTrack,
+  { fromUpNext = false }: { fromUpNext?: boolean } = {},
+): Promise<PlayOutcome> {
+  const { getState: get, setState: set } = usePlayerStore;
+  const requestId = ++playbackRequestId;
+
+  try {
+    const queuedTrack = get().queue.find((item) => item.id === track.id);
+    const resolvedTrack = await resolvePlayableTrack({
+      ...track,
+      youtube_video_id:
+        track.youtube_video_id ?? queuedTrack?.youtube_video_id ?? null,
+    });
+    if (requestId !== playbackRequestId) return 'superseded';
+    if (!resolvedTrack) return 'no-audio';
+
+    await get().initializePlayer();
+    if (requestId !== playbackRequestId) return 'superseded';
+
+    const { player, isReady, startTimeTracking } = get();
+    if (!player || !isReady || !resolvedTrack.youtube_video_id) {
+      return 'unavailable';
+    }
+
+    player.loadVideoById({
+      videoId: resolvedTrack.youtube_video_id,
+      suggestedQuality: 'highres',
+    });
+
+    set((state) => {
+      // A track from `upNext` plays between two tracks of the queue, so the
+      // queue keeps its place even when it holds the same track.
+      const queueIndex = fromUpNext
+        ? -1
+        : state.queue.findIndex((item) => item.id === resolvedTrack.id);
+      const queue = state.queue.map((item) =>
+        item.id === resolvedTrack.id ? { ...item, ...resolvedTrack } : item,
+      );
+
+      const orderPosition = state.playOrder.indexOf(queueIndex);
+      return {
+        queue,
+        currentIndex: queueIndex === -1 ? state.currentIndex : queueIndex,
+        orderPosition:
+          orderPosition === -1 ? state.orderPosition : orderPosition,
+        isPlayingUpNext: fromUpNext,
+        playbackIssue: null,
+        playingTrackId: resolvedTrack.id,
+        currentTrack: resolvedTrack,
+        isPlaying: true,
+        currentTime: 0,
+        duration: 0,
+      };
+    });
+
+    player.playVideo();
+    startTimeTracking();
+    return 'playing';
+  } catch (error) {
+    // Whatever was playing before carries on, so `isPlaying` stands.
+    console.error('Failed to play track:', error);
+    return requestId === playbackRequestId ? 'unavailable' : 'superseded';
+  }
+}
+
+/**
+ * Move to the next or previous track. Queued tracks (`upNext`) come first,
+ * then the play order. Tracks that turn out to have no audio are passed
+ * over, a limited number per call; it stops when the audio search itself is
+ * failing, or when the listener starts something else meanwhile.
  */
 async function advance(direction: 1 | -1): Promise<boolean> {
   const store = usePlayerStore;
-  for (let attempt = 0; attempt < store.getState().queue.length; attempt++) {
+  const tries = Math.min(
+    store.getState().queue.length + store.getState().upNext.length,
+    MAX_TRACKS_TRIED,
+  );
+  let passedOver = 0;
+  // Nothing played: say why, unless the order simply ran out.
+  const stop = (reason?: 'no-audio' | 'unavailable') => {
+    const issue = reason ?? (passedOver > 0 ? 'no-audio' : null);
+    if (issue) store.setState({ playbackIssue: { reason: issue } });
+    return false;
+  };
+
+  for (let attempt = 0; attempt < tries; attempt++) {
     const state = store.getState();
-    const current = { order: state.playOrder, position: state.orderPosition };
-    const position =
-      direction === 1
-        ? nextPosition(current, state.isRepeatEnabled)
-        : previousPosition(current, state.isRepeatEnabled);
-    if (position === null) return false;
+    const { upNext, isPlayingUpNext, playOrder, orderPosition } = state;
+    let track: CrateTrack | undefined;
+    let fromUpNext = false;
 
-    // Each loop of a repeating shuffle gets a fresh order.
-    const order =
-      direction === 1 &&
-      position === 0 &&
-      state.isShuffleEnabled &&
-      state.queue.length > 1
-        ? nextShuffleCycle({
-            length: state.queue.length,
-            lastIndex: state.currentIndex,
-            keyOf: recordKeyOf(state.queue),
-          })
-        : state.playOrder;
-    store.setState({ playOrder: order, orderPosition: position });
+    if (direction === 1 && state.upNext.length > 0) {
+      track = state.upNext[0];
+      fromUpNext = true;
+      store.setState({ upNext: state.upNext.slice(1) });
+    } else if (direction === -1 && state.isPlayingUpNext) {
+      // Back to the track of the queue that the queued one followed.
+      track = state.queue[state.playOrder[state.orderPosition]];
+      store.setState({ isPlayingUpNext: false });
+      if (!track) return stop();
+    } else {
+      const current = { order: state.playOrder, position: state.orderPosition };
+      const position =
+        direction === 1
+          ? nextPosition(current, state.isRepeatEnabled)
+          : previousPosition(current, state.isRepeatEnabled);
+      if (position === null) return stop();
 
-    const track = state.queue[order[position]];
-    const requestBefore = playbackRequestId;
-    if (track && (await state.playTrack(track))) return true;
-    if (playbackRequestId !== requestBefore + 1) return false;
+      // Each loop of a repeating shuffle gets a fresh order.
+      const order =
+        direction === 1 &&
+        position === 0 &&
+        state.isShuffleEnabled &&
+        state.queue.length > 1
+          ? nextShuffleCycle({
+              length: state.queue.length,
+              lastIndex: state.currentIndex,
+              keyOf: recordKeyOf(state.queue),
+            })
+          : state.playOrder;
+      store.setState({ playOrder: order, orderPosition: position });
+      track = state.queue[order[position]];
+    }
+
+    const outcome = track
+      ? await startTrack(track, { fromUpNext })
+      : 'no-audio';
+    if (outcome === 'playing') return true;
+    if (outcome === 'superseded') return false;
+    if (outcome === 'unavailable') {
+      // Keep the place, so trying again later tries this track again.
+      store.setState({ upNext, isPlayingUpNext, playOrder, orderPosition });
+      return stop('unavailable');
+    }
+    passedOver += 1;
   }
-  return false;
+  return stop();
 }
 
 /**
